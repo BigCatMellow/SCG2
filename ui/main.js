@@ -15,6 +15,13 @@ const DEFAULT_SETUP = {
   deploymentId: "crossfire",
   firstPlayerMarkerHolder: "playerA",
   armyA: [
+    { id: "swarm_kerrigan", templateId: "kerrigan" },
+    { id: "swarm_raptor_t2", templateId: "raptor_t2" },
+    { id: "swarm_roach_t3", templateId: "roach_t3" },
+    { id: "swarm_zergling_t3", templateId: "zergling_t3" },
+    { id: "swarm_zergling_t2", templateId: "zergling_t2" }
+  ],
+  armyB: [
     { id: "raiders_raynor", templateId: "jim_raynor" },
     { id: "raiders_marines_t2", templateId: "marine_t2" },
     { id: "raiders_marauder_1", templateId: "marauder_t1" },
@@ -22,15 +29,8 @@ const DEFAULT_SETUP = {
     { id: "raiders_marauder_3", templateId: "marauder_t1" },
     { id: "raiders_medic", templateId: "medic_t1" }
   ],
-  armyB: [
-    { id: "swarm_kerrigan", templateId: "kerrigan" },
-    { id: "swarm_raptor_t2", templateId: "raptor_t2" },
-    { id: "swarm_roach_t3", templateId: "roach_t3" },
-    { id: "swarm_zergling_t3", templateId: "zergling_t3" },
-    { id: "swarm_zergling_t2", templateId: "zergling_t2" }
-  ],
-  tacticalCardsA: ["barracks_proxy", "academy", "orbital_command"],
-  tacticalCardsB: ["lair", "evolution_chamber", "roach_warren", "malignant_creep"],
+  tacticalCardsA: ["lair", "evolution_chamber", "roach_warren", "malignant_creep"],
+  tacticalCardsB: ["barracks_proxy", "academy", "orbital_command"],
   rules: { gridMode: true }
 };
 
@@ -71,7 +71,9 @@ const uiState = {
   notifications: [],
   lastSeenLogCount: 0,
   legalDestinations: [],
-  pendingPass: false
+  pendingPass: false,
+  storyModalQueue: [],
+  activeStoryModal: null
 };
 
 let store;
@@ -232,6 +234,7 @@ function rerender() {
   };
   renderAll(store.getState(), uiState, handlers);
   renderNotifications();
+  renderStoryModal();
 }
 
 function showError(message) {
@@ -274,6 +277,102 @@ function renderNotifications() {
   });
 }
 
+function getStoryModalConfig(entry) {
+  if (entry.type === "combat") {
+    return {
+      tone: "combat",
+      kicker: "Combat Result",
+      title: "Attack Resolved",
+      help: "Read this left to right: attacks made, hits landed, wounds caused, saves made, then casualties removed."
+    };
+  }
+  if (entry.type === "action") {
+    const actionTitle = entry.text.includes("attempts a charge")
+      ? "Charge Roll"
+      : entry.text.includes("declares ranged attack")
+        ? "Attack Declared"
+        : "Action Resolved";
+    return {
+      tone: "action",
+      kicker: "Battle Update",
+      title: actionTitle,
+      help: "This popup explains the action that just resolved so you do not have to infer it from the board state."
+    };
+  }
+  if (entry.type === "score") {
+    return {
+      tone: "score",
+      kicker: "Scoring",
+      title: "Objectives Updated",
+      help: "Control and VP are recalculated at cleanup, so this tells you exactly how the round scored."
+    };
+  }
+  return {
+    tone: "phase",
+    kicker: "Phase Update",
+    title: "Battlefield Status",
+    help: "The game is moving to a new step. Use this as your quick explanation before the next decision."
+  };
+}
+
+function queueStoryModal(entry, state) {
+  const config = getStoryModalConfig(entry);
+  uiState.storyModalQueue.push({
+    id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    tone: config.tone,
+    kicker: config.kicker,
+    title: config.title,
+    body: entry.text,
+    help: config.help,
+    subtitle: `Round ${state.round} • ${state.phase[0].toUpperCase()}${state.phase.slice(1)} Phase`
+  });
+  if (!uiState.activeStoryModal) {
+    uiState.activeStoryModal = uiState.storyModalQueue.shift();
+  }
+}
+
+function dismissStoryModal() {
+  if (!uiState.activeStoryModal) return;
+  uiState.activeStoryModal = uiState.storyModalQueue.shift() ?? null;
+  rerender();
+  maybeRunBot();
+}
+
+function renderStoryModal() {
+  const root = document.getElementById("storyModalRoot");
+  if (!root) return;
+  root.className = uiState.activeStoryModal ? "story-modal-root active" : "story-modal-root";
+  if (!uiState.activeStoryModal) {
+    root.innerHTML = "";
+    return;
+  }
+
+  const modal = uiState.activeStoryModal;
+  root.innerHTML = `
+    <div class="story-modal-backdrop"></div>
+    <section class="story-modal ${modal.tone}" role="dialog" aria-modal="true" aria-labelledby="storyModalTitle">
+      <div class="story-modal-header">
+        <div>
+          <div class="story-modal-kicker">${modal.kicker}</div>
+          <div id="storyModalTitle" class="story-modal-title">${modal.title}</div>
+          <div class="story-modal-subtitle">${modal.subtitle}</div>
+        </div>
+      </div>
+      <div class="story-modal-body">
+        <div class="story-modal-text">${modal.body}</div>
+        <div class="story-modal-help">${modal.help}</div>
+      </div>
+      <div class="story-modal-footer">
+        <div class="story-modal-queue">${uiState.storyModalQueue.length ? `${uiState.storyModalQueue.length} more update(s) queued.` : "No more queued updates."}</div>
+        <button id="storyModalCloseBtn" class="btn primary story-modal-close">Continue</button>
+      </div>
+    </section>
+  `;
+
+  root.querySelector(".story-modal-backdrop")?.addEventListener("click", dismissStoryModal);
+  root.querySelector("#storyModalCloseBtn")?.addEventListener("click", dismissStoryModal);
+}
+
 function getNotificationTone(logEntryType) {
   if (["charge_declared", "combat_resolved", "phase_advanced", "round_scored", "game_won"].includes(logEntryType)) return "success";
   if (["disengage_failed", "invalid_action", "cannot_act", "coherency_warning"].includes(logEntryType)) return "warn";
@@ -285,6 +384,10 @@ function publishLogNotifications(state) {
   const newEntries = state.log.slice(uiState.lastSeenLogCount);
   uiState.lastSeenLogCount = state.log.length;
   newEntries.forEach(entry => {
+    if (["action", "combat", "phase", "score"].includes(entry.type)) {
+      queueStoryModal(entry, state);
+      return;
+    }
     pushToastNotification(entry.text, getNotificationTone(entry.type));
   });
 }
@@ -597,6 +700,7 @@ function handleModelClick(unitId) {
 
 async function maybeRunBot() {
   if (uiState.locked) return;
+  if (uiState.activeStoryModal || uiState.storyModalQueue.length) return;
   const state = store.getState();
   if (state.activePlayer !== "playerB") return;
   if (!["movement", "assault", "combat"].includes(state.phase)) return;
@@ -621,6 +725,8 @@ function resetGame() {
   uiState.selectedUnitId = null;
   uiState.legalDestinations = [];
   uiState.pendingPass = false;
+  uiState.storyModalQueue = [];
+  uiState.activeStoryModal = null;
   cancelCurrentInteraction(uiState);
   const nextState = buildInitialState();
   uiState.lastSeenLogCount = nextState.log.length;
@@ -662,6 +768,8 @@ function importSaveFile(file) {
       uiState.selectedUnitId = null;
       uiState.legalDestinations = [];
       uiState.pendingPass = false;
+      uiState.storyModalQueue = [];
+      uiState.activeStoryModal = null;
       cancelCurrentInteraction(uiState);
       uiState.lastSeenLogCount = importedState.log?.length ?? 0;
       store.replaceState(importedState);
@@ -751,6 +859,11 @@ function wirePreviewEvents() {
 function wireKeyboardShortcuts() {
   document.addEventListener("keydown", event => {
     if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") return;
+    if (uiState.activeStoryModal && ["Escape", "Enter", " "].includes(event.key)) {
+      event.preventDefault();
+      dismissStoryModal();
+      return;
+    }
     const state = store.getState();
     const unit = getSelectedUnit(state);
 
