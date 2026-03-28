@@ -9,7 +9,7 @@ export function renderAll(state, uiState, handlers) {
   renderSelectedUnit(state, uiState);
   renderActionButtons(actionButtons);
   renderTacticalCards(state, cardButtons);
-  renderCombatQueue(state);
+  renderCombatQueue(state, uiState, handlers);
   renderLog(state);
   renderBoard(state, uiState, handlers);
   renderPhaseChecklist(state, typeof handlers.getPhaseChecklist === "function" ? handlers.getPhaseChecklist() : null);

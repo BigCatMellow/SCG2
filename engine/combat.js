@@ -701,11 +701,43 @@ function validateDeclaration(state, declaration) {
   return { ok: true, attacker, target, weapon, isMelee, isOverwatch, visible };
 }
 
+function buildFailedAttackEvent({ attacker, target, weapon, mode, visible = true, impact = null, reason }) {
+  return {
+    type: "combat_attack_resolved",
+    payload: {
+      mode,
+      attackerId: attacker?.id ?? null,
+      targetId: target?.id ?? null,
+      weaponId: weapon?.id ?? null,
+      attempts: 0,
+      hits: 0,
+      wounds: 0,
+      saved: 0,
+      unsaved: 0,
+      totalDamage: 0,
+      casualties: 0,
+      impact,
+      visible,
+      failedReason: reason ?? null
+    }
+  };
+}
+
 function resolveSingleAttack(state, declaration, rng) {
   const validation = validateDeclaration(state, declaration);
   if (!validation.ok) {
     appendLog(state, "combat", `Skipped declared attack (${declaration.attackerId} -> ${declaration.targetId}): ${validation.reason}`);
-    return null;
+    const attacker = state.units[declaration.attackerId] ?? null;
+    const target = state.units[declaration.targetId] ?? null;
+    const weaponPool = declaration.type === "charge_attack" ? attacker?.meleeWeapons : attacker?.rangedWeapons;
+    const weapon = weaponPool?.find(profile => profile.id === declaration.weaponId) ?? weaponPool?.[0] ?? null;
+    return buildFailedAttackEvent({
+      attacker,
+      target,
+      weapon,
+      mode: declaration.type === "charge_attack" ? "melee" : declaration.type === "overwatch_attack" ? "overwatch" : "ranged",
+      reason: validation.reason
+    });
   }
 
   const { attacker, target, weapon, isMelee, isOverwatch, visible } = validation;
@@ -722,14 +754,28 @@ function resolveSingleAttack(state, declaration, rng) {
       const moved = moveLeaderTowardMeleeRange(state, attacker, targetPoint, PILE_IN_DISTANCE_INCHES, MELEE_REACH_INCHES);
       if (!moved) {
         appendLog(state, "combat", `${attacker.name} could not complete pile-in movement and loses its charge attack.`);
-        return null;
+        return buildFailedAttackEvent({
+          attacker,
+          target,
+          weapon,
+          mode: "melee",
+          visible,
+          reason: "Charge attack was lost because pile-in movement could not be completed."
+        });
       }
     }
 
     const inReachAfterPileIn = distance(getLeaderPoint(attacker), targetPoint) <= MELEE_REACH_INCHES + 1e-6;
     if (!inReachAfterPileIn) {
       appendLog(state, "combat", `${attacker.name} failed to reach ${target.name} after pile-in movement.`);
-      return null;
+      return buildFailedAttackEvent({
+        attacker,
+        target,
+        weapon,
+        mode: "melee",
+        visible,
+        reason: "Charge attack did not reach melee range after pile-in movement."
+      });
     }
   }
 
@@ -768,8 +814,24 @@ function resolveSingleAttack(state, declaration, rng) {
   if (!aliveAttackerModels) {
     if (isMelee) {
       appendLog(state, "combat", `${attacker.name} has no models assigned to ${target.name} after target allocation and cannot make melee attacks.`);
+      return buildFailedAttackEvent({
+        attacker,
+        target,
+        weapon,
+        mode: "melee",
+        visible,
+        impact: impactResult,
+        reason: "No models were in fighting or supporting rank against this target."
+      });
     }
-    return null;
+    return buildFailedAttackEvent({
+      attacker,
+      target,
+      weapon,
+      mode: isOverwatch ? "overwatch" : "ranged",
+      visible,
+      reason: "Attacker had no living models able to resolve this attack."
+    });
   }
 
   const attemptsPerModel = getModifiedValue(state, {

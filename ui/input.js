@@ -2,6 +2,7 @@ import { autoArrangeModels } from "../engine/coherency.js";
 
 export function bindInputHandlers(store, controller) {
   document.getElementById("gridModeBtn").addEventListener("click", controller.onToggleGridMode);
+  document.getElementById("armyBuilderBtn")?.addEventListener("click", controller.onOpenArmyBuilder);
   document.getElementById("exportBtn")?.addEventListener("click", controller.onExportSave);
   document.getElementById("importBtn")?.addEventListener("click", controller.onImportSave);
   document.getElementById("importFileInput")?.addEventListener("change", controller.onImportFileSelected);

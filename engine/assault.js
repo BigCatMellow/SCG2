@@ -9,10 +9,17 @@ import { canTargetWithRangedWeapon, getLongRangeValue, hasInstantWeapon } from "
 import { applyBurrowedActivationEffects, removeStealthStatuses } from "./statuses.js";
 import { getBlockingForceFieldCrossings, removeForceFieldsCrossedByUnit } from "./force_fields.js";
 import { getEffectiveRangedRange } from "./support.js";
+import { resolveCombatPhase } from "./combat.js";
 
 const RUN_BONUS = 2;
 const CHARGE_DECLARE_RANGE = 8;
 const MELEE_REACH_INCHES = 1.5;
+
+function synthesizeResolvedCombatEvents(state, combatResult) {
+  const resolvedEvents = (combatResult?.events ?? []).filter(event => event.type === "combat_attack_resolved");
+  if (resolvedEvents.length) return [];
+  return (state.lastCombatReport ?? []).map(payload => ({ type: "combat_attack_resolved", payload }));
+}
 
 function getAssaultMovementBonus(unit) {
   return unit?.abilities?.includes("leg_enhancements") ? 2 : 0;
@@ -212,7 +219,7 @@ export function validateDeclareRangedAttack(state, playerId, unitId, targetUnitI
   return { ok: true, derived: { targetId: target.id } };
 }
 
-export function resolveDeclareRangedAttack(state, playerId, unitId, targetUnitId = null) {
+export function resolveDeclareRangedAttack(state, playerId, unitId, targetUnitId = null, { rng = Math.random } = {}) {
   const validation = validateDeclareRangedAttack(state, playerId, unitId, targetUnitId);
   if (!validation.ok) return validation;
 
@@ -223,10 +230,21 @@ export function resolveDeclareRangedAttack(state, playerId, unitId, targetUnitId
   state.combatQueue.push({ type: "ranged_attack", attackerId: unitId, targetId: validation.derived.targetId, weaponId });
   markUnitActivatedForCurrentPhase(state, unitId);
 
-  appendLog(state, "action", `${unit.name} declares ranged attack on ${state.units[validation.derived.targetId].name} for Combat.${brokeStealth ? " Hidden/Burrowed removed on reveal." : ""}`);
+  appendLog(state, "action", `${unit.name} opens fire on ${state.units[validation.derived.targetId].name}.${brokeStealth ? " Hidden/Burrowed removed on reveal." : ""}`);
+  const combatResult = resolveCombatPhase(state, { rng });
+  if (!combatResult.ok) return combatResult;
+  const resolvedCombatEvents = synthesizeResolvedCombatEvents(state, combatResult);
 
   endActivationAndPassTurn(state);
-  return { ok: true, state, events: [{ type: "ranged_attack_declared", payload: { attackerId: unitId, targetId: validation.derived.targetId } }] };
+  return {
+    ok: true,
+    state,
+    events: [
+      { type: "ranged_attack_declared", payload: { attackerId: unitId, targetId: validation.derived.targetId } },
+      ...(combatResult.events ?? []),
+      ...resolvedCombatEvents
+    ]
+  };
 }
 
 export function validateDeclareCharge(state, playerId, unitId, targetUnitId = null) {
@@ -304,10 +322,16 @@ export function resolveDeclareCharge(state, playerId, unitId, targetUnitId = nul
 
   if (success) {
     state.combatQueue.push({ type: "charge_attack", attackerId: unitId, targetId: validation.derived.targetId, weaponId });
-    appendLog(state, "action", `${unit.name} locks in the charge and will fight ${targetUnit.name} in Combat.`);
+    appendLog(state, "action", `${unit.name} crashes into ${targetUnit.name} and resolves the charge immediately.`);
     events.push({ type: "charge_declared", payload: { attackerId: unitId, targetId: validation.derived.targetId } });
   } else {
     appendLog(state, "action", `${unit.name} fails the charge and will not make a melee attack this round.`);
+  }
+
+  if (success || state.combatQueue.length) {
+    const combatResult = resolveCombatPhase(state, { rng });
+    if (!combatResult.ok) return combatResult;
+    events.push(...(combatResult.events ?? []), ...synthesizeResolvedCombatEvents(state, combatResult));
   }
 
   endActivationAndPassTurn(state);

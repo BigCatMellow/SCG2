@@ -1,5 +1,35 @@
 import { getObjectiveControlSnapshot } from "../engine/objectives.js";
 import { getTacticalCard } from "../data/tactical_cards.js";
+import { distance } from "../engine/geometry.js";
+
+const RULE_NOTE_COPY = {
+  anti_evade: "Makes evade rolls harder for the defender.",
+  AntiEvade: "Makes evade rolls harder for the defender.",
+  burrowed_regen: "Heals while activated underground; it does not restore destroyed models.",
+  burst_fire: "Adds extra attacks at close range.",
+  combat_shield: "Improves melee survivability by enabling evade-style defense in close combat.",
+  concentrated_fire: "Caps casualties and discards excess damage beyond the cap.",
+  critical_hit: "Pushes wounds past armour before save rolls are made.",
+  dodge: "Cancels a limited number of hits that already bypassed armour.",
+  evade: "Late defensive roll that can avoid hits after armour results are known.",
+  flying: "Ignores many ground movement and line-of-sight restrictions, but does not control objectives.",
+  hallucination: "Supports nearby units with extra ranged defense.",
+  hidden: "Harder to target at range until revealed.",
+  impact: "Rolls charge impact dice before the main melee attack resolves.",
+  indirect_fire: "Can target without line of sight.",
+  instant: "Blocks Overwatch reactions against that charge.",
+  life_support: "Reduces damage after hits and saves are already known.",
+  locked_in: "Adds attacks against stationary targets.",
+  long_range: "Extends range, usually with a hit penalty in the outer band.",
+  lurking: "Improves the first ranged evade while stationary.",
+  pinpoint: "Allows ranged attacks into engaged enemy units.",
+  pierce: "Increases damage against matching target tags.",
+  precision: "Moves failed hit dice straight into the armour pool.",
+  solid_field_projectors: "Can place a force field that blocks smaller units.",
+  surge: "Converts matching wounds into hits that bypass armour.",
+  veteran_of_tarsonis: "Improves armour while near an objective.",
+  zealous_round: "Trades an unused activation for immediate damage reduction."
+};
 
 function formatPlayerName(playerId) {
   return playerId === "playerA" ? "Blue" : "Red";
@@ -25,6 +55,38 @@ function renderStatePill(label, value, extraClass = "") {
 
 function titleCase(value) {
   return value.replace(/_/g, " ").replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function getRuleNote(term) {
+  return RULE_NOTE_COPY[term] ?? RULE_NOTE_COPY[term?.toLowerCase?.()] ?? null;
+}
+
+function collectWeaponRuleNotes(weapon) {
+  const notes = [];
+  if (weapon.hits) notes.push(["Hits", "Adds automatic armour-pool hits that skip hit and wound rolls."]);
+  if (weapon.surge) notes.push(["Surge", "Matching wounds bypass armour after the wound step."]);
+  if (weapon.precision) notes.push(["Precision", "Failed hit dice can still become hits without rolling to wound."]);
+  if (weapon.criticalHit) notes.push(["Critical Hit", "Some wounds skip armour entirely before saves."]);
+  if (weapon.antiEvade) notes.push(["Anti-Evade", "Makes the defender's evade roll harder."]);
+  if (weapon.burstFire) notes.push(["Burst Fire", "Adds extra attacks when the target is close enough."]);
+  if (weapon.lockedIn) notes.push(["Locked In", "Adds attacks against stationary targets."]);
+  if (weapon.concentratedFire) notes.push(["Concentrated Fire", "Limits casualties and discards overflow damage."]);
+  if (weapon.bulky || weapon.keywords?.includes("bulky")) notes.push(["Bulky", "Cannot be used for ranged attacks while the attacker is engaged."]);
+  if (weapon.instant || weapon.keywords?.includes("instant")) notes.push(["Instant", "Prevents Overwatch reactions against that charge."]);
+  if (weapon.indirectFire) notes.push(["Indirect Fire", "Can target without line of sight."]);
+  if (weapon.pinpoint || weapon.keywords?.includes("pinpoint")) notes.push(["Pinpoint", "Can target engaged enemy units at range."]);
+  if (weapon.longRangeInches ?? weapon.longRange) notes.push(["Long Range", "Extends range into an outer band that applies a hit penalty."]);
+  if (weapon.pierce) notes.push(["Pierce", "Raises damage against matching target tags."]);
+  return notes;
+}
+
+function renderRuleNoteList(notes) {
+  if (!notes.length) return "";
+  return `
+    <div class="rule-note-list">
+      ${notes.map(([label, copy]) => `<div class="rule-note-item"><span class="rule-note-term">${label}:</span> ${copy}</div>`).join("")}
+    </div>
+  `;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -74,6 +136,41 @@ function describeCardEffect(card) {
   return { effectText, durationText, phaseText, targetText };
 }
 
+function describeCardTeaching(card) {
+  const mods = card.effect?.modifiers ?? [];
+  const affectsSpeed = mods.some(mod => mod.key === "unit.speed");
+  const affectsHit = mods.some(mod => mod.key === "weapon.hitTarget");
+  const affectsAttacks = mods.some(mod => mod.key === "weapon.shotsPerModel" || mod.key === "weapon.attacksPerModel");
+  const usesNextAttackWindow = card.effect?.duration?.eventType === "combat_attack_resolved";
+  const usesNextMoveWindow = card.effect?.duration?.eventType === "unit_moved";
+
+  let timing = "Play it in the phase shown on the card before the affected action is locked in.";
+  if (card.phase === "movement") {
+    timing = "Play it before that unit moves, deploys, or repositions so the bonus applies to its movement choice this phase.";
+  } else if (card.phase === "assault") {
+    timing = "Play it before the unit declares its ranged attack or charge so the Combat queue is created with the buff in mind.";
+  } else if (card.phase === "combat") {
+    timing = "Play it right before that unit resolves its combat activation so the boost affects the attack that is about to happen.";
+  }
+
+  let bestUse = "Use this when one unit needs a focused boost to swing an important moment.";
+  if (affectsSpeed && usesNextMoveWindow) {
+    bestUse = "Best used when one move needs extra reach right now, like touching an objective, escaping danger, or setting up a charge lane.";
+  } else if (affectsSpeed) {
+    bestUse = "Best used early in Movement when extra speed will change where that unit can stand for the rest of the turn.";
+  } else if (affectsHit && usesNextAttackWindow) {
+    bestUse = "Best used on the unit whose next attack matters most, especially when you need reliability instead of gambling on dice.";
+  } else if (affectsAttacks && usesNextAttackWindow) {
+    bestUse = "Best used when attack volume matters, such as finishing a damaged target or forcing more saves through.";
+  } else if (affectsHit) {
+    bestUse = "Best used before a high-value attack where accuracy is the difference between pressure and a wasted activation.";
+  } else if (affectsAttacks) {
+    bestUse = "Best used before a unit commits to a big swing, because extra attacks scale with every surviving model in that unit.";
+  }
+
+  return { timing, bestUse };
+}
+
 /* ══════════════════════════════════════════════════════════════
    WEAPON FORMATTING — show what matters for decisions
    ══════════════════════════════════════════════════════════════ */
@@ -111,6 +208,7 @@ function formatWeaponFull(weapon) {
     ? (Array.isArray(weapon.pierce) ? weapon.pierce : [weapon.pierce]).map(entry => `Pierce ${entry.tag} ${entry.damage}`).join(", ")
     : "";
   const extraRules = [hits, precision, criticalHit, antiEvade, burstFire, lockedIn, concentratedFire, bulky, instant, pinpoint, pierce, indirectFire, longRange ? `Long Range ${longRange}"` : ""].filter(Boolean).join(", ");
+  const ruleNotes = renderRuleNoteList(collectWeaponRuleNotes(weapon));
 
   return `
     <div class="weapon-stat-grid">
@@ -123,6 +221,7 @@ function formatWeaponFull(weapon) {
     </div>
     ${extraRules ? `<div class="weapon-keywords">${extraRules}</div>` : ""}
     ${keywords ? `<div class="weapon-keywords">${keywords}</div>` : ""}
+    ${ruleNotes}
   `;
 }
 
@@ -236,8 +335,20 @@ export function renderTopPanel(state) {
 
   const roundSummary = document.getElementById("roundSummary");
   roundSummary.innerHTML = "";
+  const phaseSummary = getPhaseSummary(state, snapshot);
+  const summaryCard = document.createElement("div");
+  summaryCard.className = "summary-teaching-card";
+  summaryCard.innerHTML = `
+    <div class="summary-teaching-title">${phaseSummary.title}</div>
+    <div class="summary-teaching-copy">${phaseSummary.overview}</div>
+    ${phaseSummary.lines.map(line => `<div class="summary-teaching-copy"><span class="summary-teaching-label">What to watch:</span> ${line}</div>`).join("")}
+  `;
+  roundSummary.appendChild(summaryCard);
   if (!state.lastRoundSummary) {
-    roundSummary.innerHTML = '<div class="empty-state">No completed round yet.</div>';
+    const emptyLine = document.createElement("div");
+    emptyLine.className = "objective-control-line";
+    emptyLine.innerHTML = "<span>Last Round</span><span>No completed round yet</span>";
+    roundSummary.appendChild(emptyLine);
   } else {
     const scoreLine = document.createElement("div");
     scoreLine.className = "objective-control-line";
@@ -269,11 +380,360 @@ function fillPercent(state, playerId) {
   return Math.min(100, (getPlayerSupply(state, playerId) / pool) * 100);
 }
 
+function countControllingObjectives(snapshot, playerId) {
+  return Object.values(snapshot).filter(result => result?.controller === playerId && !result?.contested).length;
+}
+
+function getQueuedAttackCounts(state, playerId) {
+  return state.combatQueue.reduce((totals, entry) => {
+    const attacker = state.units[entry.attackerId];
+    if (!attacker || attacker.owner !== playerId) return totals;
+    totals.total += 1;
+    if (entry.type === "charge_attack") totals.melee += 1;
+    else if (entry.type === "overwatch_attack") totals.overwatch += 1;
+    else totals.ranged += 1;
+    return totals;
+  }, { total: 0, ranged: 0, melee: 0, overwatch: 0 });
+}
+
+function countUnactivatedUnits(state, playerId) {
+  const ids = [
+    ...state.players[playerId].battlefieldUnitIds,
+    ...(state.phase === "movement" ? state.players[playerId].reserveUnitIds : [])
+  ];
+  return ids.reduce((total, unitId) => {
+    const unit = state.units[unitId];
+    if (!unit) return total;
+    const activated = state.phase === "movement"
+      ? unit.status.movementActivated
+      : state.phase === "assault"
+        ? unit.status.assaultActivated
+        : state.phase === "combat"
+          ? unit.status.combatActivated
+          : true;
+    return total + (activated ? 0 : 1);
+  }, 0);
+}
+
+function getPhaseSummary(state, snapshot) {
+  const blueObjectives = countControllingObjectives(snapshot, "playerA");
+  const redObjectives = countControllingObjectives(snapshot, "playerB");
+  const contestedObjectives = Object.values(snapshot).filter(result => result?.contested).length;
+  const blueQueued = getQueuedAttackCounts(state, "playerA");
+  const redQueued = getQueuedAttackCounts(state, "playerB");
+  const blueUnactivated = countUnactivatedUnits(state, "playerA");
+  const redUnactivated = countUnactivatedUnits(state, "playerB");
+
+  if (state.phase === "movement") {
+    return {
+      title: "Live Phase Summary",
+      overview: blueObjectives > redObjectives
+        ? `Blue is currently ahead on board control with ${blueObjectives} objective${blueObjectives === 1 ? "" : "s"} to Red's ${redObjectives}.`
+        : redObjectives > blueObjectives
+          ? `Red currently has the stronger board grip with ${redObjectives} objective${redObjectives === 1 ? "" : "s"} to Blue's ${blueObjectives}.`
+          : `Board control is currently even, with ${contestedObjectives ? `${contestedObjectives} contested objective${contestedObjectives === 1 ? "" : "s"}` : "no clear edge yet"}.`,
+      lines: [
+        `Blue still has ${blueUnactivated} unit${blueUnactivated === 1 ? "" : "s"} left to position this phase, while Red has ${redUnactivated} waiting for its own turn cycle.`,
+        contestedObjectives
+          ? `${contestedObjectives} objective${contestedObjectives === 1 ? " is" : "s are"} contested, so movement and spacing right now will directly shape future scoring.`
+          : "Movement is deciding future lanes and objective access, even before attacks are declared."
+      ]
+    };
+  }
+
+  if (state.phase === "assault") {
+    return {
+      title: "Live Phase Summary",
+      overview: blueQueued.total > redQueued.total
+        ? `Blue has committed more attack pressure so far, with ${blueQueued.total} queued attack${blueQueued.total === 1 ? "" : "s"} to Red's ${redQueued.total}.`
+        : redQueued.total > blueQueued.total
+          ? `Red has committed more attack pressure so far, with ${redQueued.total} queued attack${redQueued.total === 1 ? "" : "s"} to Blue's ${blueQueued.total}.`
+          : `Attack pressure is still even, with both sides having ${blueQueued.total} queued attack${blueQueued.total === 1 ? "" : "s"} so far.`,
+      lines: [
+        `Blue queue mix: ${blueQueued.ranged} ranged, ${blueQueued.melee} charge, ${blueQueued.overwatch} Overwatch. Red queue mix: ${redQueued.ranged} ranged, ${redQueued.melee} charge, ${redQueued.overwatch} Overwatch.`,
+        blueUnactivated
+          ? `Blue still has ${blueUnactivated} unit${blueUnactivated === 1 ? "" : "s"} left to commit, so the queue can still change before Combat starts.`
+          : "Blue has finished declaring actions, so the next question is how the Combat queue will resolve."
+      ]
+    };
+  }
+
+  if (state.phase === "combat") {
+    return {
+      title: "Live Phase Summary",
+      overview: state.combatQueue.length
+        ? `${state.combatQueue.length} combat sequence${state.combatQueue.length === 1 ? " is" : "s are"} still waiting to resolve, so the board can swing before cleanup.`
+        : "No combat sequences remain in queue, so the board state is close to its scoring shape for this round.",
+      lines: [
+        `Queued pressure remaining: Blue ${blueQueued.total}, Red ${redQueued.total}. That shows which side still has unresolved damage or melee pressure left.`,
+        contestedObjectives
+          ? `${contestedObjectives} objective${contestedObjectives === 1 ? " is" : "s are"} still contested, so each remaining combat can directly change scoring control.`
+          : "With no contested objective, focus on whether the remaining fights remove supply or expose units before cleanup."
+      ]
+    };
+  }
+
+  return {
+    title: "Live Phase Summary",
+    overview: "Review the current board state and prepare for the next major shift in play.",
+    lines: []
+  };
+}
+
 function formatQueueType(type) {
   if (type === "ranged_attack") return "Ranged";
   if (type === "charge_attack") return "Charge";
   if (type === "overwatch_attack") return "Overwatch";
   return titleCase(type ?? "attack");
+}
+
+function getLeaderPoint(unit) {
+  if (!unit?.leadingModelId) return null;
+  const leader = unit.models?.[unit.leadingModelId];
+  if (!leader || leader.x == null || leader.y == null) return null;
+  return { x: leader.x, y: leader.y };
+}
+
+function getEnemyThreatGuidance(state, unit) {
+  const leader = getLeaderPoint(unit);
+  const enemyUnits = Object.values(state.units).filter(other =>
+    other.owner === "playerA" &&
+    other.status.location === "battlefield" &&
+    getLeaderPoint(other)
+  );
+  const nearestEnemyDistance = leader && enemyUnits.length
+    ? Math.min(...enemyUnits.map(other => distance(leader, getLeaderPoint(other))))
+    : null;
+  const bestRangedWeapon = (unit.rangedWeapons ?? []).reduce((best, weapon) => {
+    if (!best) return weapon;
+    const bestScore = (best.rangeInches ?? 0) + ((best.shotsPerModel ?? best.attacksPerModel ?? 1) * 0.1);
+    const nextScore = (weapon.rangeInches ?? 0) + ((weapon.shotsPerModel ?? weapon.attacksPerModel ?? 1) * 0.1);
+    return nextScore > bestScore ? weapon : best;
+  }, null);
+  const bestMeleeWeapon = (unit.meleeWeapons ?? []).reduce((best, weapon) => {
+    if (!best) return weapon;
+    return (weapon.attacksPerModel ?? 1) > (best.attacksPerModel ?? 1) ? weapon : best;
+  }, null);
+  const queuedAttack = state.combatQueue.find(entry => entry.attackerId === unit.id);
+  const rangedReach = bestRangedWeapon?.longRangeInches ?? bestRangedWeapon?.longRange ?? bestRangedWeapon?.rangeInches ?? null;
+  const likelyThreat = queuedAttack
+    ? queuedAttack.type === "charge_attack"
+      ? "This enemy already has a charge committed, so it is an immediate melee threat in Combat."
+      : queuedAttack.type === "overwatch_attack"
+        ? "This enemy already has an Overwatch shot committed, so it can punish a charge before melee lands."
+        : "This enemy already has a ranged attack committed for Combat, so its pressure is already locked in."
+    : bestRangedWeapon && nearestEnemyDistance != null && rangedReach != null && nearestEnemyDistance <= rangedReach + 1e-6
+      ? `Its ranged threat is already live on the current board because ${bestRangedWeapon.name} can reach about ${rangedReach}".`
+      : bestMeleeWeapon && nearestEnemyDistance != null && nearestEnemyDistance <= 8
+        ? "Its melee threat is real if it gets an Assault activation with a legal charge lane."
+        : "Its threat is more positional right now, because it still needs range, line, or timing before it can punish you cleanly.";
+  const whatToRespect = [];
+  if (bestRangedWeapon) whatToRespect.push(`${bestRangedWeapon.name} is its clearest ranged threat piece.`);
+  if (bestMeleeWeapon) whatToRespect.push(`${bestMeleeWeapon.name} is its strongest melee follow-through if it reaches combat.`);
+  if (unit.status.hidden) whatToRespect.push("It is Hidden, so normal ranged retaliation is harder until it reveals.");
+  if (unit.status.burrowed) whatToRespect.push("It is Burrowed, so it is safer for now but may be setting up a later emerge or regeneration play.");
+  if (unit.status.engaged) whatToRespect.push("It is currently engaged, which can pin it or force it to fight instead of taking a free reposition.");
+  if (unit.abilities?.includes("stabilize_wounds")) whatToRespect.push("It has support tools, so it can trade its own activation to heal or debuff instead of only attacking.");
+  if (unit.abilities?.includes("solid_field_projectors")) whatToRespect.push("It can shape movement lanes with a Force Field during Movement.");
+
+  const opportunityWindows = [];
+  if (unit.status.outOfCoherency) opportunityWindows.push("It is out of coherency, so its objective pressure is weaker until that gets fixed.");
+  if (unit.status.burrowed) opportunityWindows.push("If it stays underground, its direct interaction is limited even though it stays safer.");
+  if (unit.abilities?.includes("flying")) opportunityWindows.push("Flying ignores a lot of ground friction, so zoning it requires distance or damage, not just terrain.");
+  if (nearestEnemyDistance != null) {
+    if (bestRangedWeapon && rangedReach != null && nearestEnemyDistance > rangedReach + 1e-6) {
+      opportunityWindows.push(`You are currently outside its most relevant ranged reach at about ${nearestEnemyDistance.toFixed(1)}".`);
+    }
+    if (bestMeleeWeapon && nearestEnemyDistance > 8) {
+      opportunityWindows.push(`It is more than 8" from your nearest unit, so an immediate charge threat is not live right now.`);
+    }
+  }
+  if (!opportunityWindows.length) {
+    opportunityWindows.push("There is no obvious free punish window, so treat this unit as an active threat and plan around its next activation.");
+  }
+
+  return {
+    role: "Enemy threat assessment",
+    nextStep: likelyThreat,
+    strengths: whatToRespect,
+    warnings: opportunityWindows,
+    threatStats: {
+      nearestEnemyDistance,
+      rangedReach,
+      meleeThreat: bestMeleeWeapon ? 8 : null,
+      queuedAttack: queuedAttack ? formatQueueType(queuedAttack.type) : null
+    }
+  };
+}
+
+function getUnitPhaseGuidance(state, unit) {
+  const phase = state.phase;
+  const isReserve = unit.status.location === "reserves";
+  const isEngaged = Boolean(unit.status.engaged);
+  const isBurrowed = Boolean(unit.status.burrowed);
+  const hasRanged = Boolean(unit.rangedWeapons?.length);
+  const hasMelee = Boolean(unit.meleeWeapons?.length);
+  const hasQueuedCombat = state.combatQueue.some(entry => entry.attackerId === unit.id);
+
+  const strengths = [];
+  const warnings = [];
+  let nextStep = "Pick the action that best supports your overall plan this phase.";
+
+  if (hasRanged) strengths.push("Can project damage at range if it has line of sight and a legal target.");
+  if (hasMelee) strengths.push("Can threaten melee if it reaches contact and has models in fighting rank.");
+  if (unit.abilities?.includes("flying")) strengths.push("Flying lets it ignore many ground movement and line-of-sight restrictions.");
+  if (unit.abilities?.includes("solid_field_projectors")) strengths.push("Can shape the board by placing a force field during Movement.");
+  if (unit.abilities?.includes("stabilize_wounds")) strengths.push("Can support nearby allies with Medic tools instead of only acting for itself.");
+  if (unit.status.hidden) strengths.push("Hidden makes ranged targeting harder and can improve survivability until the unit reveals itself.");
+  if (unit.status.burrowed) strengths.push("Burrowed units stay safer underground and some of them heal when they activate.");
+
+  if (isEngaged) warnings.push("It is engaged, so normal repositioning is limited until it disengages or fights.");
+  if (isBurrowed) warnings.push("Burrowed units cannot declare normal ranged attacks or charges until they emerge.");
+  if (unit.status.outOfCoherency) warnings.push("Out of coherency units lose objective pressure until the formation is fixed.");
+  if (unit.abilities?.includes("flying")) warnings.push("Flying helps movement, but flying units do not control objectives.");
+  if (unit.rangedWeapons?.some(weapon => weapon.bulky || weapon.keywords?.includes("bulky"))) warnings.push("Bulky ranged weapons cannot be used while the unit is engaged.");
+
+  if (phase === "movement") {
+    if (isReserve) {
+      nextStep = "Deploy this reserve onto the battlefield so it can start contributing before the phase ends.";
+    } else if (isEngaged) {
+      nextStep = "Decide whether this unit should hold position for later or disengage now to free itself for future actions.";
+    } else if (unit.abilities?.includes("solid_field_projectors")) {
+      nextStep = "Consider whether a force field would block an approach lane before you spend the unit on a normal move or hold.";
+    } else {
+      nextStep = "Use Movement to claim space, line up later attacks, or hold this unit in a safe firing lane.";
+    }
+  } else if (phase === "assault") {
+    if (isBurrowed) {
+      nextStep = "This unit is underground, so decide whether to stay hidden for safety or reveal later when the fight matters more.";
+    } else if (isEngaged) {
+      nextStep = hasMelee
+        ? "This unit is already tied up, so melee follow-through in Combat may matter more than new ranged plans."
+        : "Because it is engaged, this unit has fewer clean Assault options and may need to hold or protect space.";
+    } else if (hasRanged && hasMelee) {
+      nextStep = "Choose whether this unit wants a safer ranged declaration or a higher-risk charge that can swing melee pressure.";
+    } else if (hasRanged) {
+      nextStep = "Look for the best legal ranged declaration now, because the attack will be locked into the Combat queue.";
+    } else if (hasMelee) {
+      nextStep = "If it can reach an enemy, a charge may set up this unit's strongest damage in Combat.";
+    } else {
+      nextStep = "Use Hold or Run to reposition this unit for a better board state before Combat begins.";
+    }
+  } else if (phase === "combat") {
+    if (hasQueuedCombat) {
+      nextStep = "Resolve this unit when you are ready. Review the queue and its sequence first so you know what rules will fire.";
+    } else if (isBurrowed && isEngaged) {
+      nextStep = "Close Ranks will surface the unit so it can actually participate in melee above ground.";
+    } else {
+      nextStep = "If this unit has no queued attack, use Hold or other legal combat actions while you finish the active fights elsewhere.";
+    }
+  }
+
+  return {
+    role: strengths.length
+      ? strengths[0]
+      : "This unit is a general-purpose piece, so its role depends on where you need pressure this turn.",
+    strengths,
+    warnings,
+    nextStep
+  };
+}
+
+function getCombatQueueTeachingCopy(entry, attacker, defender, weapon) {
+  const attackerName = attacker?.name ?? "Attacker";
+  const defenderName = defender?.name ?? "Defender";
+  const weaponName = weapon?.name ?? "attack";
+
+  if (entry.type === "overwatch_attack") {
+    return {
+      what: `${attackerName} will fire ${weaponName} into ${defenderName} before that charge finishes resolving.`,
+      why: "Overwatch is a reaction attack. It can chip damage off the charger or soften the melee before the main fight begins."
+    };
+  }
+  if (entry.type === "charge_attack") {
+    return {
+      what: `${attackerName} will resolve its charge into ${defenderName}, including impact if it has that rule, then fight in melee with models in fighting and supporting rank.`,
+      why: "Charge attacks are where melee damage, impact dice, Close Ranks, and primary target focus matter most."
+    };
+  }
+  return {
+    what: `${attackerName} has declared ${weaponName} into ${defenderName}. This attack is locked into the Combat Phase queue and will resolve when that unit activates.`,
+    why: "Ranged attacks are declared in Assault Phase, but the dice are rolled later in Combat. That gives both players time to understand what is coming."
+  };
+}
+
+function getPhaseChecklistTeachingCopy(state, checklist) {
+  const phase = state.phase;
+  const remainingCount = checklist.remaining.length;
+  if (phase === "movement") {
+    return {
+      goal: "Get your force into position. Deploy reserves, move onto objectives, or hold key units in place.",
+      done: "A unit counts as finished once it deploys, moves, uses a movement ability, or holds.",
+      next: remainingCount
+        ? `You still have ${remainingCount} unit${remainingCount === 1 ? "" : "s"} to position before you can safely pass.`
+        : "Everything is positioned. Passing will hand the game into Assault Phase."
+    };
+  }
+  if (phase === "assault") {
+    return {
+      goal: "Decide what each unit is trying to accomplish next: shoot, charge, run, or hold.",
+      done: "A unit counts as finished once it declares its attack or movement choice for the coming Combat Phase.",
+      next: remainingCount
+        ? `You still have ${remainingCount} unit${remainingCount === 1 ? "" : "s"} that need an Assault decision.`
+        : "All attack declarations are locked in. Passing will start Combat and begin resolving the queue."
+    };
+  }
+  if (phase === "combat") {
+    return {
+      goal: "Resolve the attacks and fights already set up earlier, one unit activation at a time.",
+      done: "A unit counts as finished once its queued attacks or melee sequence have fully resolved in Combat.",
+      next: remainingCount
+        ? `You still have ${remainingCount} unit${remainingCount === 1 ? "" : "s"} left to resolve before scoring.`
+        : "Combat is complete. Passing will move into cleanup and objective scoring."
+    };
+  }
+  return {
+    goal: "Resolve the current phase.",
+    done: "Finish each eligible unit once.",
+    next: remainingCount ? `${remainingCount} unit(s) remain.` : "You are ready to advance."
+  };
+}
+
+function getLogTeachingCopy(entry) {
+  if (entry.type === "combat") {
+    return {
+      title: "Combat Result",
+      why: "This is where declared attacks finally turned into hits, saves, casualties, and rule interactions."
+    };
+  }
+  if (entry.type === "phase") {
+    return {
+      title: "Phase Change",
+      why: "A new phase changes what units are allowed to do and what decisions matter next."
+    };
+  }
+  if (entry.type === "card") {
+    return {
+      title: "Tactical Card",
+      why: "A temporary modifier is now active, so one unit or timing window has changed in your favor."
+    };
+  }
+  if (entry.type === "scoring") {
+    return {
+      title: "Scoring Update",
+      why: "This changed victory points or board pressure, so it affects who is actually winning."
+    };
+  }
+  if (entry.type === "action") {
+    return {
+      title: "Unit Action",
+      why: "This changed the board state or committed a unit's activation for the phase."
+    };
+  }
+  return {
+    title: titleCase(entry.type ?? "update"),
+    why: "This entry records a rule or board-state change that may affect what happens next."
+  };
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -311,8 +771,26 @@ export function renderSelectedUnit(state, uiState) {
   const alive = unit.modelIds.filter(id => unit.models[id].alive).length;
   const total = unit.modelIds.length;
   const abilities = unit.abilities?.length ? unit.abilities.map(a => titleCase(a)).join(", ") : "None";
+  const abilityNotes = (unit.abilities ?? [])
+    .map(ability => [titleCase(ability), getRuleNote(ability)])
+    .filter(([, note]) => Boolean(note));
   const tags = unit.tags?.length ? unit.tags.join(", ") : "";
   const defense = unit.defense ?? {};
+  const isFriendlyUnit = unit.owner === "playerA";
+  const guidance = isFriendlyUnit ? getUnitPhaseGuidance(state, unit) : getEnemyThreatGuidance(state, unit);
+  const guidanceTitle = isFriendlyUnit ? "How To Use This Unit Right Now" : "How To Read This Enemy Right Now";
+  const guidanceRoleLabel = isFriendlyUnit ? "Role In This Phase" : "Main Threat Right Now";
+  const guidanceNextStepLabel = isFriendlyUnit ? "Best Next Step" : "Most Likely Next Step";
+  const guidanceStrengthsLabel = isFriendlyUnit ? "What It Does Well" : "What Makes It Dangerous";
+  const guidanceWarningsLabel = isFriendlyUnit ? "What To Watch Out For" : "How To Play Around It";
+  const threatStats = !isFriendlyUnit && guidance.threatStats
+    ? [
+        ["Nearest Friendly", guidance.threatStats.nearestEnemyDistance ? `${guidance.threatStats.nearestEnemyDistance}"` : "None nearby"],
+        ["Ranged Reach", guidance.threatStats.rangedReach ? `${guidance.threatStats.rangedReach}"` : "No ranged threat"],
+        ["Melee Threat", guidance.threatStats.meleeThreat ? `${guidance.threatStats.meleeThreat}"` : "No melee threat"],
+        ["Queued Attack", guidance.threatStats.queuedAttack || "None queued"]
+      ]
+    : [];
 
   // Weapon sections with full stats
   const rangedHtml = unit.rangedWeapons?.length
@@ -354,6 +832,25 @@ export function renderSelectedUnit(state, uiState) {
     </div>
     ${defense.dodge ? `<div class="selected-detail"><div class="k">Defense Rule</div><div class="v">Dodge ${defense.dodge}</div></div>` : ""}
     ${abilities !== "None" ? `<div class="selected-detail"><div class="k">Abilities</div><div class="v">${abilities}</div></div>` : ""}
+    <div class="selected-detail teaching-detail">
+      <div class="k">${guidanceTitle}</div>
+      <div class="v">
+        <div class="selected-guidance-grid">
+          <div class="selected-guidance-card">
+            <div class="selected-guidance-label">${guidanceRoleLabel}</div>
+            <div>${guidance.role}</div>
+          </div>
+          <div class="selected-guidance-card">
+            <div class="selected-guidance-label">${guidanceNextStepLabel}</div>
+            <div>${guidance.nextStep}</div>
+          </div>
+        </div>
+        ${threatStats.length ? `<div class="selected-guidance-list selected-threat-list"><div class="selected-guidance-label">Threat Readout</div><div class="selected-guidance-grid">${threatStats.map(([label, value]) => `<div class="selected-guidance-card selected-threat-card"><div class="selected-guidance-label">${label}</div><div>${value}</div></div>`).join("")}</div></div>` : ""}
+        ${guidance.strengths.length ? `<div class="selected-guidance-list"><div class="selected-guidance-label">${guidanceStrengthsLabel}</div>${guidance.strengths.map(item => `<div class="selected-guidance-item">${item}</div>`).join("")}</div>` : ""}
+        ${guidance.warnings.length ? `<div class="selected-guidance-list"><div class="selected-guidance-label">${guidanceWarningsLabel}</div>${guidance.warnings.map(item => `<div class="selected-guidance-item warning">${item}</div>`).join("")}</div>` : ""}
+      </div>
+    </div>
+    ${abilityNotes.length ? `<div class="selected-detail"><div class="k">How These Rules Work</div><div class="v">${renderRuleNoteList(abilityNotes)}</div></div>` : ""}
     <div class="selected-detail">
       <div class="k">Ranged Weapons</div>
       <div class="v">${rangedHtml}</div>
@@ -377,6 +874,31 @@ export function renderActionButtons(buttons) {
     return;
   }
   buttons.forEach(button => container.appendChild(button));
+
+  const disabledReasons = buttons
+    .filter(button => button.disabled && button.dataset?.disabledReason)
+    .map(button => ({ label: button.dataset.actionLabel ?? button.textContent ?? "Action", reason: button.dataset.disabledReason }));
+
+  if (disabledReasons.length) {
+    const explainer = document.createElement("div");
+    explainer.className = "action-explainer";
+    explainer.innerHTML = `
+      <div class="action-explainer-title">Why Some Actions Are Unavailable</div>
+      ${disabledReasons.map(entry => `<div class="action-explainer-item"><span class="action-explainer-label">${entry.label}:</span> ${entry.reason}</div>`).join("")}
+    `;
+    container.appendChild(explainer);
+  }
+
+  const recommended = buttons.find(button => button.dataset?.recommended === "true");
+  if (recommended) {
+    const explainer = document.createElement("div");
+    explainer.className = "action-explainer action-recommendation";
+    explainer.innerHTML = `
+      <div class="action-explainer-title">${recommended.dataset.recommendationTitle ?? "Recommended Action"}</div>
+      <div class="action-explainer-item"><span class="action-explainer-label">${recommended.dataset.actionLabel ?? recommended.textContent ?? "Action"}:</span> ${recommended.dataset.recommendationReason ?? "This is the strongest next step right now."}</div>
+    `;
+    container.appendChild(explainer);
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -406,6 +928,7 @@ export function renderTacticalCards(state, buttons) {
   for (const cardEntry of hand) {
     const card = getTacticalCard(cardEntry.cardId);
     const desc = describeCardEffect(card);
+    const teaching = describeCardTeaching(card);
     const isPlayablePhase = card.phase === state.phase;
     const matchingButton = buttons.find(b => b.dataset?.cardId === cardEntry.instanceId);
 
@@ -420,6 +943,10 @@ export function renderTacticalCards(state, buttons) {
       <div class="tc-meta">
         <span>${desc.durationText}</span>
         <span>${desc.targetText}</span>
+      </div>
+      <div class="tc-teaching">
+        <div class="tc-teaching-line"><span class="tc-teaching-label">Best used when:</span> ${teaching.bestUse}</div>
+        <div class="tc-teaching-line"><span class="tc-teaching-label">Timing tip:</span> ${teaching.timing}</div>
       </div>
     `;
 
@@ -451,7 +978,7 @@ export function renderTacticalCards(state, buttons) {
    COMBAT QUEUE — with attack preview
    ══════════════════════════════════════════════════════════════ */
 
-export function renderCombatQueue(state) {
+export function renderCombatQueue(state, uiState, handlers = {}) {
   const panel = document.getElementById("combatQueuePanel");
   if (!panel) return;
   panel.innerHTML = "";
@@ -460,6 +987,14 @@ export function renderCombatQueue(state) {
     panel.innerHTML = '<div class="empty-state">No queued attacks. Declare Ranged or Charge in Assault Phase to queue attacks here.</div>';
     return;
   }
+
+  const intro = document.createElement("div");
+  intro.className = "combat-queue-intro";
+  intro.innerHTML = `
+    <div class="combat-queue-title">How to read this queue</div>
+    <div class="combat-queue-copy">These are the attacks already committed for Combat. The top entry resolves first, and each card explains what kind of interaction will happen when that unit activates.</div>
+  `;
+  panel.appendChild(intro);
 
   state.combatQueue.forEach((entry, index) => {
     const attacker = state.units[entry.attackerId];
@@ -477,9 +1012,15 @@ export function renderCombatQueue(state) {
     const weaponInfo = weapon ? formatWeaponOneLine(weapon) : "unknown weapon";
 
     const aliveModels = attacker.modelIds.filter(id => attacker.models[id].alive).length;
+    const attackCount = aliveModels * (weapon?.attacksPerModel ?? weapon?.shotsPerModel ?? 1);
+    const teachingCopy = getCombatQueueTeachingCopy(entry, attacker, defender, weapon);
 
     const row = document.createElement("div");
-    row.className = `combat-queue-entry ${isYours ? "queue-yours" : "queue-enemy"}`;
+    const isFocused = uiState?.hoveredCombatQueueIndex === index || uiState?.selectedCombatQueueIndex === index;
+    row.className = `combat-queue-entry ${isYours ? "queue-yours" : "queue-enemy"} ${isFocused ? "focused" : ""}`;
+    row.addEventListener("mouseenter", () => handlers.onCombatQueueHover?.(index));
+    row.addEventListener("mouseleave", () => handlers.onCombatQueueHover?.(null));
+    row.addEventListener("click", () => handlers.onCombatQueueClick?.(index));
     row.innerHTML = `
       <div class="cq-header">
         <span class="cq-index">#${index + 1}</span>
@@ -488,7 +1029,12 @@ export function renderCombatQueue(state) {
       </div>
       <div class="cq-detail">
         ${weapon ? `<div class="cq-weapon">${weapon.name}: ${weaponInfo}</div>` : ""}
-        <div class="cq-preview">${aliveModels} models alive × ${weapon?.attacksPerModel ?? weapon?.shotsPerModel ?? 1} attacks = ${aliveModels * (weapon?.attacksPerModel ?? weapon?.shotsPerModel ?? 1)} dice in Attack Pool</div>
+        <div class="cq-preview">${aliveModels} models alive × ${weapon?.attacksPerModel ?? weapon?.shotsPerModel ?? 1} attacks = ${attackCount} dice in Attack Pool</div>
+        <div class="cq-teaching-block">
+          <div class="cq-teaching-line"><span class="cq-teaching-label">What happens:</span> ${teachingCopy.what}</div>
+          <div class="cq-teaching-line"><span class="cq-teaching-label">Why it matters:</span> ${teachingCopy.why}</div>
+          <div class="cq-teaching-line"><span class="cq-teaching-label">Board preview:</span> Hover or click this entry to highlight the attacker, target, and likely combat lane on the board.</div>
+        </div>
       </div>
     `;
     panel.appendChild(row);
@@ -512,7 +1058,14 @@ export function renderPhaseChecklist(state, checklist) {
   }
 
   const pct = checklist.total > 0 ? Math.round((checklist.done / checklist.total) * 100) : 0;
+  const teachingCopy = getPhaseChecklistTeachingCopy(state, checklist);
   container.innerHTML = `
+    <div class="checklist-teaching-card">
+      <div class="checklist-teaching-title">${titleCase(state.phase)} Goal</div>
+      <div class="checklist-teaching-copy">${teachingCopy.goal}</div>
+      <div class="checklist-teaching-copy"><span class="checklist-teaching-label">What counts as done:</span> ${teachingCopy.done}</div>
+      <div class="checklist-teaching-copy"><span class="checklist-teaching-label">What to do next:</span> ${teachingCopy.next}</div>
+    </div>
     <div class="checklist-progress">
       <div class="checklist-bar"><div class="checklist-fill" style="width:${pct}%"></div></div>
       <div class="checklist-label">${checklist.done} / ${checklist.total} activated</div>
@@ -532,11 +1085,17 @@ export function renderPhaseChecklist(state, checklist) {
 export function renderLog(state) {
   const panel = document.getElementById("logPanel");
   panel.innerHTML = "";
-  state.log.forEach(entry => {
+  const recentEntries = state.log.slice(-16);
+  recentEntries.forEach(entry => {
     const div = document.createElement("div");
     const isCombat = entry.type === "combat";
+    const teaching = getLogTeachingCopy(entry);
     div.className = `log-entry ${isCombat ? "log-combat" : ""}`;
-    div.innerHTML = `<div class="meta">R${entry.round} · ${titleCase(entry.phase)} · ${entry.type}</div><div>${entry.text}</div>`;
+    div.innerHTML = `
+      <div class="meta">R${entry.round} · ${titleCase(entry.phase)} · ${teaching.title}</div>
+      <div class="log-body">${entry.text}</div>
+      <div class="log-teaching"><span class="log-teaching-label">Why it matters:</span> ${teaching.why}</div>
+    `;
     panel.appendChild(div);
   });
 }

@@ -1,5 +1,11 @@
 import { getObjectiveControlSnapshot } from "../engine/objectives.js";
-import { pathLength, pathTravelCost, gridDistance } from "../engine/geometry.js";
+import { pathLength, pathTravelCost, gridDistance, distance } from "../engine/geometry.js";
+import { canTargetWithRangedWeapon, getLeaderPoint, getLongRangeValue, hasLineOfSight } from "../engine/visibility.js";
+import { getEffectiveRangedRange } from "../engine/support.js";
+import { validateMove, validateDisengage } from "../engine/movement.js";
+import { validateRun } from "../engine/assault.js";
+import { validateDeploy } from "../engine/deployment.js";
+import { validatePlaceForceField } from "../engine/force_fields.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -45,16 +51,92 @@ function addTerrain(svg, terrain) {
   }
 }
 
-function addObjectives(svg, objectives, snapshot) {
+function addObjectives(svg, objectives, snapshot, uiState, handlers) {
   for (const obj of objectives) {
     const r = snapshot[obj.id];
     let cls = "objective-ring neutral";
     if (r?.contested) cls = "objective-ring contested";
     if (r?.controller === "playerA") cls = "objective-ring playerA";
     if (r?.controller === "playerB") cls = "objective-ring playerB";
-    svg.appendChild(el("circle", { cx: obj.x, cy: obj.y, r: 0.75, class: "objective-marker" }));
-    svg.appendChild(el("circle", { cx: obj.x, cy: obj.y, r: 2, class: cls }));
+    const isFocused = uiState.hoveredObjectiveId === obj.id || uiState.selectedObjectiveId === obj.id;
+    const marker = el("circle", {
+      cx: obj.x,
+      cy: obj.y,
+      r: 0.75,
+      class: `objective-marker ${isFocused ? "focused" : ""}`
+    });
+    const ring = el("circle", {
+      cx: obj.x,
+      cy: obj.y,
+      r: 2,
+      class: `${cls} ${isFocused ? "focused" : ""}`
+    });
+    for (const node of [ring, marker]) {
+      node.addEventListener("mouseenter", () => handlers.onObjectiveHover?.(obj.id));
+      node.addEventListener("mouseleave", () => handlers.onObjectiveHover?.(null));
+      node.addEventListener("click", event => {
+        event.stopPropagation();
+        handlers.onObjectiveClick?.(obj.id);
+      });
+    }
+    svg.appendChild(marker);
+    svg.appendChild(ring);
   }
+}
+
+function getObjectiveTeachingState(state, objective, result) {
+  const nearbyUnits = Object.values(state.units)
+    .filter(unit => unit.status.location === "battlefield")
+    .map(unit => {
+      const leader = getLeaderPoint(unit);
+      if (!leader) return null;
+      const objectiveDistance = distance(leader, objective);
+      if (objectiveDistance > 3.01) return null;
+      return {
+        unit,
+        distance: objectiveDistance
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.distance - b.distance);
+  const blueUnits = nearbyUnits.filter(entry => entry.unit.owner === "playerA");
+  const redUnits = nearbyUnits.filter(entry => entry.unit.owner === "playerB");
+  const blueSupply = result?.playerASupply ?? 0;
+  const redSupply = result?.playerBSupply ?? 0;
+  const controller = result?.controller ? (result.controller === "playerA" ? "Blue" : "Red") : "No one";
+  const margin = Math.abs(blueSupply - redSupply);
+  let title = `${objective.id.toUpperCase()} Control Check`;
+  let reason = `${controller} currently controls this objective because the nearby supply is ${blueSupply} for Blue versus ${redSupply} for Red.`;
+  let teaching = result?.contested
+    ? "This marker is contested, so neither player has clean control until one side removes supply or leaves the circle."
+    : result?.controller
+      ? `To flip this objective, the other side needs to overcome a ${margin} supply gap inside the 3\" control area.`
+      : "No side has established control yet, so the next unit to add clear supply pressure here can swing scoring.";
+  if (blueSupply === redSupply && blueSupply > 0) {
+    reason = `Both sides have ${blueSupply} supply within 3", so this objective is tied up and no one controls it cleanly.`;
+  } else if (!nearbyUnits.length) {
+    reason = "No battlefield unit is currently within 3\" of this objective, so it is uncontrolled.";
+    teaching = "Move a unit into the 3\" control area to start scoring pressure here.";
+  }
+  const metrics = [
+    `${controller}${result?.contested ? " (contested)" : ""}`,
+    `Blue ${blueSupply} supply`,
+    `Red ${redSupply} supply`
+  ];
+  const contributors = nearbyUnits.slice(0, 4).map(entry => {
+    const side = entry.unit.owner === "playerA" ? "Blue" : "Red";
+    return `${side}: ${entry.unit.name} (${entry.unit.currentSupplyValue} SP at ${entry.distance.toFixed(1)}")`;
+  });
+  if (!contributors.length) {
+    contributors.push("No units are close enough to contest this objective right now.");
+  }
+  return {
+    title,
+    reason,
+    teaching,
+    metrics,
+    contributors
+  };
 }
 
 function addPathPreview(svg, preview) {
@@ -88,13 +170,128 @@ function addSelection(svg, state, uiState) {
   }));
 }
 
+function getFocusedCombatQueueEntry(state, uiState) {
+  const index = uiState.hoveredCombatQueueIndex ?? uiState.selectedCombatQueueIndex;
+  if (index == null) return null;
+  const entry = state.combatQueue[index];
+  if (!entry) return null;
+  const attacker = state.units[entry.attackerId];
+  const defender = state.units[entry.targetId];
+  if (!attacker || !defender) return null;
+  const attackerPoint = getLeaderPoint(attacker);
+  const defenderPoint = getLeaderPoint(defender);
+  if (!attackerPoint || !defenderPoint) return null;
+  const isCharge = entry.type === "charge_attack";
+  const weaponPool = isCharge ? attacker.meleeWeapons : attacker.rangedWeapons;
+  const weapon = weaponPool?.find(candidate => candidate.id === entry.weaponId) ?? weaponPool?.[0] ?? null;
+  const distanceToTarget = distance(attackerPoint, defenderPoint);
+  return { index, entry, attacker, defender, attackerPoint, defenderPoint, weapon, isCharge, distanceToTarget };
+}
+
+function addCombatQueuePreview(svg, state, uiState) {
+  const focus = getFocusedCombatQueueEntry(state, uiState);
+  if (!focus) return;
+  const attackerSq = snap(state.units[focus.attacker.id].models[focus.attacker.leadingModelId]);
+  const defenderSq = snap(state.units[focus.defender.id].models[focus.defender.leadingModelId]);
+  svg.appendChild(el("rect", {
+    x: attackerSq.x - 0.18,
+    y: attackerSq.y - 0.18,
+    width: 1.36,
+    height: 1.36,
+    rx: 0.15,
+    class: "queue-focus-ring attacker"
+  }));
+  svg.appendChild(el("rect", {
+    x: defenderSq.x - 0.18,
+    y: defenderSq.y - 0.18,
+    width: 1.36,
+    height: 1.36,
+    rx: 0.15,
+    class: "queue-focus-ring defender"
+  }));
+  svg.appendChild(el("line", {
+    x1: focus.attackerPoint.x,
+    y1: focus.attackerPoint.y,
+    x2: focus.defenderPoint.x,
+    y2: focus.defenderPoint.y,
+    class: `queue-preview-line ${focus.isCharge ? "charge" : "ranged"}`
+  }));
+  const midpoint = {
+    x: (focus.attackerPoint.x + focus.defenderPoint.x) / 2,
+    y: (focus.attackerPoint.y + focus.defenderPoint.y) / 2
+  };
+  const label = el("text", {
+    x: midpoint.x,
+    y: midpoint.y - 0.3,
+    class: "queue-preview-label"
+  });
+  label.textContent = `#${focus.index + 1} ${focus.isCharge ? "Charge" : "Shot"} ${focus.distanceToTarget.toFixed(1)}"`;
+  svg.appendChild(label);
+  const ringRadius = focus.isCharge
+    ? 8
+    : Math.max(focus.weapon?.rangeInches ?? 0, focus.weapon?.longRangeInches ?? focus.weapon?.longRange ?? 0);
+  if (ringRadius > 0) {
+    svg.appendChild(el("circle", {
+      cx: focus.attackerPoint.x,
+      cy: focus.attackerPoint.y,
+      r: ringRadius,
+      class: `range-ring queue-preview ${focus.isCharge ? "charge" : "ranged"}`
+    }));
+  }
+}
+
+function addAftermathHighlights(svg, state, uiState) {
+  const highlights = uiState.boardHighlights ?? [];
+  if (!highlights.length) return;
+  for (const highlight of highlights) {
+    if (highlight.kind === "unit") {
+      const unit = state.units[highlight.unitId];
+      const point = unit ? getLeaderPoint(unit) : null;
+      if (!point) continue;
+      svg.appendChild(el("circle", {
+        cx: point.x,
+        cy: point.y,
+        r: 0.92,
+        class: `aftermath-ring ${highlight.tone ?? "attention"}`
+      }));
+      const label = el("text", {
+        x: point.x,
+        y: point.y - 0.95,
+        class: `aftermath-label ${highlight.tone ?? "attention"}`
+      });
+      label.textContent = highlight.label ?? "Update";
+      svg.appendChild(label);
+      continue;
+    }
+    if (highlight.kind === "objective") {
+      const objective = state.deployment.missionMarkers.find(marker => marker.id === highlight.objectiveId);
+      if (!objective) continue;
+      svg.appendChild(el("circle", {
+        cx: objective.x,
+        cy: objective.y,
+        r: 2.42,
+        class: `aftermath-ring objective ${highlight.tone ?? "score"}`
+      }));
+      const label = el("text", {
+        x: objective.x,
+        y: objective.y - 2.7,
+        class: `aftermath-label ${highlight.tone ?? "score"}`
+      });
+      label.textContent = highlight.label ?? "Objective";
+      svg.appendChild(label);
+    }
+  }
+}
+
 /* ── Preview: single ghost block ── */
 function addPreviewUnit(svg, state, uiState) {
   if (!uiState.previewUnit) return;
   const { leader } = uiState.previewUnit;
+  const previewState = getPreviewOverlayState(state, uiState);
   if (uiState.previewUnit.kind === "force_field") {
     svg.appendChild(el("rect", {
-      x: leader.x - 0.5, y: leader.y - 0.5, width: 1, height: 1, rx: 0.12, class: "force-field-preview"
+      x: leader.x - 0.5, y: leader.y - 0.5, width: 1, height: 1, rx: 0.12,
+      class: `force-field-preview ${previewState?.ok === false ? "invalid" : "valid"}`
     }));
     return;
   }
@@ -102,7 +299,8 @@ function addPreviewUnit(svg, state, uiState) {
   if (!unit) return;
   const sq = { x: Math.round(leader.x) - 0.5, y: Math.round(leader.y) - 0.5 };
   svg.appendChild(el("rect", {
-    x: sq.x, y: sq.y, width: 1, height: 1, rx: 0.12, class: "deploy-preview"
+    x: sq.x, y: sq.y, width: 1, height: 1, rx: 0.12,
+    class: `deploy-preview ${previewState?.ok === false ? "invalid" : "valid"}`
   }));
 }
 
@@ -152,18 +350,310 @@ function addTargetHighlights(svg, state, uiState) {
     if (t.owner !== "playerB" || t.status.location !== "battlefield") continue;
     const tl = t.models[t.leadingModelId];
     if (!tl || tl.x == null) continue;
-    const dx = tl.x - lm.x, dy = tl.y - lm.y, dist = Math.sqrt(dx * dx + dy * dy);
-    let ok = false;
-    if (uiState.mode === "declare_ranged" && unit.rangedWeapons?.length)
-      ok = dist <= Math.max(...unit.rangedWeapons.map(w => w.rangeInches ?? 0));
-    if (uiState.mode === "declare_charge") ok = dist <= 8;
-    if (ok) {
-      const sq = snap(tl);
-      svg.appendChild(el("rect", {
-        x: sq.x - 0.2, y: sq.y - 0.2, width: 1.4, height: 1.4, rx: 0.15, class: "target-highlight"
-      }));
+    const targeting = getTargetOverlayState(state, uiState, unit, t);
+    if (!targeting) continue;
+    const sq = snap(tl);
+    svg.appendChild(el("rect", {
+      x: sq.x - 0.2, y: sq.y - 0.2, width: 1.4, height: 1.4, rx: 0.15,
+      class: `target-highlight ${targeting.ok ? "valid" : "invalid"} ${uiState.hoveredUnitId === t.id ? "hovered" : ""}`
+    }));
+    const label = el("text", {
+      x: sq.x + 0.5,
+      y: sq.y - 0.38,
+      class: `target-status-label ${targeting.ok ? "valid" : "invalid"}`
+    });
+    label.textContent = targeting.ok ? "Valid" : "Blocked";
+    svg.appendChild(label);
+  }
+}
+
+function getRangedTargetOverlayState(state, attacker, target) {
+  const weapon = attacker?.rangedWeapons?.[0] ?? null;
+  const attackerPoint = getLeaderPoint(attacker);
+  const targetPoint = getLeaderPoint(target);
+  if (!weapon || !attackerPoint || !targetPoint) return null;
+  const maxRange = getEffectiveRangedRange(state, attacker, weapon) ?? getLongRangeValue(weapon) ?? weapon.rangeInches ?? 0;
+  const targetDistance = distance(attackerPoint, targetPoint);
+  if (targetDistance > maxRange + 1e-6) {
+    return {
+      ok: false,
+      reason: `Out of range. ${weapon.name} reaches ${maxRange}" here, and this target is ${targetDistance.toFixed(1)}" away.`,
+      distance: targetDistance,
+      maxRange
+    };
+  }
+  const targeting = canTargetWithRangedWeapon(state, attacker, target, weapon);
+  const visible = hasLineOfSight(state, attacker, target);
+  if (!targeting.ok) {
+    return {
+      ok: false,
+      reason: targeting.reason,
+      distance: targetDistance,
+      maxRange,
+      visible
+    };
+  }
+  return {
+    ok: true,
+    reason: visible
+      ? `Legal target. ${weapon.name} can reach ${targetDistance.toFixed(1)}" and line of sight is clear.`
+      : `Legal target. ${weapon.name} can reach ${targetDistance.toFixed(1)}", and Indirect Fire is allowing the shot without line of sight.`,
+    distance: targetDistance,
+    maxRange,
+    visible
+  };
+}
+
+function getChargeTargetOverlayState(attacker, target) {
+  const attackerPoint = getLeaderPoint(attacker);
+  const targetPoint = getLeaderPoint(target);
+  if (!attackerPoint || !targetPoint) return null;
+  const targetDistance = distance(attackerPoint, targetPoint);
+  if (targetDistance > 8 + 1e-6) {
+    return {
+      ok: false,
+      reason: `Outside charge declaration range. Charges must be declared within 8", and this target is ${targetDistance.toFixed(1)}" away.`,
+      distance: targetDistance,
+      maxRange: 8
+    };
+  }
+  return {
+    ok: true,
+    reason: `Legal charge target. The declaration is within 8", then the actual charge roll will be Speed + 1D6 against the required distance.`,
+    distance: targetDistance,
+    maxRange: 8
+  };
+}
+
+function getTargetOverlayState(state, uiState, attacker, target) {
+  if (uiState.mode === "declare_ranged") return getRangedTargetOverlayState(state, attacker, target);
+  if (uiState.mode === "declare_charge") return getChargeTargetOverlayState(attacker, target);
+  return null;
+}
+
+function isFlyingUnit(unit) {
+  return unit?.tags?.includes("Flying") || unit?.abilities?.includes("flying");
+}
+
+function getMovementMetrics(state, path) {
+  if (!path?.length || path.length < 2) return null;
+  const directDistance = pathLength(path);
+  const travelCost = state.rules?.gridMode
+    ? gridDistance(path[0], path[path.length - 1])
+    : pathTravelCost(path, state.board.terrain);
+  return { directDistance, travelCost };
+}
+
+function getPreviewOverlayState(state, uiState) {
+  if (!uiState.selectedUnitId) return null;
+  const unit = state.units[uiState.selectedUnitId];
+  if (!unit || unit.owner !== "playerA") return null;
+
+  if (uiState.mode === "move" || uiState.mode === "disengage" || uiState.mode === "run") {
+    const path = uiState.previewPath?.path;
+    if (!path?.length) return null;
+    const metrics = getMovementMetrics(state, path);
+    const validator = uiState.mode === "move"
+      ? validateMove(state, "playerA", unit.id, unit.leadingModelId, path)
+      : uiState.mode === "disengage"
+        ? validateDisengage(state, "playerA", unit.id, unit.leadingModelId, path)
+        : validateRun(state, "playerA", unit.id, unit.leadingModelId, path);
+    const actionLabel = uiState.mode === "move" ? "Move" : uiState.mode === "disengage" ? "Disengage" : "Run";
+    const movementNote = isFlyingUnit(unit)
+      ? "Flying ignores blocked ground and normal enemy ground engagement when moving."
+      : "Ground movement must respect terrain, bases, force fields, and enemy engagement distance.";
+    return {
+      ok: validator.ok,
+      kicker: `${actionLabel} Check`,
+      title: `${unit.name} → ${path[path.length - 1].x.toFixed(1)}", ${path[path.length - 1].y.toFixed(1)}"`,
+      metrics: [
+        metrics ? `${metrics.travelCost.toFixed(state.rules?.gridMode ? 0 : 1)}${state.rules?.gridMode ? " sq" : "\""} cost` : null,
+        metrics && !state.rules?.gridMode && Math.abs(metrics.travelCost - metrics.directDistance) > 0.05
+          ? `${metrics.directDistance.toFixed(1)}" straight-line`
+          : null,
+        validator.ok ? "Legal destination" : "Blocked destination"
+      ].filter(Boolean),
+      reason: validator.ok
+        ? `${actionLabel} is legal here. ${movementNote}`
+        : validator.message,
+      teaching: validator.ok
+        ? (uiState.mode === "disengage"
+          ? "Disengage is the safe way to break out of melee, but the unit still needs enough movement to end clear."
+          : uiState.mode === "run"
+            ? "Run is mainly for repositioning in Assault. It gives extra distance but still follows movement-blocking rules."
+            : "Normal Move is best for clean repositioning because it preserves future options and avoids melee penalties.")
+        : null
+    };
+  }
+
+  if (uiState.mode === "force_field") {
+    const point = uiState.previewUnit?.leader;
+    if (!point) return null;
+    const validator = validatePlaceForceField(state, "playerA", unit.id, point);
+    const leader = unit.models[unit.leadingModelId];
+    return {
+      ok: validator.ok,
+      kicker: "Force Field Check",
+      title: `${unit.name} → Force Field`,
+      metrics: [
+        leader?.x != null && leader?.y != null ? `${distance(leader, point).toFixed(1)}" from projector` : null,
+        validator.ok ? "Legal placement" : "Blocked placement"
+      ].filter(Boolean),
+      reason: validator.ok
+        ? "Legal placement. The token is within 8\", fully on the battlefield, and not overlapping other models or terrain."
+        : validator.message,
+      teaching: validator.ok
+        ? "Smaller units will be blocked by this token, while size 3 or larger units can crash through and destroy it."
+        : null
+    };
+  }
+
+  if (uiState.mode === "deploy") {
+    const path = uiState.previewPath?.path;
+    const point = uiState.previewUnit?.leader;
+    if (!path?.length || !point) return null;
+    const entryPoint = path[0];
+    const validator = validateDeploy(
+      state,
+      "playerA",
+      unit.id,
+      unit.leadingModelId,
+      entryPoint,
+      path,
+      uiState.previewUnit.placements ?? null
+    );
+    const metrics = getMovementMetrics(state, path);
+    return {
+      ok: validator.ok,
+      kicker: "Deploy Check",
+      title: `${unit.name} → ${point.x.toFixed(1)}", ${point.y.toFixed(1)}"`,
+      metrics: [
+        metrics ? `${metrics.travelCost.toFixed(state.rules?.gridMode ? 0 : 1)}${state.rules?.gridMode ? " sq" : "\""} cost` : null,
+        validator.ok ? "Legal deployment" : "Blocked deployment"
+      ].filter(Boolean),
+      reason: validator.ok
+        ? "Legal deployment. The entry point, distance, and final position all satisfy the reserve rules for this unit."
+        : validator.message,
+      teaching: validator.ok
+        ? "Deployment still follows movement limits from the entry point, so difficult ground and blocked landing spaces matter."
+        : null
+    };
+  }
+
+  return null;
+}
+
+function renderBattlefieldHint(state, uiState) {
+  const hint = document.getElementById("battlefieldHint");
+  if (!hint) return;
+  const snapshot = getObjectiveControlSnapshot(state);
+  const focusedObjectiveId = uiState.hoveredObjectiveId ?? uiState.selectedObjectiveId ?? null;
+  const focusedQueueEntry = getFocusedCombatQueueEntry(state, uiState);
+  if (!uiState.mode && focusedQueueEntry) {
+    const weaponName = focusedQueueEntry.weapon?.name ?? (focusedQueueEntry.isCharge ? "melee attack" : "ranged attack");
+    const likelyRules = [];
+    if (focusedQueueEntry.entry.type === "overwatch_attack") likelyRules.push("Overwatch");
+    if (focusedQueueEntry.isCharge) likelyRules.push("Charge", "Impact", "Fighting Rank");
+    if (focusedQueueEntry.weapon?.keywords?.includes("surge") || focusedQueueEntry.weapon?.surge) likelyRules.push("Surge");
+    if (focusedQueueEntry.weapon?.keywords?.includes("precision") || focusedQueueEntry.weapon?.precision) likelyRules.push("Precision");
+    if (focusedQueueEntry.weapon?.keywords?.includes("burst_fire") || focusedQueueEntry.weapon?.burstFire) likelyRules.push("Burst Fire");
+    hint.className = "battlefield-hint active neutral";
+    hint.innerHTML = `
+      <div class="battlefield-hint-kicker">Combat Queue Preview</div>
+      <div class="battlefield-hint-title">#${focusedQueueEntry.index + 1} ${focusedQueueEntry.attacker.name} → ${focusedQueueEntry.defender.name}</div>
+      <div class="battlefield-hint-metrics">
+        <span>${focusedQueueEntry.entry.type === "charge_attack" ? "Charge attack" : focusedQueueEntry.entry.type === "overwatch_attack" ? "Overwatch attack" : "Ranged attack"}</span>
+        <span>${focusedQueueEntry.distanceToTarget.toFixed(1)}" apart</span>
+        <span>${weaponName}</span>
+      </div>
+      <div class="battlefield-hint-copy">${focusedQueueEntry.attacker.name} is already committed to attack ${focusedQueueEntry.defender.name} when this queue step resolves. The board preview shows who is involved and the lane between them.</div>
+      <div class="battlefield-hint-copy secondary">${focusedQueueEntry.isCharge ? "Watch the charge lane first, then impact, melee ranks, and any overwatch or defensive reactions." : "Watch range, line of sight, and any attack keywords that will change how the shot converts into damage."}</div>
+      <div class="battlefield-hint-copy secondary">${likelyRules.length ? `Likely rules in play: ${[...new Set(likelyRules)].join(", ")}.` : "This preview is here to show the committed attacker, target, and timing before dice are rolled."}</div>
+    `;
+    return;
+  }
+  if (!uiState.mode && focusedObjectiveId) {
+    const objective = state.deployment.missionMarkers.find(marker => marker.id === focusedObjectiveId);
+    if (objective) {
+      const objectiveHint = getObjectiveTeachingState(state, objective, snapshot[objective.id]);
+      hint.className = "battlefield-hint active neutral";
+      hint.innerHTML = `
+        <div class="battlefield-hint-kicker">Objective Guide</div>
+        <div class="battlefield-hint-title">${objectiveHint.title}</div>
+        <div class="battlefield-hint-metrics">
+          ${objectiveHint.metrics.map(metric => `<span>${metric}</span>`).join("")}
+        </div>
+        <div class="battlefield-hint-copy">${objectiveHint.reason}</div>
+        <div class="battlefield-hint-copy secondary">${objectiveHint.teaching}</div>
+        <div class="battlefield-hint-copy secondary">${objectiveHint.contributors.join(" • ")}</div>
+      `;
+      return;
     }
   }
+  if (!uiState.selectedUnitId || !uiState.mode) {
+    hint.className = "battlefield-hint";
+    hint.innerHTML = "";
+    return;
+  }
+  if (["move", "disengage", "run", "deploy", "force_field"].includes(uiState.mode)) {
+    const previewState = getPreviewOverlayState(state, uiState);
+    if (!previewState) {
+      hint.className = "battlefield-hint active neutral";
+      hint.innerHTML = `
+        <div class="battlefield-hint-kicker">Battlefield Guide</div>
+        <div class="battlefield-hint-title">Choose A Destination</div>
+        <div class="battlefield-hint-copy">Move the cursor over the board to see whether that destination is legal and which movement rule is helping or blocking it.</div>
+      `;
+      return;
+    }
+    hint.className = `battlefield-hint active ${previewState.ok ? "valid" : "invalid"}`;
+    hint.innerHTML = `
+      <div class="battlefield-hint-kicker">${previewState.kicker}</div>
+      <div class="battlefield-hint-title">${previewState.title}</div>
+      <div class="battlefield-hint-metrics">
+        ${previewState.metrics.map(metric => `<span>${metric}</span>`).join("")}
+      </div>
+      <div class="battlefield-hint-copy">${previewState.reason}</div>
+      ${previewState.teaching ? `<div class="battlefield-hint-copy secondary">${previewState.teaching}</div>` : ""}
+    `;
+    return;
+  }
+  if (uiState.mode !== "declare_ranged" && uiState.mode !== "declare_charge") {
+    hint.className = "battlefield-hint";
+    hint.innerHTML = "";
+    return;
+  }
+  const selected = state.units[uiState.selectedUnitId];
+  const hovered = uiState.hoveredUnitId ? state.units[uiState.hoveredUnitId] : null;
+  if (!selected || !hovered || hovered.owner !== "playerB") {
+    const modeTitle = uiState.mode === "declare_ranged" ? "Choose A Ranged Target" : "Choose A Charge Target";
+    const helper = uiState.mode === "declare_ranged"
+      ? "Hover an enemy unit to see whether the shot is legal and which rule is helping or blocking it."
+      : "Hover an enemy unit to see whether the charge can be declared and what the next roll will need to do.";
+    hint.className = "battlefield-hint active neutral";
+    hint.innerHTML = `
+      <div class="battlefield-hint-kicker">Battlefield Guide</div>
+      <div class="battlefield-hint-title">${modeTitle}</div>
+      <div class="battlefield-hint-copy">${helper}</div>
+    `;
+    return;
+  }
+  const targeting = getTargetOverlayState(state, uiState, selected, hovered);
+  if (!targeting) {
+    hint.className = "battlefield-hint";
+    hint.innerHTML = "";
+    return;
+  }
+  hint.className = `battlefield-hint active ${targeting.ok ? "valid" : "invalid"}`;
+  hint.innerHTML = `
+    <div class="battlefield-hint-kicker">${uiState.mode === "declare_ranged" ? "Target Check" : "Charge Check"}</div>
+    <div class="battlefield-hint-title">${selected.name} → ${hovered.name}</div>
+    <div class="battlefield-hint-metrics">
+      <span>${targeting.distance.toFixed(1)}" away</span>
+      <span>${targeting.ok ? "Legal target" : "Blocked target"}</span>
+    </div>
+    <div class="battlefield-hint-copy">${targeting.reason}</div>
+  `;
 }
 
 /* ── Unactivated indicators ── */
@@ -201,7 +691,7 @@ function abbreviateName(name) {
   return words.map(w => w[0]).join("").toUpperCase();
 }
 
-function addUnits(svg, state, uiState, onModelClick) {
+function addUnits(svg, state, uiState, onModelClick, onModelHover) {
   const gridMode = Boolean(state.rules?.gridMode);
 
   for (const unit of Object.values(state.units)) {
@@ -234,6 +724,8 @@ function addUnits(svg, state, uiState, onModelClick) {
       event.stopPropagation();
       onModelClick(unit.id, unit.leadingModelId);
     });
+    block.addEventListener("mouseenter", () => onModelHover?.(unit.id));
+    block.addEventListener("mouseleave", () => onModelHover?.(null));
 
     // Tooltip
     const title = el("title");
@@ -297,15 +789,18 @@ export function renderBoard(state, uiState, handlers) {
   addZones(svg, state);
   addGrid(svg, state.board.widthInches, state.board.heightInches);
   addTerrain(svg, state.board.terrain);
-  addObjectives(svg, state.deployment.missionMarkers, snap);
+  addObjectives(svg, state.deployment.missionMarkers, snap, uiState, handlers);
   addLegalOverlay(svg, state, uiState);
   addActivationIndicators(svg, state);
   addRangeRings(svg, state, uiState);
   addTargetHighlights(svg, state, uiState);
+  addCombatQueuePreview(svg, state, uiState);
+  addAftermathHighlights(svg, state, uiState);
   addPathPreview(svg, uiState.previewPath);
   addSelection(svg, state, uiState);
   addPreviewUnit(svg, state, uiState);
-  addUnits(svg, state, uiState, handlers.onModelClick);
+  addUnits(svg, state, uiState, handlers.onModelClick, handlers.onModelHover);
+  renderBattlefieldHint(state, uiState);
 
   svg.onclick = event => {
     const point = screenToBoardPoint(svg, event.clientX, event.clientY);

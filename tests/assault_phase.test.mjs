@@ -67,7 +67,7 @@ test('assault run moves unit and marks assault activation', () => {
 });
 
 
-test('declare ranged attack queues a combat declaration and activates unit', () => {
+test('declare ranged attack resolves immediately during the assault activation', () => {
   const state = buildState();
   placeLeaderAt(state, 'blue_marines_1', 5, 5);
   placeLeaderAt(state, 'red_zealots_1', 10, 5);
@@ -77,26 +77,29 @@ test('declare ranged attack queues a combat declaration and activates unit', () 
 
   assert.equal(declareResult.ok, true);
   assert.equal(state.units.blue_marines_1.status.assaultActivated, true);
-  assert.equal(state.combatQueue.length, 1);
-  assert.equal(state.combatQueue[0].targetId, 'red_zealots_1');
+  assert.equal(state.combatQueue.length, 0);
+  assert.ok(declareResult.events.some(event => event.type === 'combat_attack_resolved'), JSON.stringify({ events: declareResult.events, report: state.lastCombatReport }));
+  assert.equal(state.lastCombatReport.length, 1);
+  assert.equal(state.lastCombatReport[0].targetId, 'red_zealots_1');
 });
 
-test('declare charge queues melee declaration and activates unit', () => {
+test('declare charge resolves immediately during the assault activation', () => {
   const state = buildState();
   placeLeaderAt(state, 'blue_marines_1', 5, 5);
-  placeLeaderAt(state, 'red_zealots_1', 10, 5);
+  placeLeaderAt(state, 'red_zealots_1', 7, 5);
   advanceToNextPhase(state);
 
-  const declareResult = resolveDeclareCharge(state, 'playerA', 'blue_marines_1');
+  const declareResult = resolveDeclareCharge(state, 'playerA', 'blue_marines_1', null, { rng: () => 0.99 });
 
   assert.equal(declareResult.ok, true);
   assert.equal(state.units.blue_marines_1.status.assaultActivated, true);
-  assert.equal(state.combatQueue.length, 1);
-  assert.equal(state.combatQueue[0].type, 'charge_attack');
-  assert.equal(state.combatQueue[0].targetId, 'red_zealots_1');
+  assert.equal(state.combatQueue.length, 0);
+  assert.equal(declareResult.events.some(event => event.type === 'combat_attack_resolved'), true);
+  assert.equal(state.lastCombatReport[0].mode, 'melee');
+  assert.equal(state.lastCombatReport[0].targetId, 'red_zealots_1');
 });
 
-test('declare charge also queues overwatch when defender has ranged weapon and has not used it', () => {
+test('declare charge resolves overwatch and the charge attack immediately when defender can react', () => {
   const state = createInitialGameState({
     missionId: 'take_and_hold',
     deploymentId: 'crossfire',
@@ -106,15 +109,15 @@ test('declare charge also queues overwatch when defender has ranged weapon and h
   });
   beginRound(state);
   placeLeaderAt(state, 'blue_zealots_1', 5, 5);
-  placeLeaderAt(state, 'red_marines_1', 10, 5);
+  placeLeaderAt(state, 'red_marines_1', 7, 5);
   advanceToNextPhase(state);
 
-  const declareResult = resolveDeclareCharge(state, 'playerA', 'blue_zealots_1');
+  const declareResult = resolveDeclareCharge(state, 'playerA', 'blue_zealots_1', null, { rng: () => 0.99 });
 
   assert.equal(declareResult.ok, true);
-  assert.equal(state.combatQueue.length, 2);
-  assert.equal(state.combatQueue[0].type, 'overwatch_attack');
-  assert.equal(state.combatQueue[1].type, 'charge_attack');
+  assert.equal(state.combatQueue.length, 0);
+  assert.equal(declareResult.events.some(event => event.type === 'combat_attack_resolved' && event.payload.mode === 'overwatch'), true);
+  assert.equal(declareResult.events.some(event => event.type === 'combat_attack_resolved' && event.payload.mode === 'melee'), true);
   assert.equal(state.units.red_marines_1.status.overwatchUsedThisRound, true);
 });
 
@@ -128,15 +131,16 @@ test('instant charge shuts down overwatch reactions', () => {
   });
   beginRound(state);
   placeLeaderAt(state, 'blue_zealots_1', 5, 5);
-  placeLeaderAt(state, 'red_marines_1', 10, 5);
+  placeLeaderAt(state, 'red_marines_1', 7, 5);
   advanceToNextPhase(state);
   state.units.blue_zealots_1.meleeWeapons[0].instant = true;
 
   const declareResult = resolveDeclareCharge(state, 'playerA', 'blue_zealots_1');
 
   assert.equal(declareResult.ok, true);
-  assert.equal(state.combatQueue.length, 1);
-  assert.equal(state.combatQueue[0].type, 'charge_attack');
+  assert.equal(state.combatQueue.length, 0);
+  assert.equal(declareResult.events.some(event => event.type === 'combat_attack_resolved' && event.payload.mode === 'overwatch'), false);
+  assert.equal(declareResult.events.some(event => event.type === 'combat_attack_resolved' && event.payload.mode === 'melee'), true);
   assert.equal(state.units.red_marines_1.status.overwatchUsedThisRound, false);
   assert.ok(state.log.some(entry => entry.text.includes('has Instant')));
 });
@@ -161,6 +165,7 @@ test('charge can fail and reports no queued melee attack when roll is short', ()
   assert.equal(state.combatQueue.some(entry => entry.type === 'charge_attack' && entry.attackerId === 'blue_dragoon_1'), false);
   assert.equal(declareResult.events[0].type, 'charge_roll_resolved');
   assert.equal(declareResult.events[0].payload.success, false);
+  assert.equal(declareResult.events.some(event => event.type === 'combat_attack_resolved'), false);
 });
 
 test('hidden target beyond 4 inches cannot be declared as a ranged attack target', () => {
@@ -221,7 +226,8 @@ test('pinpoint ranged weapons can target engaged enemy units', () => {
   const declareResult = resolveDeclareRangedAttack(state, 'playerA', 'blue_marines_1', 'red_zealots_1');
 
   assert.equal(declareResult.ok, true);
-  assert.equal(state.combatQueue[0].targetId, 'red_zealots_1');
+  assert.equal(state.combatQueue.length, 0);
+  assert.equal(state.lastCombatReport[0].targetId, 'red_zealots_1');
 });
 
 test('indirect fire can be declared without line of sight', () => {
@@ -240,8 +246,9 @@ test('indirect fire can be declared without line of sight', () => {
   const declareResult = resolveDeclareRangedAttack(state, 'playerA', 'blue_kerrigan_1', 'red_marines_1');
 
   assert.equal(declareResult.ok, true);
-  assert.equal(state.combatQueue[0].type, 'ranged_attack');
-  assert.equal(state.combatQueue[0].targetId, 'red_marines_1');
+  assert.equal(state.combatQueue.length, 0);
+  assert.equal(state.lastCombatReport[0].mode, 'ranged');
+  assert.equal(state.lastCombatReport[0].targetId, 'red_marines_1');
 });
 
 test('flying units ignore blocker paths and enemy ground engagement while moving', () => {
