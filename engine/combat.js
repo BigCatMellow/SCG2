@@ -4,12 +4,15 @@ import { recomputeUnitCurrentSupply, refreshAllSupply } from "./supply.js";
 import { getModifiedValue, onEvent } from "./effects.js";
 import { refreshEngagement } from "./movement.js";
 import { applyCloseRanks } from "./statuses.js";
+import { isUnitWithinObjectiveRange } from "./objectives.js";
+import { markUnitActivatedForExplicitPhase } from "./activation.js";
 import {
   canTargetWithRangedWeapon,
   getAntiEvadeValue,
   getLongRangeValue,
   targetGetsEvadeOpportunity
 } from "./visibility.js";
+import { getEffectiveRangedRange, resolveLifeSupport } from "./support.js";
 
 const MELEE_REACH_INCHES = 1.5;
 const CHARGE_MAX_RANGE_INCHES = 8;
@@ -148,6 +151,54 @@ export function getMeleeTargetSelection(state, unitId) {
     attackerName: attacker.name,
     currentPrimaryTargetId,
     options
+  };
+}
+
+function getAttackDeclarationLabel(declaration) {
+  if (declaration.type === "overwatch_attack") return "Overwatch";
+  if (declaration.type === "charge_attack") return "Charge Attack";
+  return "Ranged Attack";
+}
+
+export function getCombatActivationPreview(state, unitId) {
+  const attacker = state.units[unitId];
+  if (!attacker || attacker.status.location !== "battlefield") return null;
+
+  const declarations = expandMeleeDeclarations(state, state.combatQueue.filter(entry =>
+    ["ranged_attack", "charge_attack", "overwatch_attack"].includes(entry.type) && entry.attackerId === unitId
+  ));
+  if (!declarations.length) return null;
+
+  const steps = [];
+  if (attacker.status.burrowed && declarations.some(entry => entry.type === "charge_attack")) {
+    steps.push({
+      kind: "close_ranks",
+      label: "Close Ranks",
+      detail: `${attacker.name} emerges from Burrowed formation before its melee sequence starts.`
+    });
+  }
+
+  declarations.forEach((declaration, index) => {
+    const target = state.units[declaration.targetId];
+    const weapon = declaration.type === "charge_attack"
+      ? attacker.meleeWeapons?.[0]
+      : attacker.rangedWeapons?.[0];
+    steps.push({
+      kind: declaration.type,
+      label: getAttackDeclarationLabel(declaration),
+      detail: `${attacker.name} targets ${target?.name ?? declaration.targetId}${weapon?.name ? ` with ${weapon.name}` : ""}.`,
+      targetId: declaration.targetId,
+      targetName: target?.name ?? declaration.targetId,
+      weaponName: weapon?.name ?? null,
+      isPrimaryTarget: declaration.type === "charge_attack" && (declaration.primaryTargetId ?? declaration.targetId) === declaration.targetId,
+      order: index + 1
+    });
+  });
+
+  return {
+    unitId,
+    attackerName: attacker.name,
+    steps
   };
 }
 
@@ -361,6 +412,47 @@ function getBestSaveTarget(unit, armorPenetration) {
   return Math.min(armorSave, unit.defense.invulnerableSave);
 }
 
+function getObjectiveDefenseBonus(state, unit) {
+  return unit?.abilities?.includes("veteran_of_tarsonis") && isUnitWithinObjectiveRange(state, unit, 3) ? 1 : 0;
+}
+
+function hasAncillaryCarapaceAvailable(target) {
+  return target?.abilities?.includes("ancillary_carapace") && !target?.status?.ancillaryCarapaceUsedThisPhase;
+}
+
+function getPhaseActivationStatus(unit, phase) {
+  if (phase === "movement") return Boolean(unit?.status?.movementActivated);
+  if (phase === "assault") return Boolean(unit?.status?.assaultActivated);
+  if (phase === "combat") return Boolean(unit?.status?.combatActivated);
+  return false;
+}
+
+function resolveZealousRound(state, target, totalDamage) {
+  if (totalDamage <= 0) return null;
+  if (!target?.abilities?.includes("zealous_round")) return null;
+  if (target.status?.zealousRoundUsedThisRound) return null;
+  if (getPhaseActivationStatus(target, state.phase)) return null;
+
+  const reducedBy = Math.min(2, totalDamage);
+  if (reducedBy <= 0) return null;
+
+  target.status.zealousRoundUsedThisRound = true;
+  markUnitActivatedForExplicitPhase(state, target.id, state.phase);
+  appendLog(
+    state,
+    "combat",
+    `${target.name} uses Zealous Round, counts as activated in ${state.phase}, and reduces incoming damage by ${reducedBy}.`
+  );
+  return { reducedBy, phase: state.phase };
+}
+
+function resolveAncillaryCarapace(target, saveableWounds) {
+  if (saveableWounds <= 0) return null;
+  if (!hasAncillaryCarapaceAvailable(target)) return null;
+  target.status.ancillaryCarapaceUsedThisPhase = true;
+  return { bonus: 1 };
+}
+
 function isUnitReceivingCover(state, unit) {
   const coverTerrain = state.board.terrain.filter(terrain => !terrain.impassable && terrain.kind === "cover");
   if (!coverTerrain.length) return false;
@@ -504,13 +596,16 @@ function resolveEvade(state, attacker, target, weapon, isMelee, visible, unsaved
   if (!targetGetsEvadeOpportunity(state, attacker, target, weapon, isMelee, visible)) return null;
 
   const baseTarget = Math.max(2, Math.min(6, Math.round(target.defense.evadeTarget)));
+  const lurkingBonus = !isMelee && target?.abilities?.includes("lurking") && target?.status?.stationary && !target?.status?.lurkingUsedThisRound ? 1 : 0;
   const antiEvade = getAntiEvadeValue(weapon);
-  const evadeTarget = Math.max(2, Math.min(6, baseTarget + antiEvade));
+  const evadeTarget = Math.max(2, Math.min(6, baseTarget + antiEvade - lurkingBonus));
   const saved = rollSuccesses(unsaved, evadeTarget, rng);
+  if (lurkingBonus > 0) target.status.lurkingUsedThisRound = true;
 
   return {
     baseTarget,
     antiEvade,
+    lurkingBonus,
     target: evadeTarget,
     saved
   };
@@ -538,7 +633,7 @@ function validateDeclaration(state, declaration) {
   if (isMelee) {
     if (range > CHARGE_MAX_RANGE_INCHES + 1e-6) return { ok: false, reason: "Charge target moved out of declared charge range." };
   } else {
-    const maxRange = getLongRangeValue(weapon) ?? weapon.rangeInches;
+    const maxRange = getEffectiveRangedRange(state, attacker, weapon) ?? getLongRangeValue(weapon) ?? weapon.rangeInches;
     const modifiedRange = getModifiedValue(state, {
       timing: "combat_resolve_attack",
       unitId: attacker.id,
@@ -638,7 +733,8 @@ function resolveSingleAttack(state, declaration, rng) {
     key: "weapon.hitTarget",
     baseValue: weapon.hitTarget
   }).value;
-  const longRangePenalty = !isMelee && weapon.rangeInches != null && getLongRangeValue(weapon) != null
+  const effectiveForcedRange = getEffectiveRangedRange(state, attacker, weapon);
+  const longRangePenalty = !isMelee && effectiveForcedRange == null && weapon.rangeInches != null && getLongRangeValue(weapon) != null
     && distance(getLeaderPoint(attacker), getLeaderPoint(target)) > weapon.rangeInches + 1e-6
       ? 1
       : 0;
@@ -647,6 +743,8 @@ function resolveSingleAttack(state, declaration, rng) {
   const woundTargetBase = woundTargetForProfile(weapon.strength, target.defense.toughness);
   const woundTarget = applyWeaponKeywordsToWoundTarget(weapon, target, woundTargetBase);
   let saveTarget = getBestSaveTarget(target, weapon.armorPenetration);
+  const objectiveDefenseBonus = getObjectiveDefenseBonus(state, target);
+  if (objectiveDefenseBonus > 0) saveTarget = Math.max(2, saveTarget - objectiveDefenseBonus);
   const coverApplies = !isMelee && isUnitReceivingCover(state, target);
   if (coverApplies) saveTarget = Math.max(2, saveTarget - 1);
 
@@ -670,12 +768,17 @@ function resolveSingleAttack(state, declaration, rng) {
   const dodgeResult = resolveDodge(target, rawBypassedArmour);
   const bypassedArmour = Math.max(0, rawBypassedArmour - (dodgeResult?.prevented ?? 0));
   const saveableWounds = Math.max(0, wounds - rawBypassedArmour + (dodgeResult?.prevented ?? 0));
+  const ancillaryCarapaceResult = resolveAncillaryCarapace(target, saveableWounds);
+  if (ancillaryCarapaceResult) saveTarget = Math.max(2, saveTarget - ancillaryCarapaceResult.bonus);
   const saved = rollSuccesses(saveableWounds, saveTarget, rng);
   const unsavedBeforeEvade = Math.max(0, saveableWounds - saved) + bypassedArmour;
   const evadeResult = resolveEvade(state, attacker, target, weapon, isMelee, visible, unsavedBeforeEvade, rng);
   const unsaved = Math.max(0, unsavedBeforeEvade - (evadeResult?.saved ?? 0));
   const damagePerHit = getPierceDamage(weapon, target) ?? weapon.damage;
-  const totalDamage = unsaved * damagePerHit;
+  const rawTotalDamage = unsaved * damagePerHit;
+  const lifeSupportResult = resolveLifeSupport(state, target, rawTotalDamage);
+  const zealousRoundResult = resolveZealousRound(state, target, Math.max(0, rawTotalDamage - (lifeSupportResult?.reducedBy ?? 0)));
+  const totalDamage = Math.max(0, rawTotalDamage - (lifeSupportResult?.reducedBy ?? 0) - (zealousRoundResult?.reducedBy ?? 0));
   const concentratedFireCap = getConcentratedFireValue(weapon);
   const damageResult = applyDamageToUnit(target, totalDamage, {
     casualtyCap: concentratedFireCap > 0 ? concentratedFireCap : null
@@ -693,7 +796,7 @@ function resolveSingleAttack(state, declaration, rng) {
   appendLog(
     state,
     "combat",
-    `${attacker.name} ${isMelee ? "charges" : isOverwatch ? "fires overwatch at" : "attacks"} ${target.name} with ${weapon.name}: ${attempts} attacks, ${hits} hits${precisionApplied ? ` (including ${precisionApplied} Precision)` : ""}, ${wounds} wounds${criticalHitResult ? `, Critical Hit ${criticalHitResult.applied} bypassed armour` : ""}${surgeResult ? `, Surge ${surgeResult.dice} rolled ${surgeResult.roll} vs ${surgeResult.matchedTags.join("/")} -> ${surgeResult.applied} bypassed armour` : ""}${dodgeResult ? `, Dodge prevented ${dodgeResult.prevented} bypassed hits` : ""}, ${saved} saves${coverApplies ? " (cover)" : ""}${evadeResult ? `, ${evadeResult.saved} evade saves on ${evadeResult.target}+` : ""}${!visible && !isMelee ? ", indirect fire without line of sight" : ""}${longRangePenalty ? ", long range penalty applied" : ""}${burstFireApplied ? `, Burst Fire +${burstFireRule.bonusAttacks}` : ""}${lockedInBonus ? `, Locked In +${lockedInBonus}` : ""}${getAntiEvadeValue(weapon) ? `, Anti-Evade ${getAntiEvadeValue(weapon)}` : ""}${damagePerHit !== weapon.damage ? `, Pierce damage ${damagePerHit}` : ""}${concentratedFireCap > 0 ? `, Concentrated Fire cap ${concentratedFireCap}${damageResult.discardedDamage > 0 ? ` (discarded ${damageResult.discardedDamage} damage)` : ""}` : ""}${isMelee ? `, Fighting Rank ${meleeRankProfile.fightingRankModels.length}, Supporting Rank ${meleeRankProfile.supportingRankModels.length}, Assigned Models ${aliveAttackerModels}${primaryTargetFocus ? ", Primary Target Focus" : ""}` : ""}, ${casualties} casualties.`
+    `${attacker.name} ${isMelee ? "charges" : isOverwatch ? "fires overwatch at" : "attacks"} ${target.name} with ${weapon.name}: ${attempts} attacks, ${hits} hits${precisionApplied ? ` (including ${precisionApplied} Precision)` : ""}, ${wounds} wounds${criticalHitResult ? `, Critical Hit ${criticalHitResult.applied} bypassed armour` : ""}${surgeResult ? `, Surge ${surgeResult.dice} rolled ${surgeResult.roll} vs ${surgeResult.matchedTags.join("/")} -> ${surgeResult.applied} bypassed armour` : ""}${dodgeResult ? `, Dodge prevented ${dodgeResult.prevented} bypassed hits` : ""}, ${saved} saves${ancillaryCarapaceResult ? " (Ancillary Carapace)" : ""}${objectiveDefenseBonus ? ` (objective armor +${objectiveDefenseBonus})` : ""}${coverApplies ? " (cover)" : ""}${evadeResult ? `, ${evadeResult.saved} evade saves on ${evadeResult.target}+${evadeResult.lurkingBonus ? " with Lurking" : ""}` : ""}${!visible && !isMelee ? ", indirect fire without line of sight" : ""}${longRangePenalty ? ", long range penalty applied" : ""}${burstFireApplied ? `, Burst Fire +${burstFireRule.bonusAttacks}` : ""}${lockedInBonus ? `, Locked In +${lockedInBonus}` : ""}${getAntiEvadeValue(weapon) ? `, Anti-Evade ${getAntiEvadeValue(weapon)}` : ""}${damagePerHit !== weapon.damage ? `, Pierce damage ${damagePerHit}` : ""}${lifeSupportResult ? `, Life Support reduced damage by ${lifeSupportResult.reducedBy}` : ""}${zealousRoundResult ? `, Zealous Round reduced damage by ${zealousRoundResult.reducedBy}` : ""}${concentratedFireCap > 0 ? `, Concentrated Fire cap ${concentratedFireCap}${damageResult.discardedDamage > 0 ? ` (discarded ${damageResult.discardedDamage} damage)` : ""}` : ""}${isMelee ? `, Fighting Rank ${meleeRankProfile.fightingRankModels.length}, Supporting Rank ${meleeRankProfile.supportingRankModels.length}, Assigned Models ${aliveAttackerModels}${primaryTargetFocus ? ", Primary Target Focus" : ""}` : ""}, ${casualties} casualties.`
   );
 
   return {
@@ -714,11 +817,15 @@ function resolveSingleAttack(state, declaration, rng) {
       precision: precisionApplied,
       criticalHit: criticalHitResult,
       evade: evadeResult,
+      ancillaryCarapace: ancillaryCarapaceResult,
       dodge: dodgeResult,
       antiEvade: getAntiEvadeValue(weapon),
+      objectiveDefenseBonus,
       burstFire: burstFireApplied ? burstFireRule : null,
       lockedIn: lockedInBonus,
       concentratedFire: concentratedFireCap > 0 ? { cap: concentratedFireCap, discardedDamage: damageResult.discardedDamage } : null,
+      lifeSupport: lifeSupportResult,
+      zealousRound: zealousRoundResult,
       fightingRank: isMelee ? meleeRankProfile.fightingRankModels.length : null,
       supportingRank: isMelee ? meleeRankProfile.supportingRankModels.length : null,
       assignedModels: isMelee ? aliveAttackerModels : null,

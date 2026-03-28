@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { createInitialGameState } from '../engine/state.js';
 import { beginCombatPhase } from '../engine/phases.js';
-import { resolveCombatPhase, getMeleeTargetSelection } from '../engine/combat.js';
+import { resolveCombatPhase, getCombatActivationPreview, getMeleeTargetSelection } from '../engine/combat.js';
 import { dispatch as reduceState } from '../engine/reducer.js';
 import { createSeededRng } from './helpers/rng.mjs';
 
@@ -91,6 +91,33 @@ test('burrowed melee attacker closes ranks before resolving combat', () => {
   assert.equal(state.units.blue_roach_1.status.hidden, false);
   assert.equal(state.lastCombatReport[0].mode, 'melee');
   assert.ok(state.log.some(entry => entry.text.includes('closes ranks and emerges')));
+});
+
+test('combat phase offers close ranks as a real activation for engaged burrowed units', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_roach_1', templateId: 'roach_t3' }],
+    armyB: [{ id: 'red_marines_1', templateId: 'marine_squad' }],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  placeUnitAt(state, 'blue_roach_1', 10, 10);
+  placeUnitAt(state, 'red_marines_1', 11, 10);
+  state.phase = 'combat';
+  state.activePlayer = 'playerA';
+  state.units.blue_roach_1.status.burrowed = true;
+  state.units.blue_roach_1.status.hidden = true;
+  state.units.blue_roach_1.status.engaged = true;
+  state.units.red_marines_1.status.engaged = true;
+
+  const beforeActions = reduceState(state, { type: 'CLOSE_RANKS', payload: { playerId: 'playerA', unitId: 'blue_roach_1' } });
+
+  assert.equal(beforeActions.ok, true);
+  assert.equal(beforeActions.state.units.blue_roach_1.status.burrowed, false);
+  assert.equal(beforeActions.state.units.blue_roach_1.status.hidden, false);
+  assert.equal(beforeActions.state.units.blue_roach_1.status.combatActivated, true);
+  assert.equal(beforeActions.state.activePlayer, 'playerB');
+  assert.ok(beforeActions.state.log.some(entry => entry.text.includes('closes ranks and emerges')));
 });
 
 test('charge attack performs pile-in movement before resolving melee', () => {
@@ -242,6 +269,33 @@ test('melee target selection previews focus options for split engagements', () =
   );
 });
 
+test('combat activation preview lists numbered attack steps before resolution', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_marines_1', templateId: 'marine_squad' }],
+    armyB: [
+      { id: 'red_zealots_1', templateId: 'zealot_squad' },
+      { id: 'red_dragoon_1', templateId: 'dragoon' }
+    ],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  placeUnitAt(state, 'blue_marines_1', 10, 10);
+  placeUnitAt(state, 'red_zealots_1', 12, 10);
+  placeUnitAt(state, 'red_dragoon_1', 14, 10);
+
+  state.combatQueue.push({ type: 'ranged_attack', attackerId: 'blue_marines_1', targetId: 'red_zealots_1' });
+  state.combatQueue.push({ type: 'ranged_attack', attackerId: 'blue_marines_1', targetId: 'red_dragoon_1' });
+
+  const preview = getCombatActivationPreview(state, 'blue_marines_1');
+
+  assert.ok(preview);
+  assert.equal(preview?.steps.length, 2);
+  assert.equal(preview?.steps[0].label, 'Ranged Attack');
+  assert.equal(preview?.steps[0].targetId, 'red_zealots_1');
+  assert.equal(preview?.steps[1].targetId, 'red_dragoon_1');
+});
+
 test('setting charge primary target updates queued melee focus before resolution', () => {
   const state = createInitialGameState({
     missionId: 'take_and_hold',
@@ -331,6 +385,78 @@ test('surge bypasses armour when the target matches the weapon surge tags', () =
   assert.equal(state.lastCombatReport[0].surge?.applied, 2);
   assert.equal(state.lastCombatReport[0].saved, 0);
   assert.equal(state.lastCombatReport[0].casualties, 6);
+});
+
+test('life support reduces damage from nearby medics with stabilizer medpacks', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_marines_1', templateId: 'marine_squad' }],
+    armyB: [
+      { id: 'red_roach_1', templateId: 'roach_t3' },
+      { id: 'red_medic_1', templateId: 'medic_t1', selectedUpgrades: ['Stabilizer Medpacks'] }
+    ],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  placeUnitAt(state, 'blue_marines_1', 10, 10);
+  placeUnitAt(state, 'red_roach_1', 12, 10);
+  placeUnitAt(state, 'red_medic_1', 12, 12);
+  state.units.blue_marines_1.rangedWeapons[0].shotsPerModel = 4;
+  state.units.blue_marines_1.rangedWeapons[0].hitTarget = 2;
+  state.units.blue_marines_1.rangedWeapons[0].strength = 7;
+
+  state.combatQueue.push({ type: 'ranged_attack', attackerId: 'blue_marines_1', targetId: 'red_roach_1' });
+  const result = resolveCombatPhase(state, { rng: createSeededRng(42) });
+
+  assert.equal(result.ok, true);
+  assert.ok(state.lastCombatReport[0].lifeSupport);
+  assert.ok(state.lastCombatReport[0].lifeSupport.reducedBy >= 1);
+});
+
+test('ancillary carapace applies on the first armour roll of the phase', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_marines_1', templateId: 'marine_squad' }],
+    armyB: [{ id: 'red_roach_1', templateId: 'roach_t3', selectedUpgrades: ['Ancillary Carapace'] }],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  placeUnitAt(state, 'blue_marines_1', 10, 10);
+  placeUnitAt(state, 'red_roach_1', 12, 10);
+  state.units.blue_marines_1.rangedWeapons[0].shotsPerModel = 4;
+  state.units.blue_marines_1.rangedWeapons[0].hitTarget = 2;
+  state.units.blue_marines_1.rangedWeapons[0].strength = 7;
+
+  state.combatQueue.push({ type: 'ranged_attack', attackerId: 'blue_marines_1', targetId: 'red_roach_1' });
+  const result = resolveCombatPhase(state, { rng: createSeededRng(42) });
+
+  assert.equal(result.ok, true);
+  assert.ok(state.lastCombatReport[0].ancillaryCarapace);
+  assert.equal(state.units.red_roach_1.status.ancillaryCarapaceUsedThisPhase, true);
+});
+
+test('lurking grants the first ranged evade while stationary', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_marines_1', templateId: 'marine_squad' }],
+    armyB: [{ id: 'red_roach_1', templateId: 'roach_t3', selectedUpgrades: ['Lurking'] }],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  placeUnitAt(state, 'blue_marines_1', 10, 10);
+  placeUnitAt(state, 'red_roach_1', 12, 10);
+  state.units.red_roach_1.status.stationary = true;
+  state.units.blue_marines_1.rangedWeapons[0].shotsPerModel = 4;
+  state.units.blue_marines_1.rangedWeapons[0].hitTarget = 2;
+  state.units.blue_marines_1.rangedWeapons[0].strength = 7;
+
+  state.combatQueue.push({ type: 'ranged_attack', attackerId: 'blue_marines_1', targetId: 'red_roach_1' });
+  const result = resolveCombatPhase(state, { rng: createSeededRng(42) });
+
+  assert.equal(result.ok, true);
+  assert.ok(state.lastCombatReport[0].evade);
+  assert.equal(state.lastCombatReport[0].evade.lurkingBonus, 1);
+  assert.equal(state.units.red_roach_1.status.lurkingUsedThisRound, true);
 });
 
 test('precision converts failed hit dice into extra hits', () => {
@@ -690,9 +816,25 @@ test('overwatch attacks resolve as reduced-volume ranged attacks', () => {
   assert.equal(state.lastCombatReport[0].attempts, 2); // dragoon 4 shots, overwatch halves volume
 });
 
-test('beginCombatPhase auto-resolves combat then proceeds to cleanup/next round', () => {
+test('unit combat activation dispatch preserves combat resolution events', () => {
   const state = buildState();
+  placeUnitAt(state, 'blue_marines_1', 10, 10);
+  placeUnitAt(state, 'red_zealots_1', 12, 10);
   state.phase = 'combat';
+  state.activePlayer = 'playerA';
+  state.combatQueue.push({ type: 'ranged_attack', attackerId: 'blue_marines_1', targetId: 'red_zealots_1' });
+
+  const result = reduceState(state, {
+    type: 'RESOLVE_COMBAT_UNIT',
+    payload: { playerId: 'playerA', unitId: 'blue_marines_1' }
+  });
+
+  assert.equal(result.ok, true);
+  assert.ok(result.events?.some(event => event.type === 'combat_attack_resolved'));
+});
+
+test('beginCombatPhase starts an interactive combat activation phase', () => {
+  const state = buildState();
   state.round = 1;
   placeUnitAt(state, 'blue_marines_1', 10, 10);
   placeUnitAt(state, 'red_zealots_1', 12, 10);
@@ -701,7 +843,85 @@ test('beginCombatPhase auto-resolves combat then proceeds to cleanup/next round'
   const result = beginCombatPhase(state);
 
   assert.equal(result.ok, true);
-  assert.equal(state.phase, 'movement');
-  assert.equal(state.round, 2);
-  assert.equal(state.players.playerA.vp >= 0, true);
+  assert.equal(state.phase, 'combat');
+  assert.equal(state.round, 1);
+  assert.equal(state.lastCombatReport?.length ?? 0, 0);
+  assert.equal(state.units.blue_marines_1.status.combatActivated, false);
+});
+
+test('flying units ignore blocker line of sight rules', () => {
+  const state = buildState();
+  placeUnitAt(state, 'blue_marines_1', 10, 10);
+  placeUnitAt(state, 'red_zealots_1', 18, 10);
+  state.units.red_zealots_1.tags = state.units.red_zealots_1.tags.filter(tag => tag !== 'Ground');
+  state.units.red_zealots_1.tags.push('Flying');
+  state.units.red_zealots_1.abilities.push('flying');
+  state.board.terrain.push({
+    kind: 'blocker',
+    impassable: true,
+    rect: { minX: 13, maxX: 15, minY: 8, maxY: 12 }
+  });
+
+  state.combatQueue.push({ type: 'ranged_attack', attackerId: 'blue_marines_1', targetId: 'red_zealots_1' });
+  const result = resolveCombatPhase(state, { rng: createSeededRng(4) });
+
+  assert.equal(result.ok, true);
+  assert.equal(state.lastCombatReport[0].visible, true);
+});
+
+test('hallucination support grants evade against nearby ranged attacks', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [
+      { id: 'blue_sentry_1', templateId: 'sentry', selectedUpgrades: ['Hallucination'] },
+      { id: 'blue_adept_1', templateId: 'adept' }
+    ],
+    armyB: [{ id: 'red_marines_1', templateId: 'marine_squad' }],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  placeUnitAt(state, 'blue_sentry_1', 10, 10);
+  placeUnitAt(state, 'blue_adept_1', 12, 10);
+  placeUnitAt(state, 'red_marines_1', 20, 10);
+
+  state.combatQueue.push({ type: 'ranged_attack', attackerId: 'red_marines_1', targetId: 'blue_adept_1' });
+  resolveCombatPhase(state, { rng: createSeededRng(44) });
+
+  assert.ok(state.lastCombatReport[0].evade);
+  assert.ok(state.lastCombatReport[0].evade.saved >= 0);
+});
+
+test('zealous round reduces incoming damage and marks the target activated for the phase', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_zealots_1', templateId: 'zealot_squad', selectedUpgrades: ['Zealous Round'] }],
+    armyB: [{ id: 'red_marines_1', templateId: 'marine_t2' }],
+    firstPlayerMarkerHolder: 'playerB'
+  });
+  placeUnitAt(state, 'blue_zealots_1', 12, 10);
+  placeUnitAt(state, 'red_marines_1', 10, 10);
+
+  state.phase = 'combat';
+  state.activePlayer = 'playerB';
+  const weapon = state.units.red_marines_1.rangedWeapons[0];
+  weapon.shotsPerModel = 1;
+  weapon.hitTarget = 2;
+  weapon.strength = 8;
+  weapon.armorPenetration = 3;
+  weapon.damage = 1;
+  weapon.surge = null;
+
+  state.combatQueue.push({ type: 'ranged_attack', attackerId: 'red_marines_1', targetId: 'blue_zealots_1' });
+  const rolls = [
+    0.99, 0.99, 0.99, 0.99, 0.99, 0.99,
+    0.99, 0.99, 0.99, 0.99, 0.99, 0.99,
+    0.0, 0.0
+  ];
+  let index = 0;
+  resolveCombatPhase(state, { rng: () => rolls[index++] ?? 0 });
+
+  assert.equal(state.lastCombatReport[0].zealousRound?.reducedBy, 2);
+  assert.equal(state.units.blue_zealots_1.status.combatActivated, true);
+  assert.equal(state.units.blue_zealots_1.status.zealousRoundUsedThisRound, true);
 });

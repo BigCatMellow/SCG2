@@ -5,8 +5,19 @@ import { autoArrangeModels, applyModelPlacementsAndResolveCoherency } from "./co
 import { refreshAllSupply } from "./supply.js";
 import { getModifiedValue } from "./effects.js";
 import { applyBurrowedActivationEffects, removeStealthStatuses } from "./statuses.js";
+import { getBlockingForceFieldCrossings, removeForceFieldsCrossedByUnit } from "./force_fields.js";
 
 const ENGAGEMENT_RANGE = 1;
+
+function getMovementBonus(unit) {
+  let bonus = 0;
+  if (unit?.abilities?.includes("leg_enhancements")) bonus += 2;
+  return bonus;
+}
+
+function isFlyingUnit(unit) {
+  return unit?.tags?.includes("Flying") || unit?.abilities?.includes("flying");
+}
 
 function getEnemyId(playerId) {
   return playerId === "playerA" ? "playerB" : "playerA";
@@ -22,7 +33,9 @@ function updateUnitEngagementStatus(state) {
     unit.status.engaged = false;
   }
 
-  const battlefieldUnits = Object.values(state.units).filter(unit => unit.status.location === "battlefield" && unit.tags.includes("Ground"));
+  const battlefieldUnits = Object.values(state.units).filter(unit =>
+    unit.status.location === "battlefield" && unit.tags.includes("Ground") && !isFlyingUnit(unit)
+  );
   for (let i = 0; i < battlefieldUnits.length; i += 1) {
     for (let j = i + 1; j < battlefieldUnits.length; j += 1) {
       const a = battlefieldUnits[i];
@@ -69,8 +82,10 @@ function overlappingModelsAtPoint(state, unit, point, ignoreModelIds = new Set()
 }
 
 function pointWithinEnemyGroundEngagement(state, unit, point) {
+  if (isFlyingUnit(unit)) return false;
   for (const otherUnit of Object.values(state.units)) {
     if (otherUnit.owner === unit.owner || !otherUnit.tags.includes("Ground")) continue;
+    if (isFlyingUnit(otherUnit)) continue;
     for (const otherModel of Object.values(otherUnit.models)) {
       if (!otherModel.alive || otherModel.x == null || otherModel.y == null) continue;
       const edgeDistance = distance(point, otherModel) - unit.base.radiusInches - otherUnit.base.radiusInches;
@@ -81,9 +96,11 @@ function pointWithinEnemyGroundEngagement(state, unit, point) {
 }
 
 function getEngagedEnemyUnits(state, unit) {
+  if (isFlyingUnit(unit)) return [];
   const enemies = new Set();
   for (const otherUnit of Object.values(state.units)) {
     if (otherUnit.owner === unit.owner) continue;
+    if (isFlyingUnit(otherUnit)) continue;
     let engaged = false;
     for (const model of Object.values(unit.models)) {
       if (!model.alive || model.x == null || model.y == null) continue;
@@ -106,7 +123,10 @@ function finalPointFromPath(path) {
   return path[path.length - 1];
 }
 
-function getMovementCost(state, path) {
+function getMovementCost(state, unit, path) {
+  if (isFlyingUnit(unit)) {
+    return state.rules?.gridMode ? gridDistance(path[0], path[path.length - 1]) : pathLength(path);
+  }
   if (state.rules?.gridMode) return gridDistance(path[0], path[path.length - 1]);
   return pathTravelCost(path, state.board.terrain);
 }
@@ -125,7 +145,7 @@ export function resolveHold(state, playerId, unitId) {
   applyBurrowedActivationEffects(state, unit);
   unit.status.stationary = true;
   markUnitActivatedForCurrentPhase(state, unitId);
-  appendLog(state, "action", `${unit.name} holds position.${unit.status.burrowed ? " Burrowed status is maintained." : unit.status.hidden ? " Hidden status is maintained." : ""}`);
+  appendLog(state, "action", `${unit.name} holds position.${unit.status.burrowed ? " Burrowed maintained." : unit.status.hidden ? " Hidden maintained." : ""}`);
   endActivationAndPassTurn(state);
   return { ok: true, state, events: [{ type: "unit_held", payload: { unitId } }] };
 }
@@ -147,14 +167,15 @@ export function validateMove(state, playerId, unitId, leadingModelId, path, mode
     unitId: unit.id,
     key: "unit.speed",
     baseValue: unit.speed
-  }).value;
-  const travelCost = getMovementCost(state, path);
+  }).value + getMovementBonus(unit);
+  const travelCost = getMovementCost(state, unit, path);
   if (travelCost - modifiedSpeed > 1e-6) return { ok: false, code: "TOO_FAR", message: `${unit.name} can only move ${modifiedSpeed}" (difficult terrain costs extra movement).` };
   const ignore = new Set(unit.modelIds);
-  if (pathBlockedForCircle(path, unit.base.radiusInches, state, ignore)) return { ok: false, code: "PATH_BLOCKED", message: "Path crosses blocked ground, terrain, or bases." };
+  if (!isFlyingUnit(unit) && pathBlockedForCircle(path, unit.base.radiusInches, state, ignore)) return { ok: false, code: "PATH_BLOCKED", message: "Path crosses blocked ground, terrain, or bases." };
+  if (getBlockingForceFieldCrossings(state, unit, path).length) return { ok: false, code: "FORCE_FIELD_BLOCKED", message: "A Force Field blocks units of Size 2 or lower from crossing there." };
   const end = finalPointFromPath(path);
   if (!pointInBoard(end, state.board, unit.base.radiusInches)) return { ok: false, code: "OFF_BOARD", message: "Leading model must end fully on the battlefield." };
-  if (circleOverlapsTerrain(end, unit.base.radiusInches, state.board.terrain)) return { ok: false, code: "TERRAIN_OVERLAP", message: "Leading model cannot end overlapping impassable terrain." };
+  if (!isFlyingUnit(unit) && circleOverlapsTerrain(end, unit.base.radiusInches, state.board.terrain)) return { ok: false, code: "TERRAIN_OVERLAP", message: "Leading model cannot end overlapping impassable terrain." };
   if (overlappingModelsAtPoint(state, unit, end, ignore)) return { ok: false, code: "BASE_OVERLAP", message: "Leading model would overlap another base." };
   if (pointWithinEnemyGroundEngagement(state, unit, end)) return { ok: false, code: "ENDS_ENGAGED", message: "Normal Move cannot end within 1\" of an enemy ground unit." };
   const placements = modelPlacements ?? autoArrangeModels(state, unitId, end);
@@ -174,11 +195,12 @@ export function resolveMove(state, playerId, unitId, leadingModelId, path, model
   const brokeStealth = removeStealthStatuses(unit);
   unit.status.stationary = false;
   markUnitActivatedForMovement(state, unitId);
+  removeForceFieldsCrossedByUnit(state, unit, path);
   updateUnitEngagementStatus(state);
   refreshAllSupply(state);
-  const removedText = coherency.removedModelIds.length ? ` ${coherency.removedModelIds.length} model(s) could not be set and were removed.` : "";
-  const coherencyText = coherency.outOfCoherency ? " Unit is out of coherency." : "";
-  appendLog(state, "action", `${unit.name} moves ${pathLength(path).toFixed(1)}".${brokeStealth ? " It loses Hidden/Burrowed while moving." : ""}${removedText}${coherencyText}`);
+  const removedText = coherency.removedModelIds.length ? ` ${coherency.removedModelIds.length} model(s) removed during placement.` : "";
+  const coherencyText = coherency.outOfCoherency ? " Out of coherency." : "";
+  appendLog(state, "action", `${unit.name} moves ${pathLength(path).toFixed(1)}".${brokeStealth ? " Hidden/Burrowed removed." : ""}${removedText}${coherencyText}`);
   endActivationAndPassTurn(state);
   return { ok: true, state, events: [{ type: "unit_moved", payload: { unitId } }] };
 }
@@ -198,11 +220,12 @@ export function validateDisengage(state, playerId, unitId, leadingModelId, path,
     unitId: unit.id,
     key: "unit.speed",
     baseValue: unit.speed
-  }).value;
-  const travelCost = getMovementCost(state, path);
+  }).value + getMovementBonus(unit);
+  const travelCost = getMovementCost(state, unit, path);
   if (travelCost - modifiedSpeed > 1e-6) return { ok: false, code: "TOO_FAR", message: `${unit.name} can only move ${modifiedSpeed}" (difficult terrain costs extra movement).` };
   const ignore = new Set(unit.modelIds);
-  if (pathBlockedForCircle(path, unit.base.radiusInches, state, ignore)) return { ok: false, code: "PATH_BLOCKED", message: "Path crosses blocked ground, terrain, or bases." };
+  if (!isFlyingUnit(unit) && pathBlockedForCircle(path, unit.base.radiusInches, state, ignore)) return { ok: false, code: "PATH_BLOCKED", message: "Path crosses blocked ground, terrain, or bases." };
+  if (getBlockingForceFieldCrossings(state, unit, path).length) return { ok: false, code: "FORCE_FIELD_BLOCKED", message: "A Force Field blocks units of Size 2 or lower from crossing there." };
   const end = finalPointFromPath(path);
   if (!pointInBoard(end, state.board, unit.base.radiusInches)) return { ok: false, code: "OFF_BOARD", message: "Leading model must end fully on the battlefield." };
   const placements = modelPlacements ?? autoArrangeModels(state, unitId, end);
@@ -229,7 +252,7 @@ export function resolveDisengage(state, playerId, unitId, leadingModelId, path, 
     leader.alive = false;
     leader.x = null;
     leader.y = null;
-    appendLog(state, "action", `${unit.name} failed to break clear; the leading model was removed during Disengage.`);
+    appendLog(state, "action", `${unit.name} fails to break clear; the leading model is removed during Disengage.`);
   }
 
   for (const modelId of unit.modelIds) {
@@ -240,7 +263,7 @@ export function resolveDisengage(state, playerId, unitId, leadingModelId, path, 
       model.alive = false;
       model.x = null;
       model.y = null;
-      appendLog(state, "info", `${unit.name} loses a model that could not clear engagement during Disengage.`);
+      appendLog(state, "info", `${unit.name} loses a model that could not clear engagement.`);
     }
   }
 
@@ -254,9 +277,10 @@ export function resolveDisengage(state, playerId, unitId, leadingModelId, path, 
 
   unit.status.stationary = false;
   markUnitActivatedForMovement(state, unitId);
+  removeForceFieldsCrossedByUnit(state, unit, path);
   updateUnitEngagementStatus(state);
   refreshAllSupply(state);
-  appendLog(state, "action", `${unit.name} disengages.${brokeStealth ? " It loses Hidden/Burrowed while disengaging." : ""}${validation.derived.tacticalMass ? " Tactical Mass ignores the next-Assault penalty." : " It cannot Ranged Attack or Charge in the next Assault Phase."}${coherency.outOfCoherency ? " Unit is out of coherency." : ""}`);
+  appendLog(state, "action", `${unit.name} disengages.${brokeStealth ? " Hidden/Burrowed removed." : ""}${validation.derived.tacticalMass ? " Tactical Mass ignores the next-Assault penalty." : " Cannot Ranged Attack or Charge next Assault."}${coherency.outOfCoherency ? " Out of coherency." : ""}`);
   endActivationAndPassTurn(state);
   return { ok: true, state, events: [{ type: "unit_disengaged", payload: { unitId } }] };
 }

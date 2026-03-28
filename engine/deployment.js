@@ -5,6 +5,7 @@ import { pointOnEntryEdge, pointInsideEnemyZoneOfInfluence, pathTravelCost, grid
 import { autoArrangeModels, applyModelPlacementsAndResolveCoherency } from "./coherency.js";
 import { refreshAllSupply, validateDeploySupply } from "./supply.js";
 import { refreshEngagement } from "./movement.js";
+import { getBlockingForceFieldCrossings, removeForceFieldsCrossedByUnit } from "./force_fields.js";
 
 function validateShared(state, playerId, unitId) {
   const unit = state.units[unitId];
@@ -77,6 +78,7 @@ export function validateDeploy(state, playerId, unitId, leadingModelId, entryPoi
   }
   const collisionPath = [adjustedStart, ...path.slice(1)];
   if (pathBlockedForCircle(collisionPath, unit.base.radiusInches, state, new Set(unit.modelIds))) return { ok: false, code: "PATH_BLOCKED", message: "Path crosses blocked ground, terrain, or bases." };
+  if (getBlockingForceFieldCrossings(state, unit, collisionPath).length) return { ok: false, code: "FORCE_FIELD_BLOCKED", message: "A Force Field blocks units of Size 2 or lower from crossing there." };
   const end = path[path.length - 1];
   if (!pointInBoard(end, state.board, unit.base.radiusInches)) return { ok: false, code: "OFF_BOARD", message: "Leading model must end fully on the battlefield." };
   if (circleOverlapsTerrain(end, unit.base.radiusInches, state.board.terrain)) return { ok: false, code: "TERRAIN_OVERLAP", message: "Leading model cannot end overlapping impassable terrain." };
@@ -100,6 +102,7 @@ export function resolveDeploy(state, playerId, unitId, leadingModelId, entryPoin
   unit.status.stationary = false;
   unit.status.outOfCoherency = coherency.outOfCoherency;
   markUnitActivatedForMovement(state, unitId);
+  removeForceFieldsCrossedByUnit(state, unit, [entryPoint, ...path.slice(1)]);
   refreshEngagement(state);
   refreshAllSupply(state);
   appendLog(state, "action", `${unit.name} deploys from reserves${validation.derived.reserveDrop ? " via deep strike" : ""}.${coherency.outOfCoherency ? " Unit is out of coherency." : ""}`);

@@ -4,9 +4,21 @@ export function getObjectiveControlRange(state) {
   return state.mission.objectiveControlRangeInches ?? 2;
 }
 
+export function isUnitWithinObjectiveRange(state, unit, range = getObjectiveControlRange(state)) {
+  if (!unit || unit.status.location !== "battlefield") return false;
+  return state.deployment.missionMarkers.some(objective =>
+    unit.modelIds.some(modelId => {
+      const model = unit.models[modelId];
+      if (!model.alive || model.x == null || model.y == null) return false;
+      return distance(model, objective) <= range + 1e-6;
+    })
+  );
+}
+
 function isUnitContestingObjective(unit, objective, range) {
   if (unit.status.location !== "battlefield") return false;
   if (unit.status.burrowed) return false;
+  if (unit.tags?.includes("Flying") || unit.abilities?.includes("flying")) return false;
   return unit.modelIds.some(modelId => {
     const model = unit.models[modelId];
     if (!model.alive || model.x == null || model.y == null) return false;

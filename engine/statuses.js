@@ -47,6 +47,30 @@ export function applyCloseRanks(state, unit, options = {}) {
   return { changed: true };
 }
 
+export function validateCloseRanks(state, playerId, unitId) {
+  const unit = state.units[unitId];
+  if (!unit) return { ok: false, code: "UNKNOWN_UNIT", message: "Unit not found." };
+  if (state.phase !== "combat") return { ok: false, code: "WRONG_PHASE", message: "Close Ranks is only available in Combat Phase." };
+  if (unit.owner !== playerId) return { ok: false, code: "WRONG_OWNER", message: "You do not control that unit." };
+  if (!isUnitEligibleForCurrentPhaseActivation(state, unitId)) return { ok: false, code: "UNIT_NOT_ELIGIBLE", message: "Unit is not eligible to activate." };
+  if (unit.status.location !== "battlefield") return { ok: false, code: "NOT_ON_BATTLEFIELD", message: "Only battlefield units can close ranks." };
+  if (!unit.status.burrowed) return { ok: false, code: "NOT_BURROWED", message: "Only Burrowed units can close ranks." };
+  if (!unit.status.engaged) return { ok: false, code: "NOT_ENGAGED", message: "Unit must be engaged to close ranks." };
+  return { ok: true, unit };
+}
+
+export function resolveCloseRanks(state, playerId, unitId) {
+  const validation = validateCloseRanks(state, playerId, unitId);
+  if (!validation.ok) return validation;
+
+  const unit = validation.unit;
+  applyBurrowedActivationEffects(state, unit);
+  applyCloseRanks(state, unit);
+  markUnitActivatedForCurrentPhase(state, unitId);
+  endActivationAndPassTurn(state);
+  return { ok: true, state, events: [{ type: "unit_closed_ranks", payload: { unitId } }] };
+}
+
 export function healUnitDamage(unit, amount) {
   const healAmount = Math.max(0, Math.floor(amount));
   if (!healAmount) return 0;
@@ -77,7 +101,7 @@ export function applyBurrowedActivationEffects(state, unit) {
 
   const healed = healUnitDamage(unit, 2);
   if (healed > 0) {
-    appendLog(state, "info", `${unit.name} regenerates ${healed} wound${healed === 1 ? "" : "s"} while Burrowed.`);
+    appendLog(state, "info", `${unit.name} regenerates ${healed} wound${healed === 1 ? "" : "s"} while burrowed.`);
   }
   return { healed };
 }
@@ -113,7 +137,7 @@ export function resolveToggleBurrow(state, playerId, unitId) {
   unit.status.stationary = true;
 
   markUnitActivatedForCurrentPhase(state, unitId);
-  appendLog(state, "action", `${unit.name} ${nextBurrowed ? "burrows underground and becomes Hidden." : "emerges from underground and loses Burrowed."}`);
+  appendLog(state, "action", `${unit.name} ${nextBurrowed ? "burrows and becomes Hidden." : "emerges and loses Burrowed."}`);
   endActivationAndPassTurn(state);
   return { ok: true, state, events: [{ type: "unit_burrow_toggled", payload: { unitId, burrowed: nextBurrowed } }] };
 }
@@ -137,7 +161,7 @@ export function resolveToggleHidden(state, playerId, unitId) {
   unit.status.stationary = true;
 
   markUnitActivatedForCurrentPhase(state, unitId);
-  appendLog(state, "action", `${unit.name} ${nextHidden ? "slips into cover and becomes Hidden." : "reveals itself and loses Hidden."}`);
+  appendLog(state, "action", `${unit.name} ${nextHidden ? "becomes Hidden." : "reveals itself and loses Hidden."}`);
   endActivationAndPassTurn(state);
   return { ok: true, state, events: [{ type: "unit_hidden_toggled", payload: { unitId, hidden: nextHidden } }] };
 }

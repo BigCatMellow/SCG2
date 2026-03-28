@@ -1,6 +1,11 @@
 import { distance, pointInsideRect, sampleSegment } from "./geometry.js";
 
 const HIDDEN_REVEAL_RANGE = 4;
+const SUPPORT_REACTION_RANGE = 4;
+
+function isFlyingUnit(unit) {
+  return unit?.tags?.includes("Flying") || unit?.abilities?.includes("flying");
+}
 
 export function weaponHasKeyword(weapon, keyword) {
   return weapon?.[keyword] === true || weapon?.keywords?.includes(keyword);
@@ -44,6 +49,7 @@ export function hasLineOfSight(state, attacker, target) {
   const attackerPoint = getLeaderPoint(attacker);
   const targetPoint = getLeaderPoint(target);
   if (!attackerPoint || !targetPoint) return false;
+  if (isFlyingUnit(attacker) || isFlyingUnit(target)) return true;
 
   const blockers = state.board.terrain.filter(terrain => terrain.kind === "blocker" || terrain.impassable);
   const samples = sampleSegment(attackerPoint, targetPoint, 0.2);
@@ -78,6 +84,15 @@ export function canTargetWithRangedWeapon(state, attacker, target, weapon) {
 export function targetGetsEvadeOpportunity(state, attacker, target, weapon, isMelee, visible) {
   if (target?.defense?.evadeTarget == null) return false;
   if (target?.status?.hidden || target?.status?.burrowed) return true;
+  if (!isMelee && target?.abilities?.includes("lurking") && target?.status?.stationary && !target?.status?.lurkingUsedThisRound) return true;
+  if (isMelee && target?.abilities?.includes("combat_shield")) return true;
+  if (!isMelee && Object.values(state.units).some(unit => {
+    if (unit.owner !== target.owner || unit.id === target.id || !unit.abilities?.includes("hallucination")) return false;
+    const source = getLeaderPoint(unit);
+    const defended = getLeaderPoint(target);
+    if (!source || !defended) return false;
+    return distance(source, defended) <= SUPPORT_REACTION_RANGE + 1e-6;
+  })) return true;
   if (!isMelee && target?.status?.engaged) return true;
   if (!isMelee && hasIndirectFire(weapon) && visible === false) return true;
   return false;

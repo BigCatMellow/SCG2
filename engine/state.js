@@ -35,12 +35,12 @@ export function createInitialGameState({
   const reserveB = [];
 
   for (const entry of armyA) {
-    const unit = createUnitStateFromTemplate(entry.templateId, "playerA", entry.id);
+    const unit = createUnitStateFromTemplate(entry.templateId, "playerA", entry.id, { selectedUpgrades: entry.selectedUpgrades ?? [] });
     units[unit.id] = unit;
     reserveA.push(unit.id);
   }
   for (const entry of armyB) {
-    const unit = createUnitStateFromTemplate(entry.templateId, "playerB", entry.id);
+    const unit = createUnitStateFromTemplate(entry.templateId, "playerB", entry.id, { selectedUpgrades: entry.selectedUpgrades ?? [] });
     units[unit.id] = unit;
     reserveB.push(unit.id);
   }

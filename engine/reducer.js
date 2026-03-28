@@ -6,7 +6,9 @@ import { resolveRun, resolveDeclareRangedAttack, resolveDeclareCharge } from "./
 import { resolvePlayCard } from "./cards.js";
 import { resolveCombatForUnit, hasQueuedCombatForUnit, setChargePrimaryTarget } from "./combat.js";
 import { cloneState } from "./state.js";
-import { resolveToggleBurrow, resolveToggleHidden } from "./statuses.js";
+import { resolveCloseRanks, resolveToggleBurrow, resolveToggleHidden } from "./statuses.js";
+import { resolvePlaceForceField } from "./force_fields.js";
+import { resolveUseMedpack, resolveUseOpticalFlare } from "./support.js";
 
 export function dispatch(state, action) {
   const working = cloneState(state);
@@ -23,6 +25,12 @@ export function dispatch(state, action) {
       return resolveDeploy(working, action.payload.playerId, action.payload.unitId, action.payload.leadingModelId, action.payload.entryPoint, action.payload.path, action.payload.modelPlacements);
     case "RUN_UNIT":
       return resolveRun(working, action.payload.playerId, action.payload.unitId, action.payload.leadingModelId, action.payload.path, action.payload.modelPlacements);
+    case "PLACE_FORCE_FIELD":
+      return resolvePlaceForceField(working, action.payload.playerId, action.payload.unitId, action.payload.point);
+    case "USE_MEDPACK":
+      return resolveUseMedpack(working, action.payload.playerId, action.payload.unitId, action.payload.targetId);
+    case "USE_OPTICAL_FLARE":
+      return resolveUseOpticalFlare(working, action.payload.playerId, action.payload.unitId, action.payload.targetId);
     case "DECLARE_RANGED_ATTACK":
       return resolveDeclareRangedAttack(working, action.payload.playerId, action.payload.unitId, action.payload.targetId ?? null);
     case "DECLARE_CHARGE":
@@ -31,6 +39,8 @@ export function dispatch(state, action) {
       return resolveToggleBurrow(working, action.payload.playerId, action.payload.unitId);
     case "TOGGLE_HIDDEN":
       return resolveToggleHidden(working, action.payload.playerId, action.payload.unitId);
+    case "CLOSE_RANKS":
+      return resolveCloseRanks(working, action.payload.playerId, action.payload.unitId);
     case "PLAY_CARD":
       return resolvePlayCard(working, action.payload.playerId, action.payload.cardInstanceId, action.payload.targetUnitId ?? null);
     case "SET_CHARGE_PRIMARY_TARGET":
@@ -47,7 +57,12 @@ export function dispatch(state, action) {
       const combatResult = resolveCombatForUnit(working, unitId);
       if (!combatResult.ok) return combatResult;
       markUnitActivatedForCurrentPhase(working, unitId);
-      return endActivationAndPassTurn(working);
+      const activationResult = endActivationAndPassTurn(working) ?? { ok: true, state: working };
+      if (!activationResult.ok) return activationResult;
+      return {
+        ...activationResult,
+        events: [...(combatResult.events ?? []), ...(activationResult.events ?? [])]
+      };
     }
     default:
       return { ok: false, code: "UNKNOWN_ACTION", message: `Unknown action type: ${action.type}` };

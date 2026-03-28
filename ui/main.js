@@ -1,16 +1,19 @@
 import { createInitialGameState } from "../engine/state.js";
 import { beginGame } from "../engine/phases.js";
 import { dispatch as engineDispatch } from "../engine/reducer.js";
-import { bindInputHandlers, beginMoveInteraction, beginDeployInteraction, beginDisengageInteraction, beginRunInteraction, beginDeclareRangedInteraction, beginDeclareChargeInteraction, cancelCurrentInteraction } from "./input.js";
+import { bindInputHandlers, beginMoveInteraction, beginDeployInteraction, beginDisengageInteraction, beginRunInteraction, beginForceFieldInteraction, beginMedpackInteraction, beginOpticalFlareInteraction, beginDeclareRangedInteraction, beginDeclareChargeInteraction, cancelCurrentInteraction } from "./input.js";
 import { renderAll } from "./renderer.js";
 import { autoArrangeModels } from "../engine/coherency.js";
 import { performBotTurn } from "../ai/bot.js";
 import { screenToBoardPoint } from "./board.js";
-import { getTacticalCard } from "../data/tactical_cards.js";
+import { getTacticalCard, TACTICAL_CARDS } from "../data/tactical_cards.js";
+import { MISSION_DATA } from "../data/missions.js";
+import { DEPLOYMENT_DATA } from "../data/deployments.js";
 import { snapPointToGrid } from "../engine/geometry.js";
 import { getLegalMoveDestinations, getLegalDeployDestinations, getLegalDisengageDestinations, getLegalRunDestinations } from "../engine/legal_actions.js";
-import { canBurrow, canHide } from "../engine/statuses.js";
-import { getMeleeTargetSelection } from "../engine/combat.js";
+import { canBurrow, canHide, validateCloseRanks } from "../engine/statuses.js";
+import { getCombatActivationPreview, getMeleeTargetSelection } from "../engine/combat.js";
+import { importArmyBuilderRoster, isArmyBuilderPayload, buildSetupFromImportedRosters } from "../engine/army_builder_import.js";
 
 const DEFAULT_SETUP = {
   missionId: "take_and_hold",
@@ -76,13 +79,30 @@ const uiState = {
   pendingPass: false,
   storyModalQueue: [],
   activeStoryModal: null,
-  pendingCombatChoice: null
+  pendingCombatChoice: null,
+  setupModal: {
+    open: false,
+    missionId: DEFAULT_SETUP.missionId,
+    deploymentId: DEFAULT_SETUP.deploymentId,
+    firstPlayerMarkerHolder: DEFAULT_SETUP.firstPlayerMarkerHolder,
+    rosters: {
+      playerA: null,
+      playerB: null
+    },
+    pendingImportSide: null
+  }
 };
 
 let store;
 
 function buildInitialState() {
   const state = createInitialGameState(DEFAULT_SETUP);
+  beginGame(state);
+  return state;
+}
+
+function buildStateFromSetup(setup) {
+  const state = createInitialGameState(setup);
   beginGame(state);
   return state;
 }
@@ -190,6 +210,16 @@ function getModeText() {
   if (uiState.mode === "run" && unit) {
     return `Run ${unit.name} — move up to ${unit.speed}" (same as normal move). Good for repositioning onto objectives when you can't attack.${progress}`;
   }
+  if (uiState.mode === "force_field" && unit) {
+    return `Solid-Field Projectors — place a Force Field token within 8". Size 2 or lower units cannot cross it, while Size 3+ units break it.${progress}`;
+  }
+  if (uiState.mode === "use_medpack" && unit) {
+    return `Medpack — click another friendly biological unit within 4". Healing scales with nearby Medic models.${progress}`;
+  }
+  if (uiState.mode === "use_optical_flare" && unit) {
+    const range = unit.abilities?.includes("a_13_flash_grenade_launcher") ? 16 : 12;
+    return `Optical Flare — click an enemy within ${range}". It loses 4" of ranged weapon range this round and cannot use Long Range.${progress}`;
+  }
   if (uiState.mode === "declare_ranged" && unit) {
     const wpn = unit.rangedWeapons?.[0];
     const rangeInfo = wpn ? ` ${wpn.name}: ${wpn.rangeInches}" range, ${wpn.hitTarget}+ to hit.` : "";
@@ -202,7 +232,7 @@ function getModeText() {
   // Phase-specific guidance when no mode is active
   if (state.phase === "movement") {
     if (checklist.remaining.length > 0) {
-      return `Movement Phase: Deploy reserves or Move/Hold battlefield units. Tip: First to Pass gets initiative for Assault.${progress}`;
+      return `Movement Phase: Deploy reserves or Move/Hold battlefield units. Some units can also use movement abilities like Force Field placement.${progress}`;
     }
     return `All units moved. Pass to start the Assault Phase.${progress}`;
   }
@@ -214,7 +244,7 @@ function getModeText() {
   }
   if (state.phase === "combat") {
     if (checklist.remaining.length > 0) {
-      return `Combat Phase: Resolve queued attacks. Each attack rolls Hit → Armor → Damage. Select a unit with queued attacks.${progress}`;
+      return `Combat Phase: Review each unit's combat sequence, choose melee focus when tied into multiple enemies, then resolve the queued attacks in order.${progress}`;
     }
     return `All combat resolved. Pass to score objectives.${progress}`;
   }
@@ -239,6 +269,173 @@ function rerender() {
   renderNotifications();
   renderStoryModal();
   renderCombatChoiceModal();
+  renderSetupModal();
+}
+
+function getSetupSummaryText(side) {
+  const roster = uiState.setupModal.rosters[side];
+  if (!roster) return "Using the built-in demo force.";
+  const label = side === "playerA" ? "Blue" : "Red";
+  return `${label}: ${roster.factionName} • ${roster.summary.importedUnits} unit(s) • ${roster.summary.importedCards} tactical card(s)`;
+}
+
+function renderSetupRosterWarnings(roster) {
+  if (!roster?.warnings?.length) return "";
+  return `
+    <div class="setup-warning-list">
+      ${roster.warnings.map(warning => `<div class="setup-warning">${escapeHtml(warning)}</div>`).join("")}
+    </div>
+  `;
+}
+
+function renderSetupUpgradeBreakdown(roster) {
+  const unitsWithUpgradeInfo = (roster?.army ?? []).filter(unit => (unit.selectedUpgrades?.length ?? 0) > 0);
+  if (!unitsWithUpgradeInfo.length) return "";
+  return `
+    <div class="setup-upgrade-list">
+      ${unitsWithUpgradeInfo.map(unit => `
+        <div class="setup-upgrade-card">
+          <div class="setup-upgrade-head">
+            <div class="setup-upgrade-unit">${escapeHtml(unit.sourceName ?? unit.templateId)}</div>
+            <div class="setup-upgrade-meta">${unit.upgradeSummary?.applied?.length ?? 0} applied • ${unit.upgradeSummary?.ignored?.length ?? 0} ignored</div>
+          </div>
+          <div class="setup-upgrade-row">
+            <span class="setup-upgrade-label">Selected</span>
+            <span>${escapeHtml((unit.selectedUpgrades ?? []).join(", "))}</span>
+          </div>
+          ${(unit.upgradeSummary?.applied?.length ?? 0) ? `
+            <div class="setup-upgrade-row success">
+              <span class="setup-upgrade-label">Applied</span>
+              <span>${escapeHtml(unit.upgradeSummary.applied.join(", "))}</span>
+            </div>
+          ` : ""}
+          ${(unit.upgradeSummary?.partial?.length ?? 0) ? `
+            <div class="setup-upgrade-row partial">
+              <span class="setup-upgrade-label">Partial</span>
+              <span>${escapeHtml(unit.upgradeSummary.partial.join(", "))}</span>
+            </div>
+          ` : ""}
+          ${(unit.upgradeSummary?.ignored?.length ?? 0) ? `
+            <div class="setup-upgrade-row warn">
+              <span class="setup-upgrade-label">Ignored</span>
+              <span>${escapeHtml(unit.upgradeSummary.ignored.join(", "))}</span>
+            </div>
+          ` : ""}
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderSetupModal() {
+  const root = document.getElementById("setupModalRoot");
+  if (!root) return;
+  if (!uiState.setupModal.open) {
+    root.className = "combat-choice-root";
+    root.innerHTML = "";
+    return;
+  }
+
+  const missionOptions = Object.values(MISSION_DATA).map(mission => `
+    <option value="${escapeHtml(mission.id)}" ${mission.id === uiState.setupModal.missionId ? "selected" : ""}>${escapeHtml(mission.name)}</option>
+  `).join("");
+  const deploymentOptions = Object.values(DEPLOYMENT_DATA).map(deployment => `
+    <option value="${escapeHtml(deployment.id)}" ${deployment.id === uiState.setupModal.deploymentId ? "selected" : ""}>${escapeHtml(deployment.name)}</option>
+  `).join("");
+
+  root.className = "combat-choice-root active";
+  root.innerHTML = `
+    <div class="combat-choice-backdrop"></div>
+    <section class="combat-choice-modal setup-modal" role="dialog" aria-modal="true" aria-labelledby="setupModalTitle">
+      <header class="combat-choice-header">
+        <div>
+          <div class="combat-choice-kicker">Battle Setup</div>
+          <h2 id="setupModalTitle" class="combat-choice-title">Build the match from imported army-builder rosters or the demo forces.</h2>
+          <div class="combat-choice-subtitle">Import a Blue roster, a Red roster, or both. Anything the engine does not support yet will be listed here before the game starts.</div>
+        </div>
+      </header>
+      <div class="combat-choice-body">
+        <div class="setup-config-grid">
+          <label class="setup-field">
+            <span class="setup-label">Mission</span>
+            <select id="setupMissionSelect" class="setup-select">${missionOptions}</select>
+          </label>
+          <label class="setup-field">
+            <span class="setup-label">Deployment</span>
+            <select id="setupDeploymentSelect" class="setup-select">${deploymentOptions}</select>
+          </label>
+          <label class="setup-field">
+            <span class="setup-label">First Player</span>
+            <select id="setupFirstPlayerSelect" class="setup-select">
+              <option value="playerA" ${uiState.setupModal.firstPlayerMarkerHolder === "playerA" ? "selected" : ""}>Blue</option>
+              <option value="playerB" ${uiState.setupModal.firstPlayerMarkerHolder === "playerB" ? "selected" : ""}>Red</option>
+            </select>
+          </label>
+        </div>
+        <div class="setup-roster-grid">
+          ${["playerA", "playerB"].map(side => {
+            const roster = uiState.setupModal.rosters[side];
+            const sideLabel = side === "playerA" ? "Blue" : "Red";
+            return `
+              <section class="setup-roster-card">
+                <div class="setup-roster-head">
+                  <div>
+                    <div class="setup-roster-title">${sideLabel} Roster</div>
+                    <div class="setup-roster-subtitle">${escapeHtml(getSetupSummaryText(side))}</div>
+                  </div>
+                  <div class="setup-roster-actions">
+                    <button class="btn secondary btn-sm" data-import-side="${side}">Import JSON</button>
+                    ${roster ? `<button class="btn secondary btn-sm" data-clear-side="${side}">Use Demo</button>` : ""}
+                  </div>
+                </div>
+                ${roster ? `
+                  <div class="setup-roster-stats">
+                    ${renderStoryStat("Units", roster.summary.importedUnits, "success")}
+                    ${renderStoryStat("Cards", roster.summary.importedCards)}
+                    ${renderStoryStat("Skipped", roster.summary.skippedUnits + roster.summary.skippedCards, roster.warnings.length ? "warn" : "")}
+                    ${renderStoryStat("Upgrades", roster.summary.appliedUpgrades, roster.summary.appliedUpgrades ? "success" : "")}
+                    ${renderStoryStat("Partial", roster.summary.partialUpgrades, roster.summary.partialUpgrades ? "phase" : "")}
+                    ${renderStoryStat("Ignored", roster.summary.ignoredUpgrades, roster.summary.ignoredUpgrades ? "warn" : "")}
+                  </div>
+                  ${renderSetupUpgradeBreakdown(roster)}
+                  ${renderSetupRosterWarnings(roster)}
+                ` : `
+                  <div class="setup-empty">No imported roster yet. The match will use the built-in demo force for ${sideLabel.toLowerCase()} if you leave this alone.</div>
+                `}
+              </section>
+            `;
+          }).join("")}
+        </div>
+      </div>
+      <footer class="combat-choice-footer">
+        <div class="combat-choice-footer-copy">Army Builder exports can come straight from the JSON save button. Unsupported units and cards are skipped with warnings instead of crashing the setup.</div>
+        <button id="setupCancelBtn" class="btn secondary">Cancel</button>
+        <button id="setupStartBtn" class="btn primary">Start Battle</button>
+      </footer>
+    </section>
+  `;
+
+  root.querySelector(".combat-choice-backdrop")?.addEventListener("click", closeSetupModal);
+  root.querySelector("#setupCancelBtn")?.addEventListener("click", closeSetupModal);
+  root.querySelector("#setupMissionSelect")?.addEventListener("change", event => {
+    uiState.setupModal.missionId = event.target.value;
+  });
+  root.querySelector("#setupDeploymentSelect")?.addEventListener("change", event => {
+    uiState.setupModal.deploymentId = event.target.value;
+  });
+  root.querySelector("#setupFirstPlayerSelect")?.addEventListener("change", event => {
+    uiState.setupModal.firstPlayerMarkerHolder = event.target.value;
+  });
+  root.querySelectorAll("[data-import-side]").forEach(button => {
+    button.addEventListener("click", () => promptArmyImport(button.getAttribute("data-import-side")));
+  });
+  root.querySelectorAll("[data-clear-side]").forEach(button => {
+    button.addEventListener("click", () => {
+      uiState.setupModal.rosters[button.getAttribute("data-clear-side")] = null;
+      rerender();
+    });
+  });
+  root.querySelector("#setupStartBtn")?.addEventListener("click", startConfiguredBattle);
 }
 
 function showError(message) {
@@ -335,6 +532,7 @@ function queueStoryModal(entry, state) {
     kicker: config.kicker,
     title: config.title,
     body: isCustom ? entry.body : entry.text,
+    htmlBody: entry.htmlBody ?? null,
     subtitle: entry.subtitle ?? `Round ${state.round} • ${state.phase[0].toUpperCase()}${state.phase.slice(1)} Phase`
   });
   if (!uiState.activeStoryModal) {
@@ -377,6 +575,10 @@ function resolveCombatForSelectedUnit(unitId) {
 function confirmCombatChoice(targetId) {
   const selection = uiState.pendingCombatChoice;
   if (!selection) return;
+  if (!selection.options?.length) {
+    resolveCombatForSelectedUnit(selection.unitId);
+    return;
+  }
   const retargetResult = store.dispatch({
     type: "SET_CHARGE_PRIMARY_TARGET",
     payload: { playerId: "playerA", unitId: selection.unitId, targetId }
@@ -401,10 +603,113 @@ function renderStoryStat(label, value, accent = "") {
   return `<div class="story-stat ${accent}"><div class="story-stat-label">${escapeHtml(label)}</div><div class="story-stat-value">${escapeHtml(value)}</div></div>`;
 }
 
+function getUnitName(state, unitId) {
+  return state.units[unitId]?.name ?? unitId;
+}
+
+function getWeaponName(state, payload) {
+  const attacker = state.units[payload.attackerId];
+  if (!attacker) return payload.weaponId ?? "attack profile";
+  const weaponPool = payload.mode === "melee" ? attacker.meleeWeapons : attacker.rangedWeapons;
+  return weaponPool?.find(weapon => weapon.id === payload.weaponId)?.name ?? payload.weaponId ?? "attack profile";
+}
+
+function buildCombatPayloadBlock(payload, state) {
+  const attacker = getUnitName(state, payload.attackerId);
+  const target = getUnitName(state, payload.targetId);
+  const weapon = getWeaponName(state, payload);
+  const actionLabel = payload.mode === "overwatch"
+    ? "Overwatch"
+    : payload.mode === "melee"
+      ? "Charge Attack"
+      : "Ranged Attack";
+  const casualtiesAccent = payload.casualties > 0 ? "impact" : "";
+  const chips = [
+    actionLabel,
+    payload.visible === false ? "Indirect Fire" : "",
+    payload.longRangePenalty ? "Long Range Penalty" : "",
+    payload.antiEvade ? `Anti-Evade ${payload.antiEvade}` : "",
+    payload.damagePerHit && payload.damagePerHit > 1 ? `Damage ${payload.damagePerHit}` : "",
+    payload.primaryTargetFocus ? "Primary Target" : ""
+  ].filter(Boolean);
+
+  const statGrid = `
+    <div class="story-stat-grid">
+      ${renderStoryStat("Attacks", payload.attempts)}
+      ${renderStoryStat("Hits", payload.hits)}
+      ${payload.precision ? renderStoryStat("Precision", payload.precision, "success") : ""}
+      ${renderStoryStat("Wounds", payload.wounds)}
+      ${payload.criticalHit?.applied ? renderStoryStat("Crit", payload.criticalHit.applied, "impact") : ""}
+      ${payload.surge?.applied ? renderStoryStat("Surge", payload.surge.applied, "impact") : ""}
+      ${payload.dodge?.prevented ? renderStoryStat("Dodge", payload.dodge.prevented, "success") : ""}
+      ${renderStoryStat("Saves", payload.saved)}
+      ${payload.evade?.saved ? renderStoryStat("Evade", payload.evade.saved, "success") : ""}
+      ${renderStoryStat("Damage", payload.totalDamage, payload.totalDamage > 0 ? "impact" : "")}
+      ${renderStoryStat("Casualties", payload.casualties, casualtiesAccent)}
+      ${payload.fightingRank != null ? renderStoryStat("Fight Rank", payload.fightingRank, "success") : ""}
+      ${payload.supportingRank != null ? renderStoryStat("Support", payload.supportingRank, "success") : ""}
+      ${payload.assignedModels != null ? renderStoryStat("Assigned", payload.assignedModels, "success") : ""}
+    </div>
+  `;
+
+  const notes = [];
+  if (payload.impact) {
+    notes.push(payload.impact.preventedByHidden
+      ? `Impact was negated because ${target} stayed hidden.`
+      : `Impact rolled ${payload.impact.attempts} dice, landed ${payload.impact.hits} hits, and caused ${payload.impact.casualties} casualties before the main attack.`);
+  }
+  if (payload.surge?.applied) {
+    notes.push(`Surge rolled ${payload.surge.roll} on ${payload.surge.dice} and turned ${payload.surge.applied} wound(s) into bypassed armour against ${payload.surge.matchedTags.join("/")}.`);
+  }
+  if (payload.criticalHit?.applied) {
+    notes.push(`Critical Hit pushed ${payload.criticalHit.applied} wound(s) straight past armour.`);
+  }
+  if (payload.dodge?.prevented) {
+    notes.push(`${target} used Dodge to cancel ${payload.dodge.prevented} bypassed hit(s).`);
+  }
+  if (payload.evade?.saved) {
+    notes.push(`${target} avoided ${payload.evade.saved} hit(s) on ${payload.evade.target}+ evade.`);
+  }
+  if (payload.ancillaryCarapace) {
+    notes.push(`${target} improved its armour roll with Ancillary Carapace.`);
+  }
+  if (payload.objectiveDefenseBonus) {
+    notes.push(`${target} gained +${payload.objectiveDefenseBonus} armour from objective positioning.`);
+  }
+  if (payload.burstFire?.bonusAttacks) {
+    notes.push(`${attacker} gained +${payload.burstFire.bonusAttacks} attacks from Burst Fire at close range.`);
+  }
+  if (payload.lockedIn) {
+    notes.push(`${attacker} gained +${payload.lockedIn} attacks because ${target} was stationary.`);
+  }
+  if (payload.lifeSupport?.reducedBy) {
+    notes.push(`Life Support reduced the damage that got through by ${payload.lifeSupport.reducedBy}.`);
+  }
+  if (payload.zealousRound?.reducedBy) {
+    notes.push(`Zealous Round reduced the damage that got through by ${payload.zealousRound.reducedBy} and activated ${target}.`);
+  }
+  if (payload.concentratedFire?.cap) {
+    notes.push(
+      payload.concentratedFire.discardedDamage > 0
+        ? `Concentrated Fire capped casualties at ${payload.concentratedFire.cap} and discarded ${payload.concentratedFire.discardedDamage} excess damage.`
+        : `Concentrated Fire capped casualties at ${payload.concentratedFire.cap}.`
+    );
+  }
+
+  return `
+    <div class="story-lead"><strong>${escapeHtml(attacker)}</strong> resolved a ${escapeHtml(actionLabel.toLowerCase())} into <strong>${escapeHtml(target)}</strong> with <strong>${escapeHtml(weapon)}</strong>.</div>
+    ${statGrid}
+    <div class="story-note-row">
+      ${chips.map(chip => `<span class="story-chip">${escapeHtml(chip)}</span>`).join("")}
+    </div>
+    ${notes.length ? `<div class="story-summary-list">${notes.map(note => `<div class="story-summary-item">${escapeHtml(note)}</div>`).join("")}</div>` : ""}
+  `;
+}
+
 function buildStoryBlock(text) {
-  const combatMatch = text.match(/^(.*?) (attacks|fires overwatch at|charges) (.*?) with (.*?): (\d+) attacks, (\d+) hits(?: \(including (\d+) Precision\))?, (\d+) wounds(?:, Critical Hit (\d+) bypassed armour)?(?:, Surge (.*?) rolled (\d+) vs (.*?) -> (\d+) bypassed armour)?(?:, Dodge prevented (\d+) bypassed hits)?, (\d+) saves(?: \((cover)\))?(?:, (\d+) evade saves on (\d+)\+)?(?:, indirect fire without line of sight)?(?:, long range penalty applied)?(?:, Burst Fire \+(\d+))?(?:, Locked In \+(\d+))?(?:, Anti-Evade (\d+))?(?:, Pierce damage (\d+))?(?:, Concentrated Fire cap (\d+)(?: \(discarded (\d+) damage\))?)?(?:, Fighting Rank (\d+), Supporting Rank (\d+), Assigned Models (\d+)(?:, Primary Target Focus)?)?, (\d+) casualties\.$/);
+  const combatMatch = text.match(/^(.*?) (attacks|fires overwatch at|charges) (.*?) with (.*?): (\d+) attacks, (\d+) hits(?: \(including (\d+) Precision\))?, (\d+) wounds(?:, Critical Hit (\d+) bypassed armour)?(?:, Surge (.*?) rolled (\d+) vs (.*?) -> (\d+) bypassed armour)?(?:, Dodge prevented (\d+) bypassed hits)?, (\d+) saves(?: \((cover)\))?(?:, (\d+) evade saves on (\d+)\+)?(?:, indirect fire without line of sight)?(?:, long range penalty applied)?(?:, Burst Fire \+(\d+))?(?:, Locked In \+(\d+))?(?:, Anti-Evade (\d+))?(?:, Pierce damage (\d+))?(?:, Zealous Round reduced damage by (\d+))?(?:, Concentrated Fire cap (\d+)(?: \(discarded (\d+) damage\))?)?(?:, Fighting Rank (\d+), Supporting Rank (\d+), Assigned Models (\d+)(?:, Primary Target Focus)?)?, (\d+) casualties\.$/);
   if (combatMatch) {
-      const [, attacker, verb, target, weapon, attacks, hits, precisionApplied, wounds, criticalApplied, surgeDie, surgeRoll, surgeTags, surgeApplied, dodgePrevented, saves, cover, evadeSaved, evadeTarget, burstFireBonus, lockedInBonus, antiEvade, pierceDamage, concentratedFireCap, concentratedFireDiscarded, fightingRank, supportingRank, assignedModels, casualties] = combatMatch;
+      const [, attacker, verb, target, weapon, attacks, hits, precisionApplied, wounds, criticalApplied, surgeDie, surgeRoll, surgeTags, surgeApplied, dodgePrevented, saves, cover, evadeSaved, evadeTarget, burstFireBonus, lockedInBonus, antiEvade, pierceDamage, zealousRoundReduced, concentratedFireCap, concentratedFireDiscarded, fightingRank, supportingRank, assignedModels, casualties] = combatMatch;
       const longRangeApplied = text.includes("long range penalty applied");
       const indirectFireApplied = text.includes("indirect fire without line of sight");
       const primaryTargetFocus = text.includes("Primary Target Focus");
@@ -420,6 +725,7 @@ function buildStoryBlock(text) {
           ${surgeApplied ? renderStoryStat("Surge", surgeApplied, Number(surgeApplied) > 0 ? "impact" : "") : ""}
           ${burstFireBonus ? renderStoryStat("Burst", burstFireBonus, "success") : ""}
           ${lockedInBonus ? renderStoryStat("Locked In", lockedInBonus, "success") : ""}
+          ${zealousRoundReduced ? renderStoryStat("Zealous", zealousRoundReduced, "success") : ""}
           ${fightingRank ? renderStoryStat("Fight Rank", fightingRank, "success") : ""}
           ${supportingRank ? renderStoryStat("Support", supportingRank, "success") : ""}
           ${assignedModels ? renderStoryStat("Assigned", assignedModels, "success") : ""}
@@ -438,6 +744,7 @@ function buildStoryBlock(text) {
           ${longRangeApplied ? '<span class="story-chip">Long Range Penalty</span>' : ""}
           ${burstFireBonus ? `<span class="story-chip">Burst Fire +${escapeHtml(burstFireBonus)}</span>` : ""}
           ${lockedInBonus ? `<span class="story-chip">Locked In +${escapeHtml(lockedInBonus)}</span>` : ""}
+          ${zealousRoundReduced ? `<span class="story-chip">Zealous Round -${escapeHtml(zealousRoundReduced)} damage</span>` : ""}
           ${fightingRank ? `<span class="story-chip">Fighting Rank ${escapeHtml(fightingRank)}</span>` : ""}
           ${supportingRank ? `<span class="story-chip">Supporting Rank ${escapeHtml(supportingRank)}</span>` : ""}
           ${assignedModels ? `<span class="story-chip">Assigned Models ${escapeHtml(assignedModels)}</span>` : ""}
@@ -572,12 +879,127 @@ function buildStoryBlock(text) {
     `;
   }
 
+  const medpackMatch = text.match(/^(.*?) uses Medpack on (.*?): (\d+) support in range, (\d+) wound\(s\) restored\.$/);
+  if (medpackMatch) {
+    const [, source, target, supportPoints, healed] = medpackMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(source)}</strong> treated <strong>${escapeHtml(target)}</strong>.</div>
+      <div class="story-stat-grid">
+        ${renderStoryStat("Support", supportPoints, "success")}
+        ${renderStoryStat("Healed", healed, Number(healed) > 0 ? "success" : "")}
+      </div>
+      <div class="story-outcome success">${escapeHtml(target)} regains ${escapeHtml(healed)} wound(s) right now.</div>
+    `;
+  }
+
+  const opticalFlareMatch = text.match(/^(.*?) uses Optical Flare on (.*?): Range -4 this round, no Long Range\.$/);
+  if (opticalFlareMatch) {
+    const [, source, target] = opticalFlareMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(source)}</strong> blinds <strong>${escapeHtml(target)}</strong> with Optical Flare.</div>
+      <div class="story-outcome warning">${escapeHtml(target)} loses 4" of ranged weapon range for this round and cannot use Long Range.</div>
+      <div class="story-note-row">
+        <span class="story-chip">Range -4</span>
+        <span class="story-chip">No Long Range</span>
+        <span class="story-chip">Until End of Round</span>
+      </div>
+    `;
+  }
+
+  const lifeSupportMatch = text.match(/^(.*?) gains Life Support: (.*?) reduce incoming damage by (\d+)\.$/);
+  if (lifeSupportMatch) {
+    const [, target, sources, reducedBy] = lifeSupportMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(target)}</strong> is kept alive by nearby medics.</div>
+      <div class="story-outcome success">Life Support cuts the incoming damage by ${escapeHtml(reducedBy)} before it is applied.</div>
+      <div class="story-note-row">
+        <span class="story-chip">${escapeHtml(sources)}</span>
+      </div>
+    `;
+  }
+
+  const zealousRoundMatch = text.match(/^(.*?) uses Zealous Round, counts as activated in (.*?), and reduces incoming damage by (\d+)\.$/);
+  if (zealousRoundMatch) {
+    const [, target, phase, reducedBy] = zealousRoundMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(target)}</strong> spends Zealous Round to endure the hit.</div>
+      <div class="story-outcome success">Incoming damage is reduced by ${escapeHtml(reducedBy)}, and the unit counts as activated in ${escapeHtml(phase)}.</div>
+      <div class="story-note-row">
+        <span class="story-chip">Activated in ${escapeHtml(phase)}</span>
+        <span class="story-chip">Damage -${escapeHtml(reducedBy)}</span>
+      </div>
+    `;
+  }
+
+  const burrowToggleMatch = text.match(/^(.*?) burrows and becomes Hidden\.$/);
+  if (burrowToggleMatch) {
+    const [, unitName] = burrowToggleMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(unitName)}</strong> burrows underground.</div>
+      <div class="story-outcome success">The unit gains Burrowed and Hidden.</div>
+      <div class="story-note-row">
+        <span class="story-chip">Burrowed</span>
+        <span class="story-chip">Hidden</span>
+      </div>
+    `;
+  }
+
+  const emergeMatch = text.match(/^(.*?) emerges and loses Burrowed\.$/);
+  if (emergeMatch) {
+    const [, unitName] = emergeMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(unitName)}</strong> emerges from underground.</div>
+      <div class="story-outcome">Burrowed is removed, and the unit is no longer protected by that state.</div>
+      <div class="story-note-row">
+        <span class="story-chip">Burrowed Removed</span>
+      </div>
+    `;
+  }
+
+  const hiddenToggleMatch = text.match(/^(.*?) becomes Hidden\.$/);
+  if (hiddenToggleMatch) {
+    const [, unitName] = hiddenToggleMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(unitName)}</strong> slips out of sight.</div>
+      <div class="story-outcome success">The unit becomes Hidden until it reveals itself or an enemy gets close enough.</div>
+      <div class="story-note-row">
+        <span class="story-chip">Hidden</span>
+      </div>
+    `;
+  }
+
+  const revealMatch = text.match(/^(.*?) reveals itself and loses Hidden\.$/);
+  if (revealMatch) {
+    const [, unitName] = revealMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(unitName)}</strong> is no longer concealed.</div>
+      <div class="story-outcome">Hidden is removed, so the unit can be targeted normally again.</div>
+      <div class="story-note-row">
+        <span class="story-chip">Hidden Removed</span>
+      </div>
+    `;
+  }
+
+  const regenMatch = text.match(/^(.*?) regenerates (\d+) wounds? while burrowed\.$/);
+  if (regenMatch) {
+    const [, unitName, healed] = regenMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(unitName)}</strong> regenerates while underground.</div>
+      <div class="story-outcome success">${escapeHtml(healed)} wound(s) are restored because the unit activated while Burrowed.</div>
+      <div class="story-note-row">
+        <span class="story-chip">Burrowed Regen</span>
+      </div>
+    `;
+  }
+
   const cardMatch = text.match(/^(Blue|Red) plays (.*?)(?: on (.*?))?\.$/);
   if (cardMatch) {
     const [, player, cardName, target] = cardMatch;
+    const cardEntry = Object.values(TACTICAL_CARDS).find(card => card?.name === cardName);
+    const effectSummary = cardEntry ? describeTacticalCardForModal(cardEntry, target) : "Its effect is now active.";
     return `
       <div class="story-lead"><strong>${escapeHtml(player)}</strong> used <strong>${escapeHtml(cardName)}</strong>${target ? ` on <strong>${escapeHtml(target)}</strong>` : ""}.</div>
-      <div class="story-outcome">Its effect is now active for the relevant timing window.</div>
+      <div class="story-outcome">${escapeHtml(effectSummary)}</div>
     `;
   }
 
@@ -586,6 +1008,7 @@ function buildStoryBlock(text) {
 }
 
 function buildStoryModalBody(modal) {
+  if (modal.htmlBody) return modal.htmlBody;
   const blocks = String(modal.body).split("\n").filter(Boolean);
   if (blocks.length <= 1) return buildStoryBlock(blocks[0] ?? "");
   return blocks.map((block, index) => `<div class="story-sequence-block ${index > 0 ? "stacked" : ""}">${buildStoryBlock(block)}</div>`).join("");
@@ -642,13 +1065,28 @@ function renderCombatChoiceModal() {
     <section class="combat-choice-modal" role="dialog" aria-modal="true" aria-labelledby="combatChoiceTitle">
       <header class="combat-choice-header">
         <div>
-          <div class="combat-choice-kicker">Melee Target Choice</div>
-          <h2 id="combatChoiceTitle" class="combat-choice-title">Choose where ${escapeHtml(selection.attackerName)} pushes hardest.</h2>
-          <div class="combat-choice-subtitle">This charge is tied into multiple enemies. Pick the unit that gets primary target focus before combat resolves.</div>
+          <div class="combat-choice-kicker">Combat Sequence</div>
+          <h2 id="combatChoiceTitle" class="combat-choice-title">Review how ${escapeHtml(selection.attackerName)} resolves this activation.</h2>
+          <div class="combat-choice-subtitle">${selection.options?.length
+            ? "This charge is tied into multiple enemies. Review the sequence, then pick the unit that gets primary target focus."
+            : "Review the numbered steps below, then resolve the activation when you are ready."}</div>
         </div>
       </header>
       <div class="combat-choice-body">
-        ${selection.options.map(option => `
+        <div class="combat-choice-sequence">
+          ${(selection.steps ?? []).map((step, index) => `
+            <div class="combat-sequence-step ${step.kind === "close_ranks" ? "support" : ""}">
+              <div class="combat-sequence-order">${index + 1}</div>
+              <div class="combat-sequence-copy">
+                <div class="combat-sequence-label">${escapeHtml(step.label)}</div>
+                <div class="combat-sequence-detail">${escapeHtml(step.detail)}</div>
+              </div>
+              ${step.targetName ? `<span class="combat-choice-chip ${step.isPrimaryTarget ? "current" : ""}">${escapeHtml(step.targetName)}</span>` : ""}
+            </div>
+          `).join("")}
+        </div>
+        ${selection.options?.length ? '<div class="combat-choice-section-title">Choose Primary Target Focus</div>' : ""}
+        ${(selection.options ?? []).map(option => `
           <button class="combat-choice-option ${option.isCurrentPrimary ? "current" : ""}" data-target-id="${escapeHtml(option.targetId)}">
             <div class="combat-choice-option-header">
               <div>
@@ -666,7 +1104,8 @@ function renderCombatChoiceModal() {
         `).join("")}
       </div>
       <footer class="combat-choice-footer">
-        <div class="combat-choice-footer-copy">Pick a target to resolve this melee sequence.</div>
+        <div class="combat-choice-footer-copy">${selection.options?.length ? "Pick a target to resolve this melee sequence." : "Resolve this activation in the order shown above."}</div>
+        ${selection.options?.length ? "" : '<button id="combatChoiceResolveBtn" class="btn primary">Resolve Sequence</button>'}
         <button id="combatChoiceCancelBtn" class="btn secondary">Cancel</button>
       </footer>
     </section>
@@ -674,6 +1113,7 @@ function renderCombatChoiceModal() {
 
   root.querySelector(".combat-choice-backdrop")?.addEventListener("click", dismissCombatChoiceModal);
   root.querySelector("#combatChoiceCancelBtn")?.addEventListener("click", dismissCombatChoiceModal);
+  root.querySelector("#combatChoiceResolveBtn")?.addEventListener("click", () => confirmCombatChoice(null));
   root.querySelectorAll("[data-target-id]").forEach(button => {
     button.addEventListener("click", () => confirmCombatChoice(button.getAttribute("data-target-id")));
   });
@@ -710,15 +1150,32 @@ function isChargeSequenceAction(entry) {
   ].some(fragment => entry.text.includes(fragment));
 }
 
-function buildModalFromEntries(entries, state, title, kicker, tone) {
+function buildModalFromEntries(entries, state, title, kicker, tone, options = {}) {
   queueStoryModal({
     type: "custom",
     tone,
     kicker,
     title,
     body: entries.map(entry => entry.text).join("\n"),
+    htmlBody: options.htmlBody ?? null,
     subtitle: `Round ${state.round} • ${state.phase[0].toUpperCase()}${state.phase.slice(1)} Phase`
   }, state);
+}
+
+function buildCombatModalFromEvents(events, state) {
+  if (!events.length) return;
+  buildModalFromEntries(
+    [],
+    state,
+    events.length > 1 ? "Combat Sequence" : "Attack Resolved",
+    "Combat Result",
+    "combat",
+    {
+      htmlBody: events
+        .map((event, index) => `<div class="story-sequence-block ${index > 0 ? "stacked" : ""}">${buildCombatPayloadBlock(event.payload, state)}</div>`)
+        .join("")
+    }
+  );
 }
 
 function getToastConfig(entry) {
@@ -739,10 +1196,74 @@ function getToastConfig(entry) {
   return { title: "Update", prominent: false, durationMs: 5200 };
 }
 
-function publishLogNotifications(state) {
-  if (uiState.lastSeenLogCount >= state.log.length) return;
+function getToastMessage(entry) {
+  const text = entry.text;
+
+  const deployMatch = text.match(/^(.*?) deploys from reserves(?: via deep strike)?\.(.*)$/);
+  if (deployMatch) {
+    const [, unitName, extra] = deployMatch;
+    return `${unitName} enters the battlefield from reserves.${extra ? ` ${extra.trim()}` : ""}`.trim();
+  }
+
+  const moveMatch = text.match(/^(.*?) moves ([\d.]+)"\.(.*)$/);
+  if (moveMatch) {
+    const [, unitName, distanceMoved, extra] = moveMatch;
+    return `${unitName} repositions ${distanceMoved}".${extra ? ` ${extra.trim()}` : ""}`.trim();
+  }
+
+  const runMatch = text.match(/^(.*?) runs ([\d.]+)" \(movement cost ([\d.]+) \/ max ([\d.]+)\)\.(.*)$/);
+  if (runMatch) {
+    const [, unitName, distanceMoved, cost, max, extra] = runMatch;
+    return `${unitName} sprints ${distanceMoved}" across the battlefield (${cost}/${max} movement used).${extra ? ` ${extra.trim()}` : ""}`.trim();
+  }
+
+  const disengageMatch = text.match(/^(.*?) disengages\.(.*)$/);
+  if (disengageMatch) {
+    const [, unitName, extra] = disengageMatch;
+    return `${unitName} pulls out of engagement.${extra ? ` ${extra.trim()}` : ""}`.trim();
+  }
+
+  const holdMatch = text.match(/^(.*?) holds position\.(.*)$/);
+  if (holdMatch) {
+    const [, unitName, extra] = holdMatch;
+    return `${unitName} stays in place and keeps its current stance.${extra ? ` ${extra.trim()}` : ""}`.trim();
+  }
+
+  const forceFieldBreakMatch = text.match(/^(.*?) crashes through a Force Field and destroys it\.$/);
+  if (forceFieldBreakMatch) {
+    const [, unitName] = forceFieldBreakMatch;
+    return `${unitName} is large enough to smash through the Force Field, removing it from play.`;
+  }
+
+  const burrowRegenMatch = text.match(/^(.*?) regenerates (\d+) wounds? while Burrowed\.$/);
+  if (burrowRegenMatch) {
+    const [, unitName, healed] = burrowRegenMatch;
+    return `${unitName} heals ${healed} while staying Burrowed.`;
+  }
+
+  const passFirstMatch = text.match(/^(Blue|Red) player passes first and claims the First Player Marker for the next phase\.$/);
+  if (passFirstMatch) {
+    const [, player] = passFirstMatch;
+    return `${player} passes first and will have initiative going into the next phase.`;
+  }
+
+  const passMatch = text.match(/^(Blue|Red) player passes\.$/);
+  if (passMatch) {
+    const [, player] = passMatch;
+    return `${player} ends their remaining actions for this phase.`;
+  }
+
+  return text;
+}
+
+function publishLogNotifications(state, events = []) {
+  if (uiState.lastSeenLogCount >= state.log.length && !events.length) return;
   const newEntries = state.log.slice(uiState.lastSeenLogCount);
   uiState.lastSeenLogCount = state.log.length;
+  const combatEvents = events.filter(event => event.type === "combat_attack_resolved");
+  if (combatEvents.length) {
+    buildCombatModalFromEvents(combatEvents, state);
+  }
   for (let index = 0; index < newEntries.length; index += 1) {
     const entry = newEntries[index];
 
@@ -757,6 +1278,7 @@ function publishLogNotifications(state) {
     }
 
     if (entry.type === "combat") {
+      if (combatEvents.length) continue;
       const grouped = [entry];
       while (index + 1 < newEntries.length && newEntries[index + 1].type === "combat" && grouped.length < 3) {
         grouped.push(newEntries[index + 1]);
@@ -771,7 +1293,7 @@ function publishLogNotifications(state) {
       continue;
     }
     const toastConfig = getToastConfig(entry);
-    pushToastNotification(entry.text, getNotificationTone(entry.type), toastConfig.durationMs, {
+    pushToastNotification(getToastMessage(entry), getNotificationTone(entry.type), toastConfig.durationMs, {
       prominent: toastConfig.prominent,
       title: toastConfig.title
     });
@@ -804,6 +1326,38 @@ function describeTacticalCard(card) {
     ? `${duration.type}${duration.phase ? `:${duration.phase}` : ""}${duration.eventType ? `:${duration.eventType}` : ""}`
     : "none";
   return `Phase: ${card.phase}. Target: ${card.target.replace(/_/g, " ")}. Modifiers: ${modifierText || "none"}. Timings: ${timingText}. Duration: ${durationText}.`;
+}
+
+function describeTacticalCardForModal(card, targetName = null) {
+  const modifiers = card.effect?.modifiers ?? [];
+  const duration = card.effect?.duration ?? null;
+  const durationText = duration?.eventType === "combat_attack_resolved"
+    ? "for the next resolved attack"
+    : duration?.phase
+      ? `until ${duration.phase} begins`
+      : duration?.eventType === "unit_moved"
+        ? "for the next move"
+        : "for its active timing window";
+
+  const pieces = modifiers.map(modifier => {
+    const targetLabel = targetName ? `${targetName}` : "the target";
+    if (modifier.key === "weapon.hitTarget" && modifier.operation === "add" && modifier.value < 0) {
+      return `${targetLabel} hits ${Math.abs(modifier.value)} better ${durationText}`;
+    }
+    if (modifier.key === "weapon.attacksPerModel" && modifier.operation === "add" && modifier.value > 0) {
+      return `${targetLabel} gains +${modifier.value} melee attack per model ${durationText}`;
+    }
+    if (modifier.key === "weapon.shotsPerModel" && modifier.operation === "add" && modifier.value > 0) {
+      return `${targetLabel} gains +${modifier.value} ranged shot per model ${durationText}`;
+    }
+    if (modifier.key === "unit.speed" && modifier.operation === "add" && modifier.value > 0) {
+      return `${targetLabel} gains +${modifier.value}" speed ${durationText}`;
+    }
+    return null;
+  }).filter(Boolean);
+
+  if (pieces.length) return pieces.join(". ") + ".";
+  return `This card changes ${card.target.replace(/_/g, " ")} behavior ${durationText}.`;
 }
 
 function buildActionButtons() {
@@ -870,6 +1424,27 @@ function buildActionButtons() {
       rerender();
     }, unit.status.engaged, "Unit is engaged. Disengage before moving."));
 
+    if (unit.abilities?.includes("solid_field_projectors")) {
+      buttons.unshift(actionButton("Force Field", "secondary", () => {
+        beginForceFieldInteraction(uiState);
+        uiState.legalDestinations = [];
+        rerender();
+      }));
+    }
+
+    if (unit.abilities?.includes("stabilize_wounds")) {
+      buttons.unshift(actionButton("Medpack", "secondary", () => {
+        beginMedpackInteraction(uiState);
+        uiState.legalDestinations = [];
+        rerender();
+      }));
+      buttons.unshift(actionButton("Optical Flare", "secondary", () => {
+        beginOpticalFlareInteraction(uiState);
+        uiState.legalDestinations = [];
+        rerender();
+      }));
+    }
+
     buttons.unshift(actionButton("Disengage", "warn", () => {
       beginDisengageInteraction(state, uiState, unit.id);
       computeLegalDestinations();
@@ -920,15 +1495,29 @@ function buildActionButtons() {
     const hasQueuedAttacks = state.combatQueue.some(entry =>
       ["ranged_attack", "charge_attack", "overwatch_attack"].includes(entry.type) && entry.attackerId === unit.id
     );
+    const canCloseRanksNow = validateCloseRanks(state, "playerA", unit.id).ok;
+    const combatPreview = getCombatActivationPreview(state, unit.id);
 
-    buttons.unshift(actionButton("Resolve Combat", "primary", () => {
+    buttons.unshift(actionButton("Review Combat", "primary", () => {
       const selection = getMeleeTargetSelection(state, unit.id);
-      if (selection) {
-        openCombatChoiceModal(selection);
+      if (combatPreview) {
+        openCombatChoiceModal({
+          ...combatPreview,
+          currentPrimaryTargetId: selection?.currentPrimaryTargetId ?? null,
+          options: selection?.options ?? []
+        });
         return;
       }
       resolveCombatForSelectedUnit(unit.id);
     }, !hasQueuedAttacks, "No queued attacks for this unit."));
+    buttons.unshift(actionButton("Close Ranks", "warn", () => {
+      const result = store.dispatch({
+        type: "CLOSE_RANKS",
+        payload: { playerId: "playerA", unitId: unit.id }
+      });
+      if (!result.ok) showError(result.message);
+      else { autoSelectNextUnit(); rerender(); }
+    }, !canCloseRanksNow, unit.status.burrowed ? "Burrowed units must be engaged and ready to activate." : "Only engaged Burrowed units can close ranks."));
     return buttons;
   }
 
@@ -1057,6 +1646,23 @@ function handleBoardClick(point) {
     return;
   }
 
+  if (uiState.mode === "force_field") {
+    const result = store.dispatch({
+      type: "PLACE_FORCE_FIELD",
+      payload: {
+        playerId: "playerA",
+        unitId: unit.id,
+        point: snappedPoint
+      }
+    });
+    if (!result.ok) return showError(result.message);
+    cancelCurrentInteraction(uiState);
+    uiState.legalDestinations = [];
+    autoSelectNextUnit();
+    rerender();
+    return;
+  }
+
   if (uiState.mode === "disengage") {
     const leader = unit.models[unit.leadingModelId];
     const path = [{ x: leader.x, y: leader.y }, snappedPoint];
@@ -1113,6 +1719,32 @@ function handleModelClick(unitId) {
     return;
   }
 
+  if (uiState.mode === "use_medpack" && selected && clickedUnit && selected.owner === "playerA" && clickedUnit.owner === "playerA") {
+    const result = store.dispatch({
+      type: "USE_MEDPACK",
+      payload: { playerId: "playerA", unitId: selected.id, targetId: clickedUnit.id }
+    });
+    if (!result.ok) { showError(result.message); return; }
+    cancelCurrentInteraction(uiState);
+    uiState.legalDestinations = [];
+    autoSelectNextUnit();
+    rerender();
+    return;
+  }
+
+  if (uiState.mode === "use_optical_flare" && selected && clickedUnit && selected.owner === "playerA" && clickedUnit.owner === "playerB") {
+    const result = store.dispatch({
+      type: "USE_OPTICAL_FLARE",
+      payload: { playerId: "playerA", unitId: selected.id, targetId: clickedUnit.id }
+    });
+    if (!result.ok) { showError(result.message); return; }
+    cancelCurrentInteraction(uiState);
+    uiState.legalDestinations = [];
+    autoSelectNextUnit();
+    rerender();
+    return;
+  }
+
   selectUnit(unitId);
 }
 
@@ -1140,7 +1772,7 @@ async function maybeRunBot() {
   }
 }
 
-function resetGame() {
+function resetUiForLoadedState(nextState) {
   uiState.selectedUnitId = null;
   uiState.legalDestinations = [];
   uiState.pendingPass = false;
@@ -1148,9 +1780,83 @@ function resetGame() {
   uiState.activeStoryModal = null;
   uiState.pendingCombatChoice = null;
   cancelCurrentInteraction(uiState);
-  const nextState = buildInitialState();
   uiState.lastSeenLogCount = nextState.log.length;
   store.replaceState(nextState);
+  document.getElementById("gridModeBtn").textContent = `Grid: ${store.getState().rules.gridMode ? "On" : "Off"}`;
+}
+
+function resetGame() {
+  resetUiForLoadedState(buildInitialState());
+}
+
+function openSetupModal() {
+  uiState.setupModal.open = true;
+  rerender();
+}
+
+function closeSetupModal() {
+  uiState.setupModal.open = false;
+  uiState.setupModal.pendingImportSide = null;
+  rerender();
+}
+
+function promptArmyImport(side) {
+  uiState.setupModal.pendingImportSide = side;
+  const input = document.getElementById("armyImportFileInput");
+  if (!input) return;
+  input.value = "";
+  input.click();
+}
+
+function importArmyBuilderFile(file) {
+  if (!file) return;
+  const side = uiState.setupModal.pendingImportSide;
+  if (!side) {
+    showError("Pick whether the roster is for Blue or Red first.");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(String(reader.result));
+      if (!isArmyBuilderPayload(parsed)) {
+        showError("That file is not an Army Builder roster export.");
+        return;
+      }
+      const roster = importArmyBuilderRoster(parsed, side);
+      uiState.setupModal.rosters[side] = roster;
+      uiState.setupModal.pendingImportSide = null;
+      const skipped = roster.summary.skippedUnits + roster.summary.skippedCards;
+      pushToastNotification(
+        skipped
+          ? `${side === "playerA" ? "Blue" : "Red"} roster imported with ${skipped} unsupported item(s) skipped.`
+          : `${side === "playerA" ? "Blue" : "Red"} roster imported.`,
+        skipped ? "warn" : "success",
+        5600,
+        { prominent: true }
+      );
+      rerender();
+    } catch {
+      showError("Could not read this army roster.");
+    }
+  };
+  reader.onerror = () => showError("Failed to load army roster file.");
+  reader.readAsText(file);
+}
+
+function startConfiguredBattle() {
+  const setup = buildSetupFromImportedRosters({
+    baseSetup: DEFAULT_SETUP,
+    missionId: uiState.setupModal.missionId,
+    deploymentId: uiState.setupModal.deploymentId,
+    firstPlayerMarkerHolder: uiState.setupModal.firstPlayerMarkerHolder,
+    rosterA: uiState.setupModal.rosters.playerA,
+    rosterB: uiState.setupModal.rosters.playerB
+  });
+  resetUiForLoadedState(buildStateFromSetup(setup));
+  uiState.setupModal.open = false;
+  pushToastNotification("Battle setup applied.", "success");
 }
 
 function sanitizeSaveFilenamePart(value) {
@@ -1192,9 +1898,7 @@ function importSaveFile(file) {
       uiState.activeStoryModal = null;
       uiState.pendingCombatChoice = null;
       cancelCurrentInteraction(uiState);
-      uiState.lastSeenLogCount = importedState.log?.length ?? 0;
-      store.replaceState(importedState);
-      document.getElementById("gridModeBtn").textContent = `Grid: ${store.getState().rules.gridMode ? "On" : "Off"}`;
+      resetUiForLoadedState(importedState);
       pushToastNotification("Save loaded.", "success");
     } catch (_error) {
       showError("Could not read this save file.");
@@ -1206,7 +1910,7 @@ function importSaveFile(file) {
 
 function controller() {
   return {
-    onNewGame: resetGame,
+    onNewGame: openSetupModal,
     onToggleGridMode: () => {
       const state = store.getState();
       state.rules.gridMode = !state.rules.gridMode;
@@ -1221,6 +1925,7 @@ function controller() {
       input.click();
     },
     onImportFileSelected: (event) => importSaveFile(event.target?.files?.[0]),
+    onArmyImportFileSelected: (event) => importArmyBuilderFile(event.target?.files?.[0]),
     onPass: () => {
       // Two-click pass confirmation
       if (!uiState.pendingPass) {
@@ -1258,6 +1963,10 @@ function updatePreviewFromPoint(point) {
     uiState.previewPath = { path: [{ x: leader.x, y: leader.y }, snappedPoint], state };
     uiState.previewUnit = { unitId: unit.id, leader: snappedPoint, placements: autoArrangeModels(state, unit.id, snappedPoint) };
   }
+  if (uiState.mode === "force_field") {
+    uiState.previewPath = null;
+    uiState.previewUnit = { kind: "force_field", leader: snappedPoint };
+  }
 }
 
 function wirePreviewEvents() {
@@ -1294,8 +2003,9 @@ function wireKeyboardShortcuts() {
       if (event.key === "Enter") {
         event.preventDefault();
         const targetId = uiState.pendingCombatChoice.currentPrimaryTargetId
-          ?? uiState.pendingCombatChoice.options[0]?.targetId;
-        if (targetId) confirmCombatChoice(targetId);
+          ?? uiState.pendingCombatChoice.options?.[0]?.targetId
+          ?? null;
+        confirmCombatChoice(targetId);
         return;
       }
     }
@@ -1359,8 +2069,8 @@ function init() {
   bindInputHandlers(store, controller());
   document.getElementById("gridModeBtn").textContent = `Grid: ${store.getState().rules.gridMode ? "On" : "Off"}`;
   uiState.lastSeenLogCount = store.getState().log.length;
-  store.subscribe((state) => {
-    publishLogNotifications(state);
+  store.subscribe((state, events) => {
+    publishLogNotifications(state, events ?? []);
     rerender();
     maybeRunBot();
   });

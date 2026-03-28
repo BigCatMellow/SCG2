@@ -36,10 +36,11 @@ function addZones(svg, state) {
 
 function addTerrain(svg, terrain) {
   for (const p of terrain) {
+    const klass = p.kind === "force_field" ? "terrain-force-field" : p.impassable ? "terrain-block" : "terrain-cover";
     svg.appendChild(el("rect", {
       x: p.rect.minX, y: p.rect.minY,
       width: p.rect.maxX - p.rect.minX, height: p.rect.maxY - p.rect.minY,
-      class: p.impassable ? "terrain-block" : "terrain-cover"
+      class: klass
     }));
   }
 }
@@ -90,9 +91,15 @@ function addSelection(svg, state, uiState) {
 /* ── Preview: single ghost block ── */
 function addPreviewUnit(svg, state, uiState) {
   if (!uiState.previewUnit) return;
+  const { leader } = uiState.previewUnit;
+  if (uiState.previewUnit.kind === "force_field") {
+    svg.appendChild(el("rect", {
+      x: leader.x - 0.5, y: leader.y - 0.5, width: 1, height: 1, rx: 0.12, class: "force-field-preview"
+    }));
+    return;
+  }
   const unit = state.units[uiState.previewUnit.unitId];
   if (!unit) return;
-  const { leader } = uiState.previewUnit;
   const sq = { x: Math.round(leader.x) - 0.5, y: Math.round(leader.y) - 0.5 };
   svg.appendChild(el("rect", {
     x: sq.x, y: sq.y, width: 1, height: 1, rx: 0.12, class: "deploy-preview"
@@ -120,6 +127,9 @@ function addRangeRings(svg, state, uiState) {
   if (!m || m.x == null) return;
   if (uiState.mode === "move" || uiState.mode === "run" || uiState.mode === "disengage") {
     svg.appendChild(el("circle", { cx: m.x, cy: m.y, r: unit.speed, class: "range-ring movement" }));
+  }
+  if (uiState.mode === "force_field") {
+    svg.appendChild(el("circle", { cx: m.x, cy: m.y, r: 8, class: "range-ring support" }));
   }
   if (uiState.mode === "declare_ranged" && unit.rangedWeapons?.length) {
     const r = Math.max(...unit.rangedWeapons.map(w => w.rangeInches ?? 0));

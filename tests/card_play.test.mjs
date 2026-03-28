@@ -77,7 +77,7 @@ test('focused_fire card affects combat hit chance for the targeted unit', () => 
 });
 
 // Integration sanity: cards should not break the normal phase flow.
-test('combat phase still advances correctly after cards are used', () => {
+test('combat phase still starts correctly after cards are used', () => {
   const state = buildState();
   state.phase = 'assault';
   placeUnitAt(state, 'blue_marines_1', 10, 10);
@@ -89,6 +89,7 @@ test('combat phase still advances correctly after cards are used', () => {
 
   const result = beginCombatPhase(state);
   assert.equal(result.ok, true);
-  assert.equal(state.phase, 'movement');
-  assert.equal(state.round, 2);
+  assert.equal(state.phase, 'combat');
+  assert.equal(state.round, 1);
+  assert.equal(state.combatQueue.length, 1);
 });

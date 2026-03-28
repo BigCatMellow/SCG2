@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createInitialGameState } from '../engine/state.js';
+import { resolveCombatPhase } from '../engine/combat.js';
 import { determineWinner, getObjectiveControlSnapshot, resolveObjectiveController, scoreObjectivesForRound } from '../engine/objectives.js';
 import { beginCleanupPhase } from '../engine/phases.js';
 
@@ -77,6 +78,19 @@ test('burrowed units do not contest objectives', () => {
   assert.equal(snapshot.obj2.controller, null);
 });
 
+test('flying units do not contest objectives', () => {
+  const state = buildState();
+  placeUnitAt(state, 'blue_marines_1', 18, 10);
+  state.units.blue_marines_1.tags = state.units.blue_marines_1.tags.filter(tag => tag !== 'Ground');
+  state.units.blue_marines_1.tags.push('Flying');
+  state.units.blue_marines_1.abilities.push('flying');
+
+  const snapshot = getObjectiveControlSnapshot(state);
+
+  assert.equal(snapshot.obj2.playerASupply, 0);
+  assert.equal(snapshot.obj2.controller, null);
+});
+
 test('beginCleanupPhase on final round resolves winner from VP totals', () => {
   const state = buildState();
   state.round = state.mission.roundLimit;
@@ -92,4 +106,21 @@ test('beginCleanupPhase on final round resolves winner from VP totals', () => {
   assert.equal(result.events[0].type, 'game_completed');
   assert.equal(state.winner, 'playerA');
   assert.equal(determineWinner(state), 'playerA');
+});
+
+test('veteran of tarsonis improves armour while within 3 inches of an objective', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_marauder_1', templateId: 'marauder_t1', selectedUpgrades: ['Veteran of Tarsonis'] }],
+    armyB: [{ id: 'red_marines_1', templateId: 'marine_squad' }],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  placeUnitAt(state, 'blue_marauder_1', 18, 10);
+  placeUnitAt(state, 'red_marines_1', 24, 10);
+
+  state.combatQueue.push({ type: 'ranged_attack', attackerId: 'red_marines_1', targetId: 'blue_marauder_1' });
+  resolveCombatPhase(state, { rng: () => 0.45 });
+
+  assert.equal(state.lastCombatReport[0].objectiveDefenseBonus, 1);
 });

@@ -8,6 +8,7 @@ import { resolveRun, resolveDeclareRangedAttack, resolveDeclareCharge } from '..
 import { passPhase } from '../engine/activation.js';
 import { dispatch } from '../engine/reducer.js';
 import { getLegalActionsForUnit } from '../engine/legal_actions.js';
+import { autoArrangeModels } from '../engine/coherency.js';
 
 function buildState() {
   const state = createInitialGameState({
@@ -216,6 +217,37 @@ test('indirect fire can be declared without line of sight', () => {
   assert.equal(state.combatQueue[0].targetId, 'red_marines_1');
 });
 
+test('flying units ignore blocker paths and enemy ground engagement while moving', () => {
+  const state = buildState();
+  placeLeaderAt(state, 'blue_marines_1', 4, 10);
+  placeLeaderAt(state, 'red_zealots_1', 18, 10);
+
+  const unit = state.units.blue_marines_1;
+  unit.tags = unit.tags.filter(tag => tag !== 'Ground');
+  unit.tags.push('Flying');
+  unit.abilities.push('flying');
+  unit.speed = 20;
+
+  state.board.terrain.push({
+    kind: 'blocker',
+    impassable: true,
+    rect: { minX: 8, maxX: 12, minY: 8, maxY: 12 }
+  });
+
+  const result = dispatch(state, {
+    type: 'MOVE_UNIT',
+    payload: {
+      playerId: 'playerA',
+      unitId: 'blue_marines_1',
+      leadingModelId: unit.leadingModelId,
+      path: [{ x: 4, y: 10 }, { x: 16.4, y: 10 }]
+    }
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.state.units.blue_marines_1.status.engaged, false);
+});
+
 test('burrow-capable units can burrow as an activation in movement', () => {
   const state = createInitialGameState({
     missionId: 'take_and_hold',
@@ -358,7 +390,7 @@ test('burrowed regen does not restore destroyed models', () => {
   assert.equal(result.state.units.blue_roach_1.models[roach.modelIds[1]].woundsRemaining, 3);
 });
 
-test('both players passing in assault resolves combat and advances round', () => {
+test('both players passing in assault now enters the combat phase', () => {
   const state = buildState();
   placeLeaderAt(state, 'blue_marines_1', 5, 5);
   placeLeaderAt(state, 'red_zealots_1', 30, 30);
@@ -368,6 +400,200 @@ test('both players passing in assault resolves combat and advances round', () =>
   const result = passPhase(state, 'playerB');
 
   assert.equal(result.ok, true);
+  assert.equal(state.phase, 'combat');
+  assert.equal(state.round, 1);
+});
+
+test('both players passing in combat advances to cleanup and the next round', () => {
+  const state = buildState();
+  placeLeaderAt(state, 'blue_marines_1', 5, 5);
+  placeLeaderAt(state, 'red_zealots_1', 30, 30);
+  advanceToNextPhase(state);
+
+  passPhase(state, 'playerA');
+  passPhase(state, 'playerB');
+
+  assert.equal(state.phase, 'combat');
+
+  passPhase(state, 'playerA');
+  const result = passPhase(state, 'playerB');
+
+  assert.equal(result.ok, true);
   assert.equal(state.phase, 'movement');
   assert.equal(state.round, 2);
+});
+
+test('leg enhancements increase movement range for imported units', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_zealot_1', templateId: 'zealot_squad', selectedUpgrades: ['Leg Enhancements'] }],
+    armyB: [{ id: 'red_marines_1', templateId: 'marine_squad' }],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  beginRound(state);
+  placeLeaderAt(state, 'blue_zealot_1', 10, 10);
+  placeLeaderAt(state, 'red_marines_1', 30, 30);
+
+  const zealot = state.units.blue_zealot_1;
+  const destination = { x: 18, y: 12 };
+  const placements = autoArrangeModels(state, 'blue_zealot_1', destination);
+
+  const result = dispatch(state, {
+    type: 'MOVE_UNIT',
+    payload: {
+      playerId: 'playerA',
+      unitId: 'blue_zealot_1',
+      leadingModelId: zealot.leadingModelId,
+      path: [{ x: 10, y: 10 }, destination],
+      modelPlacements: placements
+    }
+  });
+
+  assert.equal(result.ok, true);
+});
+
+test('solid-field projectors place a force field token during movement', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_sentry_1', templateId: 'sentry', selectedUpgrades: ['Solid-Field Projectors'] }],
+    armyB: [{ id: 'red_marines_1', templateId: 'marine_squad' }],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  beginRound(state);
+  placeLeaderAt(state, 'blue_sentry_1', 6, 4);
+  placeLeaderAt(state, 'red_marines_1', 15, 4);
+
+  const result = dispatch(state, {
+    type: 'PLACE_FORCE_FIELD',
+    payload: { playerId: 'playerA', unitId: 'blue_sentry_1', point: { x: 13, y: 4 } }
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.state.board.terrain.some(entry => entry.kind === 'force_field'), true);
+  assert.equal(result.state.units.blue_sentry_1.status.movementActivated, true);
+});
+
+test('force field blocks size 2 or lower units from crossing it', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_sentry_1', templateId: 'sentry', selectedUpgrades: ['Solid-Field Projectors'] }],
+    armyB: [{ id: 'red_marines_1', templateId: 'marine_squad' }],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  beginRound(state);
+  placeLeaderAt(state, 'blue_sentry_1', 6, 4);
+  placeLeaderAt(state, 'red_marines_1', 15, 4);
+
+  const placed = dispatch(state, {
+    type: 'PLACE_FORCE_FIELD',
+    payload: { playerId: 'playerA', unitId: 'blue_sentry_1', point: { x: 13, y: 4 } }
+  });
+
+  const result = dispatch(placed.state, {
+    type: 'MOVE_UNIT',
+    payload: {
+      playerId: 'playerB',
+      unitId: 'red_marines_1',
+      leadingModelId: placed.state.units.red_marines_1.leadingModelId,
+      path: [{ x: 15, y: 4 }, { x: 11, y: 4 }],
+      modelPlacements: autoArrangeModels(placed.state, 'red_marines_1', { x: 11, y: 4 })
+    }
+  });
+
+  assert.equal(result.ok, false);
+  assert.match(result.message, /force field/i);
+});
+
+test('size 3 units break force fields when moving through them', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_sentry_1', templateId: 'sentry', selectedUpgrades: ['Solid-Field Projectors'] }],
+    armyB: [{ id: 'red_goliath_1', templateId: 'goliath' }],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  beginRound(state);
+  placeLeaderAt(state, 'blue_sentry_1', 6, 4);
+  placeLeaderAt(state, 'red_goliath_1', 16, 4);
+
+  const placed = dispatch(state, {
+    type: 'PLACE_FORCE_FIELD',
+    payload: { playerId: 'playerA', unitId: 'blue_sentry_1', point: { x: 13, y: 4 } }
+  });
+
+  const result = dispatch(placed.state, {
+    type: 'MOVE_UNIT',
+    payload: {
+      playerId: 'playerB',
+      unitId: 'red_goliath_1',
+      leadingModelId: placed.state.units.red_goliath_1.leadingModelId,
+      path: [{ x: 16, y: 4 }, { x: 10, y: 4 }],
+      modelPlacements: autoArrangeModels(placed.state, 'red_goliath_1', { x: 10, y: 4 })
+    }
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.state.board.terrain.some(entry => entry.kind === 'force_field'), false);
+});
+
+test('medpack heals another friendly biological unit during movement', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [
+      { id: 'blue_medic_1', templateId: 'medic_t1', selectedUpgrades: ['Stabilizer Medpacks'] },
+      { id: 'blue_roach_1', templateId: 'roach_t3' }
+    ],
+    armyB: [{ id: 'red_marines_1', templateId: 'marine_squad' }],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  beginRound(state);
+  placeLeaderAt(state, 'blue_medic_1', 8, 8);
+  placeLeaderAt(state, 'blue_roach_1', 10, 8);
+  placeLeaderAt(state, 'red_marines_1', 20, 20);
+  state.units.blue_roach_1.models[state.units.blue_roach_1.modelIds[0]].woundsRemaining = 1;
+
+  const result = dispatch(state, {
+    type: 'USE_MEDPACK',
+    payload: { playerId: 'playerA', unitId: 'blue_medic_1', targetId: 'blue_roach_1' }
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.state.units.blue_roach_1.models[state.units.blue_roach_1.modelIds[0]].woundsRemaining, state.units.blue_roach_1.woundsPerModel);
+  assert.ok(result.state.log.some(entry => entry.text.includes('uses Medpack')));
+});
+
+test('optical flare with A-13 flash grenade launcher suppresses long range declarations', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [
+      { id: 'blue_medic_1', templateId: 'medic_t1', selectedUpgrades: ['A-13 Flash Grenade Launcher'] },
+      { id: 'blue_marines_1', templateId: 'marine_squad' }
+    ],
+    armyB: [
+      { id: 'red_hydra_1', templateId: 'hydralisk', selectedUpgrades: ['Grooved Spines'] }
+    ],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  beginRound(state);
+  placeLeaderAt(state, 'blue_medic_1', 10, 10);
+  placeLeaderAt(state, 'blue_marines_1', 31, 10);
+  placeLeaderAt(state, 'red_hydra_1', 18, 10);
+
+  const flareResult = dispatch(state, {
+    type: 'USE_OPTICAL_FLARE',
+    payload: { playerId: 'playerA', unitId: 'blue_medic_1', targetId: 'red_hydra_1' }
+  });
+  assert.equal(flareResult.ok, true);
+
+  advanceToNextPhase(flareResult.state);
+  flareResult.state.activePlayer = 'playerB';
+  const rangedResult = resolveDeclareRangedAttack(flareResult.state, 'playerB', 'red_hydra_1', 'blue_marines_1');
+
+  assert.equal(rangedResult.ok, false);
+  assert.match(rangedResult.message, /out of range/i);
 });

@@ -3,7 +3,6 @@ import { refreshAllSupply } from "./supply.js";
 import { determineWinner } from "./objectives.js";
 import { checkMissionInstantWin, resolveMissionScoringAtCleanup } from "./mission_rules.js";
 import { clearCurrentPhaseActivationFlags, clearPhaseActivationFlagsForNewRound } from "./activation.js";
-import { resolveCombatPhase } from "./combat.js";
 import { onPhaseStart, onRoundStart } from "./effects.js";
 
 export function runStartOfRoundHooks() {
@@ -26,6 +25,9 @@ function beginActivationPhase(state, phase, message) {
   state.activePlayer = state.firstPlayerMarkerHolder;
   resetPassFlags(state);
   clearCurrentPhaseActivationFlags(state);
+  for (const unit of Object.values(state.units)) {
+    unit.status.ancillaryCarapaceUsedThisPhase = false;
+  }
   appendLog(state, "phase", message);
   return { ok: true, state, events: [] };
 }
@@ -66,6 +68,10 @@ export function beginRound(state) {
   clearPhaseActivationFlagsForNewRound(state);
   for (const unit of Object.values(state.units)) {
     unit.status.overwatchUsedThisRound = false;
+    unit.status.zealousRoundUsedThisRound = false;
+    unit.status.lurkingUsedThisRound = false;
+    unit.status.opticalFlareRound = null;
+    unit.status.opticalFlareRangePenalty = 0;
   }
   onRoundStart(state);
   state.combatQueue = [];
@@ -92,11 +98,11 @@ export function beginAssaultPhase(state) {
 }
 
 export function beginCombatPhase(state) {
-  beginActivationPhase(state, "combat", "Combat Phase active. Resolving automatic ranged attacks.");
-  const combatResult = resolveCombatPhase(state);
-  if (!combatResult.ok) return combatResult;
-  appendLog(state, "phase", "Combat resolution complete.");
-  return beginCleanupPhase(state);
+  return beginActivationPhase(
+    state,
+    "combat",
+    "Combat Phase active. Players alternate resolving queued attacks or holding with engaged units."
+  );
 }
 
 export function beginCleanupPhase(state) {

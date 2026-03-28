@@ -67,6 +67,10 @@ export function markUnitActivatedForCurrentPhase(state, unitId) {
   markUnitActivatedForPhase(state, unitId, state.phase);
 }
 
+export function markUnitActivatedForExplicitPhase(state, unitId, phase) {
+  markUnitActivatedForPhase(state, unitId, phase);
+}
+
 export function clearPhaseActivationFlagsForNewRound(state) {
   for (const unit of Object.values(state.units)) {
     unit.status.movementActivated = false;

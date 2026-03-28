@@ -81,7 +81,8 @@
           <button id="exportBtn" class="btn secondary btn-sm">Export</button>
           <button id="importBtn" class="btn secondary btn-sm">Load</button>
           <input id="importFileInput" type="file" accept="application/json" hidden />
-          <button id="newGameBtn" class="btn secondary btn-sm">New Game</button>
+          <input id="armyImportFileInput" type="file" accept="application/json" hidden />
+          <button id="newGameBtn" class="btn secondary btn-sm">Setup Battle</button>
         </div>
       </aside>
 
@@ -89,6 +90,7 @@
   </div>
   <div id="storyModalRoot"></div>
   <div id="combatChoiceRoot"></div>
+  <div id="setupModalRoot"></div>
   <div id="toastStack" class="toast-stack" aria-live="polite"></div>
   <script type="module" src="./ui/main.js"></script>
 </body>

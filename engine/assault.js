@@ -7,10 +7,16 @@ import { getModifiedValue } from "./effects.js";
 import { refreshEngagement } from "./movement.js";
 import { canTargetWithRangedWeapon, getLongRangeValue, hasInstantWeapon } from "./visibility.js";
 import { applyBurrowedActivationEffects, removeStealthStatuses } from "./statuses.js";
+import { getBlockingForceFieldCrossings, removeForceFieldsCrossedByUnit } from "./force_fields.js";
+import { getEffectiveRangedRange } from "./support.js";
 
 const RUN_BONUS = 2;
 const CHARGE_DECLARE_RANGE = 8;
 const MELEE_REACH_INCHES = 1.5;
+
+function getAssaultMovementBonus(unit) {
+  return unit?.abilities?.includes("leg_enhancements") ? 2 : 0;
+}
 
 function getOpponent(playerId) {
   return playerId === "playerA" ? "playerB" : "playerA";
@@ -19,7 +25,7 @@ function getOpponent(playerId) {
 function findNearestEnemyUnitInRange(state, unit) {
   const primaryWeapon = unit.rangedWeapons?.[0] ?? null;
   if (!primaryWeapon) return null;
-  const maxRange = getLongRangeValue(primaryWeapon) ?? primaryWeapon.rangeInches;
+  const maxRange = getEffectiveRangedRange(state, unit, primaryWeapon) ?? getLongRangeValue(primaryWeapon) ?? primaryWeapon.rangeInches;
   const leader = unit.models[unit.leadingModelId];
   if (!leader || leader.x == null || leader.y == null) return null;
   const enemies = state.players[getOpponent(unit.owner)].battlefieldUnitIds
@@ -86,11 +92,12 @@ export function validateRun(state, playerId, unitId, leadingModelId, path, model
   if (!leader || leader.x == null || leader.y == null) return { ok: false, code: "INVALID_LEADER", message: "Leading model must be on the battlefield." };
   const start = path[0];
   if (Math.abs(start.x - leader.x) > 0.01 || Math.abs(start.y - leader.y) > 0.01) return { ok: false, code: "BAD_PATH_START", message: "Path must begin at the leader's current position." };
-  const maxDistance = unit.speed + RUN_BONUS;
+  const maxDistance = unit.speed + RUN_BONUS + getAssaultMovementBonus(unit);
   const travelCost = state.rules?.gridMode ? gridDistance(path[0], path[path.length - 1]) : pathTravelCost(path, state.board.terrain);
   if (travelCost - maxDistance > 1e-6) return { ok: false, code: "TOO_FAR", message: `${unit.name} can only Run ${maxDistance}" (difficult terrain costs extra movement).` };
   const ignore = new Set(unit.modelIds);
   if (pathBlockedForCircle(path, unit.base.radiusInches, state, ignore)) return { ok: false, code: "PATH_BLOCKED", message: "Path crosses blocked ground, terrain, or bases." };
+  if (getBlockingForceFieldCrossings(state, unit, path).length) return { ok: false, code: "FORCE_FIELD_BLOCKED", message: "A Force Field blocks units of Size 2 or lower from crossing there." };
   const end = path[path.length - 1];
   if (!pointInBoard(end, state.board, unit.base.radiusInches)) return { ok: false, code: "OFF_BOARD", message: "Leading model must end fully on the battlefield." };
   if (circleOverlapsTerrain(end, unit.base.radiusInches, state.board.terrain)) return { ok: false, code: "TERRAIN_OVERLAP", message: "Leading model cannot end overlapping impassable terrain." };
@@ -115,13 +122,14 @@ export function resolveRun(state, playerId, unitId, leadingModelId, path, modelP
   unit.status.stationary = false;
   unit.status.cannotRangedAttackNextAssault = true;
   markUnitActivatedForCurrentPhase(state, unitId);
+  removeForceFieldsCrossedByUnit(state, unit, path);
   refreshEngagement(state);
   refreshAllSupply(state);
 
   appendLog(
     state,
     "action",
-    `${unit.name} runs ${validation.derived.runDistance.toFixed(1)}" (movement cost ${validation.derived.travelCost.toFixed(1)} / max ${validation.derived.maxDistance}").${brokeStealth ? " It loses Hidden/Burrowed while running." : ""}${coherency.outOfCoherency ? " Unit is out of coherency." : ""}`
+    `${unit.name} runs ${validation.derived.runDistance.toFixed(1)}" (${validation.derived.travelCost.toFixed(1)}/${validation.derived.maxDistance} movement).${brokeStealth ? " Hidden/Burrowed removed." : ""}${coherency.outOfCoherency ? " Out of coherency." : ""}`
   );
 
   endActivationAndPassTurn(state);
@@ -140,7 +148,7 @@ function validateSpecifiedTarget(state, unit, targetUnitId) {
   if (!targetLeader || targetLeader.x == null || targetLeader.y == null || !leader || leader.x == null || leader.y == null) {
     return { ok: false, code: "BAD_TARGET", message: "Target or attacker does not have a valid leader position." };
   }
-  const maxRange = getLongRangeValue(primaryWeapon) ?? primaryWeapon.rangeInches;
+  const maxRange = getEffectiveRangedRange(state, unit, primaryWeapon) ?? getLongRangeValue(primaryWeapon) ?? primaryWeapon.rangeInches;
   if (distance(leader, targetLeader) > maxRange + 1e-6) {
     return { ok: false, code: "BAD_TARGET", message: "Selected target is out of range." };
   }
@@ -215,7 +223,7 @@ export function resolveDeclareRangedAttack(state, playerId, unitId, targetUnitId
   state.combatQueue.push({ type: "ranged_attack", attackerId: unitId, targetId: validation.derived.targetId, weaponId });
   markUnitActivatedForCurrentPhase(state, unitId);
 
-  appendLog(state, "action", `${unit.name} declares ranged attack on ${state.units[validation.derived.targetId].name} for Combat.${brokeStealth ? " It loses Hidden/Burrowed when it reveals its position." : ""}`);
+  appendLog(state, "action", `${unit.name} declares ranged attack on ${state.units[validation.derived.targetId].name} for Combat.${brokeStealth ? " Hidden/Burrowed removed on reveal." : ""}`);
 
   endActivationAndPassTurn(state);
   return { ok: true, state, events: [{ type: "ranged_attack_declared", payload: { attackerId: unitId, targetId: validation.derived.targetId } }] };
