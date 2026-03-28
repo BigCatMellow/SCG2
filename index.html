@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>StarCraft TMG Engine</title>
   <link rel="stylesheet" href="./css/styles.css" />
 </head>
@@ -10,8 +10,8 @@
   <div class="app-shell">
     <main class="main-layout">
 
-      <!-- LEFT SIDEBAR: scrollable info panels -->
-      <aside class="sidebar left-sidebar">
+      <!-- LEFT SIDEBAR / Mobile "Forces" tab -->
+      <aside class="sidebar left-sidebar" data-tab="forces">
         <section class="card">
           <div class="card-heading"><h2>Mission</h2></div>
           <div class="kv-grid" id="battleState"></div>
@@ -28,7 +28,6 @@
           <details class="foldout" open><summary>Objectives</summary><div id="objectiveControl" class="obj-list"></div></details>
           <details class="foldout"><summary>Round Summary</summary><div id="roundSummary" class="obj-list"></div></details>
         </section>
-
         <section class="card">
           <div class="card-heading"><h2>Your Forces</h2></div>
           <details class="foldout" open><summary>Phase Progress</summary><div id="phaseChecklist" class="phase-checklist"></div></details>
@@ -37,35 +36,28 @@
         </section>
       </aside>
 
-      <!-- CENTER: Board + floating action bar -->
-      <section class="center-col">
-        <!-- Status bar -->
+      <!-- CENTER: Board / Mobile "Board" tab (default) -->
+      <section class="center-col tab-visible" data-tab="board">
         <div class="status-bar">
           <div id="turnBanner" class="turn-banner playerA">Blue — Movement Phase</div>
           <div id="modeBanner" class="mode-banner">Select a unit.</div>
         </div>
-
-        <!-- Board -->
         <div class="board-wrap">
           <svg id="battlefield" viewBox="0 0 36 36" preserveAspectRatio="xMidYMid meet"></svg>
-
-          <!-- Floating action bar pinned to bottom of board -->
           <div id="actionBar" class="action-bar">
             <div id="selectedUnitBrief" class="unit-brief"></div>
             <div id="actionButtons" class="action-btn-row"></div>
-            <button id="passBtn" class="btn primary">Pass Phase</button>
+            <button id="passBtn" class="btn primary">Pass</button>
           </div>
         </div>
-
-        <!-- Compact selected unit detail (collapsible, below board) -->
         <details class="card unit-detail-card" id="unitDetailSection">
           <summary class="unit-detail-toggle">Unit Details</summary>
           <div id="selectedUnitPanel" class="empty-state">No unit selected.</div>
         </details>
       </section>
 
-      <!-- RIGHT SIDEBAR -->
-      <aside class="sidebar right-sidebar">
+      <!-- RIGHT SIDEBAR / Mobile "Intel" tab -->
+      <aside class="sidebar right-sidebar" data-tab="intel">
         <section class="card">
           <div class="card-heading"><h2>Intel</h2></div>
           <details class="foldout" open><summary>Tactical Cards</summary><div id="tacticalCards" class="card-stack"></div></details>
@@ -74,8 +66,6 @@
           <details class="foldout" open><summary>Enemy Battlefield</summary><div id="enemyBattlefield" class="unit-list compact"></div></details>
           <details class="foldout" open><summary>Log</summary><div id="logPanel" class="log-panel"></div></details>
         </section>
-
-        <!-- Toolbar tucked at bottom of right sidebar -->
         <div class="toolbar-row">
           <button id="gridModeBtn" class="btn secondary btn-sm">Grid: On</button>
           <button id="exportBtn" class="btn secondary btn-sm">Export</button>
@@ -86,9 +76,36 @@
       </aside>
 
     </main>
+
+    <!-- MOBILE TAB BAR -->
+    <nav class="mobile-tabs" id="mobileTabs">
+      <button class="tab-btn active" data-target="board">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+        Board
+      </button>
+      <button class="tab-btn" data-target="forces">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Forces
+      </button>
+      <button class="tab-btn" data-target="intel">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        Intel
+      </button>
+    </nav>
   </div>
-  <div id="storyModalRoot"></div>
+
   <div id="toastStack" class="toast-stack" aria-live="polite"></div>
+
+  <!-- Mobile tab switching -->
+  <script>
+    document.getElementById("mobileTabs")?.addEventListener("click", e => {
+      const btn = e.target.closest("[data-target]");
+      if (!btn) return;
+      const target = btn.dataset.target;
+      document.querySelectorAll(".mobile-tabs .tab-btn").forEach(b => b.classList.toggle("active", b === btn));
+      document.querySelectorAll("[data-tab]").forEach(p => p.classList.toggle("tab-visible", p.dataset.tab === target));
+    });
+  </script>
   <script type="module" src="./ui/main.js"></script>
 </body>
 </html>

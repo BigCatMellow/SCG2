@@ -8,7 +8,6 @@ import { refreshEngagement } from "./movement.js";
 
 const RUN_BONUS = 2;
 const CHARGE_DECLARE_RANGE = 8;
-const MELEE_REACH_INCHES = 1.5;
 
 function getOpponent(playerId) {
   return playerId === "playerA" ? "playerB" : "playerA";
@@ -156,18 +155,6 @@ function validateSpecifiedChargeTarget(state, unit, targetUnitId) {
   return { ok: true, target };
 }
 
-function rollD6(rng) {
-  return Math.floor(rng() * 6) + 1;
-}
-
-function getChargeAttemptDetails(unit, targetUnit) {
-  const leader = unit.models[unit.leadingModelId];
-  const targetLeader = targetUnit.models[targetUnit.leadingModelId];
-  const currentDistance = distance(leader, targetLeader);
-  const requiredDistance = Math.max(0, Math.ceil(currentDistance - MELEE_REACH_INCHES));
-  return { currentDistance, requiredDistance };
-}
-
 export function validateDeclareRangedAttack(state, playerId, unitId, targetUnitId = null) {
   const shared = validateShared(state, playerId, unitId);
   if (!shared.ok) return shared;
@@ -227,7 +214,7 @@ export function validateDeclareCharge(state, playerId, unitId, targetUnitId = nu
   return { ok: true, derived: { targetId: target.id } };
 }
 
-export function resolveDeclareCharge(state, playerId, unitId, targetUnitId = null, { rng = Math.random } = {}) {
+export function resolveDeclareCharge(state, playerId, unitId, targetUnitId = null) {
   const validation = validateDeclareCharge(state, playerId, unitId, targetUnitId);
   if (!validation.ok) return validation;
 
@@ -235,11 +222,6 @@ export function resolveDeclareCharge(state, playerId, unitId, targetUnitId = nul
   const targetUnit = state.units[validation.derived.targetId];
   const weaponId = unit.meleeWeapons?.[0]?.id ?? null;
   const overwatchWeaponId = targetUnit.rangedWeapons?.[0]?.id ?? null;
-  const { currentDistance, requiredDistance } = getChargeAttemptDetails(unit, targetUnit);
-  const chargeDie = rollD6(rng);
-  const chargeTotal = unit.speed + chargeDie;
-  const margin = chargeTotal - requiredDistance;
-  const success = chargeTotal >= requiredDistance;
 
   if (overwatchWeaponId && !targetUnit.status.overwatchUsedThisRound) {
     state.combatQueue.push({ type: "overwatch_attack", attackerId: targetUnit.id, targetId: unitId, weaponId: overwatchWeaponId });
@@ -247,36 +229,11 @@ export function resolveDeclareCharge(state, playerId, unitId, targetUnitId = nul
     appendLog(state, "action", `${targetUnit.name} sets Overwatch response against ${unit.name}.`);
   }
 
+  state.combatQueue.push({ type: "charge_attack", attackerId: unitId, targetId: validation.derived.targetId, weaponId });
   markUnitActivatedForCurrentPhase(state, unitId);
-  appendLog(
-    state,
-    "action",
-    `${unit.name} attempts a charge on ${targetUnit.name}: distance ${currentDistance.toFixed(1)}", need ${requiredDistance}", rolled ${chargeDie} + Speed ${unit.speed} = ${chargeTotal}. ${success ? `Success by ${margin}".` : `Failed by ${Math.abs(margin)}".`}`
-  );
 
-  const events = [{
-    type: "charge_roll_resolved",
-    payload: {
-      attackerId: unitId,
-      targetId: validation.derived.targetId,
-      currentDistance,
-      requiredDistance,
-      chargeDie,
-      speed: unit.speed,
-      total: chargeTotal,
-      success,
-      margin
-    }
-  }];
-
-  if (success) {
-    state.combatQueue.push({ type: "charge_attack", attackerId: unitId, targetId: validation.derived.targetId, weaponId });
-    appendLog(state, "action", `${unit.name} locks in the charge and will fight ${targetUnit.name} in Combat.`);
-    events.push({ type: "charge_declared", payload: { attackerId: unitId, targetId: validation.derived.targetId } });
-  } else {
-    appendLog(state, "action", `${unit.name} fails the charge and will not make a melee attack this round.`);
-  }
+  appendLog(state, "action", `${unit.name} declares charge on ${targetUnit.name} for Combat.`);
 
   endActivationAndPassTurn(state);
-  return { ok: true, state, events };
+  return { ok: true, state, events: [{ type: "charge_declared", payload: { attackerId: unitId, targetId: validation.derived.targetId } }] };
 }

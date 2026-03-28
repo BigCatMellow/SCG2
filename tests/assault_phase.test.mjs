@@ -115,28 +115,6 @@ test('declare charge also queues overwatch when defender has ranged weapon and h
   assert.equal(state.units.red_marines_1.status.overwatchUsedThisRound, true);
 });
 
-test('charge can fail and reports no queued melee attack when roll is short', () => {
-  const state = createInitialGameState({
-    missionId: 'take_and_hold',
-    deploymentId: 'crossfire',
-    armyA: [{ id: 'blue_dragoon_1', templateId: 'dragoon' }],
-    armyB: [{ id: 'red_zerglings_1', templateId: 'zergling_squad' }],
-    firstPlayerMarkerHolder: 'playerA'
-  });
-  beginRound(state);
-  placeLeaderAt(state, 'blue_dragoon_1', 10, 10);
-  placeLeaderAt(state, 'red_zerglings_1', 17.6, 10);
-  advanceToNextPhase(state);
-
-  const declareResult = resolveDeclareCharge(state, 'playerA', 'blue_dragoon_1', 'red_zerglings_1', { rng: () => 0 });
-
-  assert.equal(declareResult.ok, true);
-  assert.equal(state.units.blue_dragoon_1.status.assaultActivated, true);
-  assert.equal(state.combatQueue.some(entry => entry.type === 'charge_attack' && entry.attackerId === 'blue_dragoon_1'), false);
-  assert.equal(declareResult.events[0].type, 'charge_roll_resolved');
-  assert.equal(declareResult.events[0].payload.success, false);
-});
-
 test('both players passing in assault resolves combat and advances round', () => {
   const state = buildState();
   placeLeaderAt(state, 'blue_marines_1', 5, 5);
