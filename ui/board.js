@@ -243,20 +243,38 @@ function addCombatQueuePreview(svg, state, uiState) {
 function addAftermathHighlights(svg, state, uiState) {
   const highlights = uiState.boardHighlights ?? [];
   if (!highlights.length) return;
+  const now = Date.now();
   for (const highlight of highlights) {
+    if ((highlight.startsAt ?? 0) > now) continue;
     if (highlight.kind === "unit") {
       const unit = state.units[highlight.unitId];
-      const point = unit ? getLeaderPoint(unit) : null;
+      const point = highlight.point ?? (unit ? getLeaderPoint(unit) : null);
       if (!point) continue;
       svg.appendChild(el("circle", {
         cx: point.x,
         cy: point.y,
-        r: 0.92,
+        r: highlight.tone === "destroyed" ? 1.14 : 0.92,
         class: `aftermath-ring ${highlight.tone ?? "attention"}`
       }));
+      if (highlight.tone === "destroyed") {
+        svg.appendChild(el("line", {
+          x1: point.x - 0.62,
+          y1: point.y - 0.62,
+          x2: point.x + 0.62,
+          y2: point.y + 0.62,
+          class: "aftermath-cross"
+        }));
+        svg.appendChild(el("line", {
+          x1: point.x + 0.62,
+          y1: point.y - 0.62,
+          x2: point.x - 0.62,
+          y2: point.y + 0.62,
+          class: "aftermath-cross"
+        }));
+      }
       const label = el("text", {
         x: point.x,
-        y: point.y - 0.95,
+        y: point.y - (highlight.tone === "destroyed" ? 1.18 : 0.95),
         class: `aftermath-label ${highlight.tone ?? "attention"}`
       });
       label.textContent = highlight.label ?? "Update";
@@ -543,9 +561,10 @@ function getPreviewOverlayState(state, uiState) {
   return null;
 }
 
-function renderBattlefieldHint(state, uiState) {
+function renderBattlefieldHint(state, uiState, handlers) {
   const hint = document.getElementById("battlefieldHint");
   if (!hint) return;
+  const now = Date.now();
   const snapshot = getObjectiveControlSnapshot(state);
   const focusedObjectiveId = uiState.hoveredObjectiveId ?? uiState.selectedObjectiveId ?? null;
   const focusedQueueEntry = getFocusedCombatQueueEntry(state, uiState);
@@ -576,10 +595,14 @@ function renderBattlefieldHint(state, uiState) {
     const objective = state.deployment.missionMarkers.find(marker => marker.id === focusedObjectiveId);
     if (objective) {
       const objectiveHint = getObjectiveTeachingState(state, objective, snapshot[objective.id]);
+      const canDismiss = uiState.selectedObjectiveId === focusedObjectiveId;
       hint.className = "battlefield-hint active neutral";
       hint.innerHTML = `
         <div class="battlefield-hint-kicker">Objective Guide</div>
-        <div class="battlefield-hint-title">${objectiveHint.title}</div>
+        <div class="battlefield-hint-head">
+          <div class="battlefield-hint-title">${objectiveHint.title}</div>
+          ${canDismiss ? '<button type="button" class="battlefield-hint-close" aria-label="Close objective guide">×</button>' : ""}
+        </div>
         <div class="battlefield-hint-metrics">
           ${objectiveHint.metrics.map(metric => `<span>${metric}</span>`).join("")}
         </div>
@@ -587,8 +610,36 @@ function renderBattlefieldHint(state, uiState) {
         <div class="battlefield-hint-copy secondary">${objectiveHint.teaching}</div>
         <div class="battlefield-hint-copy secondary">${objectiveHint.contributors.join(" • ")}</div>
       `;
+      if (canDismiss) {
+        hint.querySelector(".battlefield-hint-close")?.addEventListener("click", event => {
+          event.preventDefault();
+          event.stopPropagation();
+          handlers?.onObjectiveClick?.(focusedObjectiveId);
+        });
+      }
       return;
     }
+  }
+  const aftermathNarrative = uiState.aftermathNarrative;
+  if (
+    !uiState.mode
+    && !focusedObjectiveId
+    && !focusedQueueEntry
+    && aftermathNarrative
+    && (aftermathNarrative.startsAt ?? 0) <= now
+    && (aftermathNarrative.expiresAt ?? 0) > now
+  ) {
+    hint.className = "battlefield-hint active aftermath";
+    hint.innerHTML = `
+      <div class="battlefield-hint-kicker">Aftermath Sequence</div>
+      <div class="battlefield-hint-title">${aftermathNarrative.title}</div>
+      <div class="battlefield-hint-metrics">
+        ${(aftermathNarrative.metrics ?? []).map(metric => `<span>${metric}</span>`).join("")}
+      </div>
+      <div class="battlefield-hint-copy">${aftermathNarrative.reason}</div>
+      <div class="battlefield-hint-copy secondary">${aftermathNarrative.teaching}</div>
+    `;
+    return;
   }
   if (!uiState.selectedUnitId || !uiState.mode) {
     hint.className = "battlefield-hint";
@@ -800,7 +851,7 @@ export function renderBoard(state, uiState, handlers) {
   addSelection(svg, state, uiState);
   addPreviewUnit(svg, state, uiState);
   addUnits(svg, state, uiState, handlers.onModelClick, handlers.onModelHover);
-  renderBattlefieldHint(state, uiState);
+  renderBattlefieldHint(state, uiState, handlers);
 
   svg.onclick = event => {
     const point = screenToBoardPoint(svg, event.clientX, event.clientY);

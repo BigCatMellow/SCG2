@@ -878,26 +878,18 @@ export function renderActionButtons(buttons) {
   const disabledReasons = buttons
     .filter(button => button.disabled && button.dataset?.disabledReason)
     .map(button => ({ label: button.dataset.actionLabel ?? button.textContent ?? "Action", reason: button.dataset.disabledReason }));
-
-  if (disabledReasons.length) {
-    const explainer = document.createElement("div");
-    explainer.className = "action-explainer";
-    explainer.innerHTML = `
-      <div class="action-explainer-title">Why Some Actions Are Unavailable</div>
-      ${disabledReasons.map(entry => `<div class="action-explainer-item"><span class="action-explainer-label">${entry.label}:</span> ${entry.reason}</div>`).join("")}
-    `;
-    container.appendChild(explainer);
-  }
-
   const recommended = buttons.find(button => button.dataset?.recommended === "true");
-  if (recommended) {
-    const explainer = document.createElement("div");
-    explainer.className = "action-explainer action-recommendation";
-    explainer.innerHTML = `
-      <div class="action-explainer-title">${recommended.dataset.recommendationTitle ?? "Recommended Action"}</div>
-      <div class="action-explainer-item"><span class="action-explainer-label">${recommended.dataset.actionLabel ?? recommended.textContent ?? "Action"}:</span> ${recommended.dataset.recommendationReason ?? "This is the strongest next step right now."}</div>
-    `;
-    container.appendChild(explainer);
+  if (recommended || disabledReasons.length) {
+    const summary = document.createElement("div");
+    summary.className = "action-bar-note";
+    const recommendedText = recommended
+      ? `Recommended: ${recommended.dataset.actionLabel ?? recommended.textContent ?? "Action"}`
+      : null;
+    const blockedText = disabledReasons.length
+      ? `${disabledReasons.length} blocked action${disabledReasons.length === 1 ? "" : "s"}`
+      : null;
+    summary.textContent = [recommendedText, blockedText].filter(Boolean).join(" • ");
+    container.appendChild(summary);
   }
 }
 

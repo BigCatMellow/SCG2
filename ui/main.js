@@ -110,6 +110,8 @@ const uiState = {
   hoveredCombatQueueIndex: null,
   selectedCombatQueueIndex: null,
   boardHighlights: [],
+  aftermathNarrative: null,
+  compactActionBar: false,
   lastObjectiveSnapshot: null,
   pendingPass: false,
   storyModalQueue: [],
@@ -307,6 +309,7 @@ function rerender() {
     onObjectiveClick: handleObjectiveClick,
     onCombatQueueHover: handleCombatQueueHover,
     onCombatQueueClick: handleCombatQueueClick,
+    onToggleActionBarCompact: handleActionBarToggle,
     buildActionButtons,
     buildCardButtons,
     getModeText,
@@ -2388,6 +2391,8 @@ function resetUiForLoadedState(nextState) {
   uiState.hoveredCombatQueueIndex = null;
   uiState.selectedCombatQueueIndex = null;
   uiState.boardHighlights = [];
+  uiState.aftermathNarrative = null;
+  uiState.compactActionBar = false;
   uiState.lastObjectiveSnapshot = getObjectiveControlSnapshot(nextState);
   uiState.pendingPass = false;
   uiState.storyModalQueue = [];
@@ -2613,26 +2618,52 @@ function handleCombatQueueClick(queueIndex) {
   rerender();
 }
 
+function handleActionBarToggle() {
+  uiState.compactActionBar = !uiState.compactActionBar;
+  rerender();
+}
+
 function pruneBoardHighlights() {
   const now = Date.now();
   uiState.boardHighlights = (uiState.boardHighlights ?? []).filter(highlight => (highlight.expiresAt ?? 0) > now);
+  if (uiState.aftermathNarrative && (uiState.aftermathNarrative.expiresAt ?? 0) <= now) {
+    uiState.aftermathNarrative = null;
+  }
 }
 
 function pushBoardHighlight(highlight) {
   pruneBoardHighlights();
-  uiState.boardHighlights.push(highlight);
+  uiState.boardHighlights.push({
+    startsAt: highlight.startsAt ?? Date.now(),
+    ...highlight
+  });
+}
+
+function getBoardHighlightPointForUnit(unit) {
+  if (!unit) return null;
+  const leader = unit.models?.[unit.leadingModelId];
+  if (leader?.x != null && leader?.y != null) return { x: leader.x, y: leader.y };
+  for (const model of Object.values(unit.models ?? {})) {
+    if (model?.x != null && model?.y != null) return { x: model.x, y: model.y };
+  }
+  return null;
 }
 
 function scheduleBoardHighlightPrune() {
   window.clearTimeout(boardHighlightTimer);
-  const nextExpiry = (uiState.boardHighlights ?? []).reduce((soonest, highlight) => {
-    const expiry = highlight?.expiresAt ?? 0;
-    if (!expiry) return soonest;
-    if (!soonest) return expiry;
-    return Math.min(soonest, expiry);
-  }, 0);
-  if (!nextExpiry) return;
-  const delay = Math.max(40, nextExpiry - Date.now() + 30);
+  const now = Date.now();
+  let nextRefreshAt = 0;
+  for (const highlight of uiState.boardHighlights ?? []) {
+    const startsAt = highlight?.startsAt ?? 0;
+    const expiresAt = highlight?.expiresAt ?? 0;
+    if (startsAt > now) {
+      nextRefreshAt = !nextRefreshAt ? startsAt : Math.min(nextRefreshAt, startsAt);
+    } else if (expiresAt > now) {
+      nextRefreshAt = !nextRefreshAt ? expiresAt : Math.min(nextRefreshAt, expiresAt);
+    }
+  }
+  if (!nextRefreshAt) return;
+  const delay = Math.max(40, nextRefreshAt - now + 30);
   boardHighlightTimer = window.setTimeout(() => {
     pruneBoardHighlights();
     rerender();
@@ -2644,47 +2675,134 @@ function updateBoardHighlights(state, events) {
   const now = Date.now();
   const currentSnapshot = getObjectiveControlSnapshot(state);
   pruneBoardHighlights();
+  let sequenceOffset = 0;
+  const objectiveNarratives = [];
+  const combatEvents = [];
+
+  const queueAftermathHighlight = (highlight, { stepMs = 0 } = {}) => {
+    const startsAt = now + sequenceOffset;
+    pushBoardHighlight({
+      startsAt,
+      ...highlight,
+      expiresAt: (highlight.expiresAt ?? now + 3200) + sequenceOffset
+    });
+    sequenceOffset += stepMs;
+  };
 
   for (const event of events ?? []) {
     if (event.type === "combat_attack_resolved") {
+      combatEvents.push(event);
       const payload = event.payload ?? {};
-      pushBoardHighlight({
+      const attacker = state.units[payload.attackerId] ?? null;
+      const target = state.units[payload.targetId] ?? null;
+      const attackerPoint = getBoardHighlightPointForUnit(attacker);
+      const targetPoint = getBoardHighlightPointForUnit(target);
+      const targetDestroyed = target && target.status?.location !== "battlefield";
+      queueAftermathHighlight({
         kind: "unit",
         unitId: payload.attackerId,
         tone: "action",
-        label: payload.mode === "melee" ? "Acted" : payload.mode === "overwatch" ? "Overwatch" : "Fired",
+        label: payload.mode === "melee" ? "Charged" : payload.mode === "overwatch" ? "Overwatch" : "Fired",
+        point: attackerPoint,
         expiresAt: now + 3200
       });
-      pushBoardHighlight({
+      queueAftermathHighlight({
         kind: "unit",
         unitId: payload.targetId,
-        tone: payload.casualties > 0 || payload.totalDamage > 0 ? "damage" : "attention",
-        label: payload.casualties > 0 ? `-${payload.casualties}` : payload.totalDamage > 0 ? `-${payload.totalDamage}` : "Defended",
-        expiresAt: now + 3200
-      });
+        tone: targetDestroyed ? "destroyed" : payload.casualties > 0 || payload.totalDamage > 0 ? "damage" : "attention",
+        label: targetDestroyed ? "Destroyed" : payload.casualties > 0 ? `-${payload.casualties}` : payload.totalDamage > 0 ? `-${payload.totalDamage}` : "Defended",
+        point: targetPoint,
+        expiresAt: now + (targetDestroyed ? 4600 : 3200)
+      }, { stepMs: targetDestroyed ? 420 : payload.casualties > 0 || payload.totalDamage > 0 ? 180 : 0 });
     }
   }
 
   const previousSnapshot = uiState.lastObjectiveSnapshot ?? {};
+  const combatResolvedThisUpdate = (events ?? []).some(event => event.type === "combat_attack_resolved");
   for (const [objectiveId, result] of Object.entries(currentSnapshot)) {
     const previous = previousSnapshot[objectiveId] ?? {};
     const changedController = previous.controller !== result.controller;
     const changedContested = Boolean(previous.contested) !== Boolean(result.contested);
-    if (!changedController && !changedContested) continue;
-    const label = result.contested
-      ? "Contested"
-      : result.controller === "playerA"
-        ? "Blue Control"
-        : result.controller === "playerB"
-          ? "Red Control"
-          : "Uncontrolled";
-    pushBoardHighlight({
+    const changedSupplyPressure = (previous.playerASupply ?? 0) !== (result.playerASupply ?? 0)
+      || (previous.playerBSupply ?? 0) !== (result.playerBSupply ?? 0);
+    if (changedController || changedContested) {
+      const label = result.contested
+        ? "Contested"
+        : result.controller === "playerA"
+          ? "Blue Control"
+          : result.controller === "playerB"
+            ? "Red Control"
+            : "Uncontrolled";
+      queueAftermathHighlight({
+        kind: "objective",
+        objectiveId,
+        tone: result.contested ? "attention" : "score",
+        label,
+        expiresAt: now + 4200
+      }, { stepMs: 220 });
+      objectiveNarratives.push(
+        `${objectiveId.toUpperCase()} is now ${result.contested
+          ? "contested"
+          : result.controller === "playerA"
+            ? "under Blue control"
+            : result.controller === "playerB"
+              ? "under Red control"
+              : "uncontrolled"} because the nearby supply changed from ${previous.playerASupply ?? 0}-${previous.playerBSupply ?? 0} to ${result.playerASupply ?? 0}-${result.playerBSupply ?? 0}.`
+      );
+      continue;
+    }
+    if (!combatResolvedThisUpdate || !changedSupplyPressure) continue;
+    const blueLead = (result.playerASupply ?? 0) - (result.playerBSupply ?? 0);
+    const previousLead = (previous.playerASupply ?? 0) - (previous.playerBSupply ?? 0);
+    if (blueLead === previousLead) continue;
+    const label = blueLead === 0
+      ? "Pressure Even"
+      : blueLead > 0
+        ? "Blue Pressure"
+        : "Red Pressure";
+    queueAftermathHighlight({
       kind: "objective",
       objectiveId,
-      tone: result.contested ? "attention" : "score",
+      tone: blueLead === 0 ? "attention" : "pressure",
       label,
-      expiresAt: now + 4200
-    });
+      expiresAt: now + 3600
+    }, { stepMs: 180 });
+    objectiveNarratives.push(
+      `${objectiveId.toUpperCase()} pressure shifted from ${previous.playerASupply ?? 0}-${previous.playerBSupply ?? 0} supply to ${result.playerASupply ?? 0}-${result.playerBSupply ?? 0}, so ${label.toLowerCase()} now matters there.`
+    );
+  }
+
+  if (combatEvents.length) {
+    const finalCombatEvent = combatEvents[combatEvents.length - 1];
+    const payload = finalCombatEvent.payload ?? {};
+    const attacker = state.units[payload.attackerId] ?? null;
+    const target = state.units[payload.targetId] ?? null;
+    const targetDestroyed = Boolean(target && target.status?.location !== "battlefield");
+    const resultSummary = targetDestroyed
+      ? `${target?.name ?? "The defender"} was destroyed.`
+      : (payload.casualties ?? 0) > 0
+        ? `${target?.name ?? "The defender"} lost ${payload.casualties} model(s).`
+        : (payload.totalDamage ?? 0) > 0
+          ? `${target?.name ?? "The defender"} took ${payload.totalDamage} damage but stayed in play.`
+          : `${target?.name ?? "The defender"} absorbed the attack without losing a model.`;
+    const metrics = [
+      payload.mode === "melee" ? "Melee resolution" : payload.mode === "overwatch" ? "Overwatch resolution" : "Ranged resolution",
+      `${payload.casualties ?? 0} casualties`,
+      `${payload.totalDamage ?? 0} damage`
+    ];
+    if (targetDestroyed) metrics.push("Target removed");
+    uiState.aftermathNarrative = {
+      startsAt: now + 140,
+      expiresAt: now + Math.max(5000, sequenceOffset + 3600),
+      title: `${attacker?.name ?? "Attack"} → ${target?.name ?? "Target"}`,
+      metrics,
+      reason: `${attacker?.name ?? "The attacker"} finished its ${payload.mode === "melee" ? "melee attack" : payload.mode === "overwatch" ? "Overwatch attack" : "ranged attack"}, and ${resultSummary}`,
+      teaching: objectiveNarratives.length
+        ? objectiveNarratives.join(" ")
+        : "Watch the nearby objective circles next. Casualties can open supply gaps, remove contesting units, or change which side has the safer follow-up activation."
+    };
+  } else if (!uiState.aftermathNarrative || (uiState.aftermathNarrative.expiresAt ?? 0) <= now) {
+    uiState.aftermathNarrative = null;
   }
 
   uiState.lastObjectiveSnapshot = currentSnapshot;

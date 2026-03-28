@@ -29,6 +29,16 @@ export function renderAll(state, uiState, handlers) {
   passBtn.textContent = uiState.pendingPass ? "Confirm Pass" : "Pass";
   passBtn.className = uiState.pendingPass ? "btn warn pass-confirm-flash" : "btn primary";
 
+  const actionBar = document.getElementById("actionBar");
+  const actionBarToggleBtn = document.getElementById("actionBarToggleBtn");
+  if (actionBar) {
+    actionBar.classList.toggle("compact", Boolean(uiState.compactActionBar));
+  }
+  if (actionBarToggleBtn) {
+    actionBarToggleBtn.textContent = uiState.compactActionBar ? "Expand" : "Compact";
+    actionBarToggleBtn.onclick = () => handlers.onToggleActionBarCompact?.();
+  }
+
   // Unit brief in action bar
   const brief = document.getElementById("selectedUnitBrief");
   const unit = uiState.selectedUnitId ? state.units[uiState.selectedUnitId] : null;
