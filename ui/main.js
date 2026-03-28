@@ -8,6 +8,7 @@ import { performBotTurn } from "../ai/bot.js";
 import { screenToBoardPoint } from "./board.js";
 import { getTacticalCard } from "../data/tactical_cards.js";
 import { snapPointToGrid } from "../engine/geometry.js";
+import { getLegalMoveDestinations, getLegalDeployDestinations, getLegalDisengageDestinations, getLegalRunDestinations } from "../engine/legal_actions.js";
 
 const DEFAULT_SETUP = {
   missionId: "take_and_hold",
@@ -68,7 +69,9 @@ const uiState = {
   locked: false,
   lastError: null,
   notifications: [],
-  lastSeenLogCount: 0
+  lastSeenLogCount: 0,
+  legalDestinations: [],
+  pendingPass: false
 };
 
 let store;
@@ -82,6 +85,7 @@ function buildInitialState() {
 function selectUnit(unitId) {
   uiState.selectedUnitId = unitId;
   cancelCurrentInteraction(uiState);
+  uiState.legalDestinations = [];
   rerender();
 }
 
@@ -89,16 +93,131 @@ function getSelectedUnit(state) {
   return uiState.selectedUnitId ? state.units[uiState.selectedUnitId] : null;
 }
 
+/* ── Compute legal destinations when entering a mode ── */
+function computeLegalDestinations() {
+  const state = store.getState();
+  const unit = getSelectedUnit(state);
+  if (!unit || unit.owner !== "playerA") { uiState.legalDestinations = []; return; }
+
+  try {
+    if (uiState.mode === "move") {
+      uiState.legalDestinations = getLegalMoveDestinations(state, "playerA", unit.id, unit.leadingModelId);
+    } else if (uiState.mode === "deploy") {
+      uiState.legalDestinations = getLegalDeployDestinations(state, "playerA", unit.id, unit.leadingModelId);
+    } else if (uiState.mode === "disengage") {
+      uiState.legalDestinations = getLegalDisengageDestinations(state, "playerA", unit.id, unit.leadingModelId);
+    } else if (uiState.mode === "run") {
+      uiState.legalDestinations = getLegalRunDestinations(state, "playerA", unit.id, unit.leadingModelId);
+    } else {
+      uiState.legalDestinations = [];
+    }
+  } catch (_e) {
+    uiState.legalDestinations = [];
+  }
+}
+
+/* ── Auto-select next unactivated unit ── */
+function autoSelectNextUnit() {
+  const state = store.getState();
+  if (state.activePlayer !== "playerA") return;
+  const phase = state.phase;
+  const allPlayerUnits = [
+    ...state.players.playerA.battlefieldUnitIds,
+    ...(phase === "movement" ? state.players.playerA.reserveUnitIds : [])
+  ];
+  for (const uid of allPlayerUnits) {
+    const u = state.units[uid];
+    if (!u) continue;
+    const activated = phase === "movement" ? u.status.movementActivated
+      : phase === "assault" ? u.status.assaultActivated
+      : phase === "combat" ? u.status.combatActivated : true;
+    if (!activated) {
+      uiState.selectedUnitId = uid;
+      return;
+    }
+  }
+}
+
+/* ── Phase checklist data ── */
+function getPhaseChecklist() {
+  const state = store.getState();
+  if (state.activePlayer !== "playerA") return { total: 0, done: 0, remaining: [] };
+  const phase = state.phase;
+  const allIds = [
+    ...state.players.playerA.battlefieldUnitIds,
+    ...(phase === "movement" ? state.players.playerA.reserveUnitIds : [])
+  ];
+  let done = 0;
+  const remaining = [];
+  for (const uid of allIds) {
+    const u = state.units[uid];
+    if (!u) continue;
+    const activated = phase === "movement" ? u.status.movementActivated
+      : phase === "assault" ? u.status.assaultActivated
+      : phase === "combat" ? u.status.combatActivated : true;
+    if (activated) done++;
+    else remaining.push(u.name);
+  }
+  return { total: allIds.length, done, remaining };
+}
+
 function getModeText() {
   if (uiState.lastError) return uiState.lastError;
-  if (store?.getState().rules?.gridMode) return "Grid Mode active (practice variant): 1 square = 1 inch. Destinations snap to the grid.";
-  if (uiState.mode === "deploy") return "Deploy mode: click to place the leader. Deep strike units may deploy away from board edges.";
-  if (uiState.mode === "move") return "Move mode: click on the board to choose the leader's destination.";
-  if (uiState.mode === "disengage") return "Disengage mode: click on the board to choose the fallback position.";
-  if (uiState.mode === "run") return "Run mode: click on the board to choose the leader's destination.";
-  if (uiState.mode === "declare_ranged") return "Ranged declaration mode: click an enemy model to choose your target.";
-  if (uiState.mode === "declare_charge") return "Charge declaration mode: click an enemy model within 8\".";
-  return "Select a reserve or battlefield unit, then choose an action.";
+  const state = store.getState();
+  const unit = getSelectedUnit(state);
+  const checklist = getPhaseChecklist();
+  const progress = checklist.total > 0 ? ` [${checklist.done}/${checklist.total}]` : "";
+
+  if (uiState.pendingPass) return "⚠ Press Pass again to confirm ending your phase. First to pass gets initiative next phase!";
+  if (uiState.locked) return "⏳ Enemy is taking their turn…";
+  if (state.activePlayer !== "playerA") return "Waiting for enemy turn…";
+
+  if (uiState.mode === "deploy" && unit) {
+    const avail = state.players.playerA.supplyPool - getPlayerSupply(state);
+    return `Deploy ${unit.name} (${unit.currentSupplyValue} SP) — click a green square. Available supply: ${avail}.${progress}`;
+  }
+  if (uiState.mode === "move" && unit) {
+    return `Move ${unit.name} — click a green square within ${unit.speed}" speed. Leader moves first, squad follows in coherency.${progress}`;
+  }
+  if (uiState.mode === "disengage" && unit) {
+    return `Disengage ${unit.name} — models that can't clear engagement range are destroyed. Can't shoot/charge next phase unless supply exceeds engaged enemies.${progress}`;
+  }
+  if (uiState.mode === "run" && unit) {
+    return `Run ${unit.name} — move up to ${unit.speed}" (same as normal move). Good for repositioning onto objectives when you can't attack.${progress}`;
+  }
+  if (uiState.mode === "declare_ranged" && unit) {
+    const wpn = unit.rangedWeapons?.[0];
+    const rangeInfo = wpn ? ` ${wpn.name}: ${wpn.rangeInches}" range, ${wpn.hitTarget}+ to hit.` : "";
+    return `Ranged Attack — click a red-highlighted enemy in range.${rangeInfo} Attack resolves in Combat Phase.${progress}`;
+  }
+  if (uiState.mode === "declare_charge" && unit) {
+    return `Charge — click an enemy within 8". In Combat Phase, ${unit.name} will pile in and fight in melee. Charge distance = Speed + 1D6.${progress}`;
+  }
+
+  // Phase-specific guidance when no mode is active
+  if (state.phase === "movement") {
+    if (checklist.remaining.length > 0) {
+      return `Movement Phase: Deploy reserves or Move/Hold battlefield units. Tip: First to Pass gets initiative for Assault.${progress}`;
+    }
+    return `All units moved. Pass to start the Assault Phase.${progress}`;
+  }
+  if (state.phase === "assault") {
+    if (checklist.remaining.length > 0) {
+      return `Assault Phase: Declare Ranged Attacks, Charges, Run to reposition, or Hold. Attacks resolve in Combat Phase.${progress}`;
+    }
+    return `All units assigned. Pass to start Combat.${progress}`;
+  }
+  if (state.phase === "combat") {
+    if (checklist.remaining.length > 0) {
+      return `Combat Phase: Resolve queued attacks. Each attack rolls Hit → Armor → Damage. Select a unit with queued attacks.${progress}`;
+    }
+    return `All combat resolved. Pass to score objectives.${progress}`;
+  }
+  return `Select a unit to act.${progress}`;
+}
+
+function getPlayerSupply(state) {
+  return state.players.playerA.battlefieldUnitIds.reduce((t, id) => t + state.units[id].currentSupplyValue, 0);
 }
 
 function rerender() {
@@ -108,7 +227,8 @@ function rerender() {
     onModelClick: handleModelClick,
     buildActionButtons,
     buildCardButtons,
-    getModeText
+    getModeText,
+    getPhaseChecklist
   };
   renderAll(store.getState(), uiState, handlers);
   renderNotifications();
@@ -128,9 +248,7 @@ function showError(message) {
 function pushToastNotification(message, tone = "info", durationMs = 5200) {
   const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   uiState.notifications.push({ id, message, tone });
-  if (uiState.notifications.length > 5) {
-    uiState.notifications.shift();
-  }
+  if (uiState.notifications.length > 5) uiState.notifications.shift();
   rerender();
   window.setTimeout(() => {
     const index = uiState.notifications.findIndex(item => item.id === id);
@@ -208,6 +326,7 @@ function buildActionButtons() {
 
   buttons.push(actionButton("Cancel", "secondary", () => {
     cancelCurrentInteraction(uiState);
+    uiState.legalDestinations = [];
     rerender();
   }, !uiState.mode, "No active interaction to cancel."));
 
@@ -227,6 +346,7 @@ function buildActionButtons() {
   if (state.phase === "movement" && unit.status.location === "reserves") {
     buttons.unshift(actionButton("Deploy", "primary", () => {
       beginDeployInteraction(state, uiState, unit.id);
+      computeLegalDestinations();
       rerender();
     }));
     return buttons;
@@ -235,16 +355,19 @@ function buildActionButtons() {
   buttons.unshift(actionButton("Hold", "secondary", () => {
     const result = store.dispatch({ type: "HOLD_UNIT", payload: { playerId: "playerA", unitId: unit.id } });
     if (!result.ok) showError(result.message);
+    else { autoSelectNextUnit(); rerender(); }
   }));
 
   if (state.phase === "movement") {
     buttons.unshift(actionButton("Move", "primary", () => {
       beginMoveInteraction(state, uiState, unit.id);
+      computeLegalDestinations();
       rerender();
     }, unit.status.engaged, "Unit is engaged. Disengage before moving."));
 
     buttons.unshift(actionButton("Disengage", "warn", () => {
       beginDisengageInteraction(state, uiState, unit.id);
+      computeLegalDestinations();
       rerender();
     }, !unit.status.engaged, "Unit must be engaged to disengage."));
 
@@ -254,16 +377,19 @@ function buildActionButtons() {
   if (state.phase === "assault") {
     buttons.unshift(actionButton("Charge", "warn", () => {
       beginDeclareChargeInteraction(uiState);
+      uiState.legalDestinations = [];
       rerender();
     }, !(unit.meleeWeapons?.length) || unit.status.cannotChargeThisAssault, unit.status.cannotChargeThisAssault ? "This unit cannot charge again this assault phase." : "This unit has no melee weapons."));
 
     buttons.unshift(actionButton("Ranged", "secondary", () => {
       beginDeclareRangedInteraction(uiState);
+      uiState.legalDestinations = [];
       rerender();
     }, !(unit.rangedWeapons?.length) || unit.status.cannotRangedAttackThisAssault, unit.status.cannotRangedAttackThisAssault ? "This unit has already made a ranged declaration this assault phase." : "This unit has no ranged weapons."));
 
     buttons.unshift(actionButton("Run", "primary", () => {
       beginRunInteraction(state, uiState, unit.id);
+      computeLegalDestinations();
       rerender();
     }, unit.status.engaged, "Unit is engaged. Disengage before running."));
     return buttons;
@@ -277,12 +403,10 @@ function buildActionButtons() {
     buttons.unshift(actionButton("Resolve Combat", "primary", () => {
       const result = store.dispatch({
         type: "RESOLVE_COMBAT_UNIT",
-        payload: {
-          playerId: "playerA",
-          unitId: unit.id
-        }
+        payload: { playerId: "playerA", unitId: unit.id }
       });
       if (!result.ok) showError(result.message);
+      else { autoSelectNextUnit(); rerender(); }
     }, !hasQueuedAttacks, "No queued attacks for this unit."));
     return buttons;
   }
@@ -303,15 +427,11 @@ function buildCardButtons() {
 
     if (card.target === "friendly_battlefield_unit") {
       const hasValidSelection = selectedUnit && selectedUnit.owner === "playerA" && selectedUnit.status.location === "battlefield";
-      const label = hasValidSelection ? `Play ${card.name} (${selectedUnit.name})` : `Play ${card.name} (Select friendly battlefield unit)`;
+      const label = hasValidSelection ? `Play ${card.name} on ${selectedUnit.name}` : `Play ${card.name} (select a unit first)`;
       buttons.push(actionButton(label, "secondary", () => {
         const result = store.dispatch({
           type: "PLAY_CARD",
-          payload: {
-            playerId: "playerA",
-            cardInstanceId: cardEntry.instanceId,
-            targetUnitId: selectedUnit.id
-          }
+          payload: { playerId: "playerA", cardInstanceId: cardEntry.instanceId, targetUnitId: selectedUnit.id }
         });
         if (!result.ok) showError(result.message);
       }, !hasValidSelection, "Select a friendly battlefield unit first."));
@@ -321,11 +441,7 @@ function buildCardButtons() {
     buttons.push(actionButton(`Play ${card.name}`, "secondary", () => {
       const result = store.dispatch({
         type: "PLAY_CARD",
-        payload: {
-          playerId: "playerA",
-          cardInstanceId: cardEntry.instanceId,
-          targetUnitId: null
-        }
+        payload: { playerId: "playerA", cardInstanceId: cardEntry.instanceId, targetUnitId: null }
       });
       if (!result.ok) showError(result.message);
     }));
@@ -354,6 +470,13 @@ function maybeSnapPoint(state, point) {
 }
 
 function handleBoardClick(point) {
+  // Cancel pending pass on any board click
+  if (uiState.pendingPass) {
+    uiState.pendingPass = false;
+    rerender();
+    return;
+  }
+
   const state = store.getState();
   const snappedPoint = maybeSnapPoint(state, point);
   const unit = getSelectedUnit(state);
@@ -365,16 +488,14 @@ function handleBoardClick(point) {
     const result = store.dispatch({
       type: "DEPLOY_UNIT",
       payload: {
-        playerId: "playerA",
-        unitId: unit.id,
-        leadingModelId: unit.leadingModelId,
-        entryPoint,
-        path,
-        modelPlacements: autoArrangeModels(state, unit.id, snappedPoint)
+        playerId: "playerA", unitId: unit.id, leadingModelId: unit.leadingModelId,
+        entryPoint, path, modelPlacements: autoArrangeModels(state, unit.id, snappedPoint)
       }
     });
     if (!result.ok) return showError(result.message);
     cancelCurrentInteraction(uiState);
+    uiState.legalDestinations = [];
+    autoSelectNextUnit();
     rerender();
     return;
   }
@@ -385,15 +506,14 @@ function handleBoardClick(point) {
     const result = store.dispatch({
       type: "MOVE_UNIT",
       payload: {
-        playerId: "playerA",
-        unitId: unit.id,
-        leadingModelId: unit.leadingModelId,
-        path,
-        modelPlacements: autoArrangeModels(state, unit.id, snappedPoint)
+        playerId: "playerA", unitId: unit.id, leadingModelId: unit.leadingModelId,
+        path, modelPlacements: autoArrangeModels(state, unit.id, snappedPoint)
       }
     });
     if (!result.ok) return showError(result.message);
     cancelCurrentInteraction(uiState);
+    uiState.legalDestinations = [];
+    autoSelectNextUnit();
     rerender();
     return;
   }
@@ -404,15 +524,14 @@ function handleBoardClick(point) {
     const result = store.dispatch({
       type: "RUN_UNIT",
       payload: {
-        playerId: "playerA",
-        unitId: unit.id,
-        leadingModelId: unit.leadingModelId,
-        path,
-        modelPlacements: autoArrangeModels(state, unit.id, snappedPoint)
+        playerId: "playerA", unitId: unit.id, leadingModelId: unit.leadingModelId,
+        path, modelPlacements: autoArrangeModels(state, unit.id, snappedPoint)
       }
     });
     if (!result.ok) return showError(result.message);
     cancelCurrentInteraction(uiState);
+    uiState.legalDestinations = [];
+    autoSelectNextUnit();
     rerender();
     return;
   }
@@ -423,21 +542,26 @@ function handleBoardClick(point) {
     const result = store.dispatch({
       type: "DISENGAGE_UNIT",
       payload: {
-        playerId: "playerA",
-        unitId: unit.id,
-        leadingModelId: unit.leadingModelId,
-        path,
-        modelPlacements: autoArrangeModels(state, unit.id, snappedPoint)
+        playerId: "playerA", unitId: unit.id, leadingModelId: unit.leadingModelId,
+        path, modelPlacements: autoArrangeModels(state, unit.id, snappedPoint)
       }
     });
     if (!result.ok) return showError(result.message);
     cancelCurrentInteraction(uiState);
+    uiState.legalDestinations = [];
+    autoSelectNextUnit();
     rerender();
   }
 }
 
 
 function handleModelClick(unitId) {
+  // Cancel pending pass
+  if (uiState.pendingPass) {
+    uiState.pendingPass = false;
+    rerender();
+  }
+
   const state = store.getState();
   const selected = getSelectedUnit(state);
   const clickedUnit = state.units[unitId];
@@ -445,17 +569,12 @@ function handleModelClick(unitId) {
   if (uiState.mode === "declare_ranged" && selected && clickedUnit && selected.owner === "playerA" && clickedUnit.owner === "playerB") {
     const result = store.dispatch({
       type: "DECLARE_RANGED_ATTACK",
-      payload: {
-        playerId: "playerA",
-        unitId: selected.id,
-        targetId: clickedUnit.id
-      }
+      payload: { playerId: "playerA", unitId: selected.id, targetId: clickedUnit.id }
     });
-    if (!result.ok) {
-      showError(result.message);
-      return;
-    }
+    if (!result.ok) { showError(result.message); return; }
     cancelCurrentInteraction(uiState);
+    uiState.legalDestinations = [];
+    autoSelectNextUnit();
     rerender();
     return;
   }
@@ -463,17 +582,12 @@ function handleModelClick(unitId) {
   if (uiState.mode === "declare_charge" && selected && clickedUnit && selected.owner === "playerA" && clickedUnit.owner === "playerB") {
     const result = store.dispatch({
       type: "DECLARE_CHARGE",
-      payload: {
-        playerId: "playerA",
-        unitId: selected.id,
-        targetId: clickedUnit.id
-      }
+      payload: { playerId: "playerA", unitId: selected.id, targetId: clickedUnit.id }
     });
-    if (!result.ok) {
-      showError(result.message);
-      return;
-    }
+    if (!result.ok) { showError(result.message); return; }
     cancelCurrentInteraction(uiState);
+    uiState.legalDestinations = [];
+    autoSelectNextUnit();
     rerender();
     return;
   }
@@ -489,9 +603,14 @@ async function maybeRunBot() {
   uiState.locked = true;
   rerender();
   await new Promise(resolve => setTimeout(resolve, 420));
+  const logBefore = store.getState().log.length;
   const result = await performBotTurn(store, "playerB");
   if (!result.ok) showError(result.message);
   uiState.locked = false;
+  // After bot finishes its full turn cycle, auto-select for player
+  if (store.getState().activePlayer === "playerA") {
+    autoSelectNextUnit();
+  }
   rerender();
   if (store.getState().activePlayer === "playerB" && ["movement", "assault", "combat"].includes(store.getState().phase)) {
     maybeRunBot();
@@ -500,6 +619,8 @@ async function maybeRunBot() {
 
 function resetGame() {
   uiState.selectedUnitId = null;
+  uiState.legalDestinations = [];
+  uiState.pendingPass = false;
   cancelCurrentInteraction(uiState);
   const nextState = buildInitialState();
   uiState.lastSeenLogCount = nextState.log.length;
@@ -512,18 +633,13 @@ function sanitizeSaveFilenamePart(value) {
 
 function exportSaveFile() {
   const state = store.getState();
-  const payload = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    state
-  };
+  const payload = { version: 1, exportedAt: new Date().toISOString(), state };
   const content = JSON.stringify(payload, null, 2);
   const blob = new Blob([content], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  const missionPart = sanitizeSaveFilenamePart(state.mission.id ?? "mission");
   link.href = url;
-  link.download = `starcraft-grid-save-${missionPart}.json`;
+  link.download = `starcraft-grid-save-${sanitizeSaveFilenamePart(state.mission.id ?? "mission")}.json`;
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -532,14 +648,7 @@ function exportSaveFile() {
 }
 
 function isValidImportedState(nextState) {
-  return Boolean(
-    nextState &&
-    typeof nextState === "object" &&
-    nextState.board &&
-    nextState.players &&
-    nextState.units &&
-    Array.isArray(nextState.turnOrder)
-  );
+  return Boolean(nextState && typeof nextState === "object" && nextState.board && nextState.players && nextState.units && Array.isArray(nextState.turnOrder));
 }
 
 function importSaveFile(file) {
@@ -549,23 +658,20 @@ function importSaveFile(file) {
     try {
       const parsed = JSON.parse(String(reader.result));
       const importedState = parsed?.state ?? parsed;
-      if (!isValidImportedState(importedState)) {
-        showError("Invalid save file.");
-        return;
-      }
+      if (!isValidImportedState(importedState)) { showError("Invalid save file."); return; }
       uiState.selectedUnitId = null;
+      uiState.legalDestinations = [];
+      uiState.pendingPass = false;
       cancelCurrentInteraction(uiState);
       uiState.lastSeenLogCount = importedState.log?.length ?? 0;
       store.replaceState(importedState);
-      document.getElementById("gridModeBtn").textContent = `Grid Mode: ${store.getState().rules.gridMode ? "On" : "Off"}`;
+      document.getElementById("gridModeBtn").textContent = `Grid: ${store.getState().rules.gridMode ? "On" : "Off"}`;
       pushToastNotification("Save loaded.", "success");
     } catch (_error) {
       showError("Could not read this save file.");
     }
   };
-  reader.onerror = () => {
-    showError("Failed to load save file.");
-  };
+  reader.onerror = () => showError("Failed to load save file.");
   reader.readAsText(file);
 }
 
@@ -575,7 +681,7 @@ function controller() {
     onToggleGridMode: () => {
       const state = store.getState();
       state.rules.gridMode = !state.rules.gridMode;
-      document.getElementById("gridModeBtn").textContent = `Grid Mode: ${state.rules.gridMode ? "On" : "Off"}`;
+      document.getElementById("gridModeBtn").textContent = `Grid: ${state.rules.gridMode ? "On" : "Off"}`;
       rerender();
     },
     onExportSave: exportSaveFile,
@@ -585,16 +691,27 @@ function controller() {
       input.value = "";
       input.click();
     },
-    onImportFileSelected: (event) => {
-      const input = event.target;
-      importSaveFile(input?.files?.[0]);
-    },
+    onImportFileSelected: (event) => importSaveFile(event.target?.files?.[0]),
     onPass: () => {
+      // Two-click pass confirmation
+      if (!uiState.pendingPass) {
+        uiState.pendingPass = true;
+        rerender();
+        // Auto-cancel after 3 seconds
+        window.clearTimeout(controller._passTimer);
+        controller._passTimer = window.setTimeout(() => {
+          uiState.pendingPass = false;
+          rerender();
+        }, 3000);
+        return;
+      }
+      uiState.pendingPass = false;
       const result = store.dispatch({ type: "PASS_PHASE", payload: { playerId: "playerA" } });
       if (!result.ok) showError(result.message);
     }
   };
 }
+controller._passTimer = null;
 
 
 function updatePreviewFromPoint(point) {
@@ -630,18 +747,79 @@ function wirePreviewEvents() {
   });
 }
 
+/* ── Keyboard shortcuts ── */
+function wireKeyboardShortcuts() {
+  document.addEventListener("keydown", event => {
+    if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") return;
+    const state = store.getState();
+    const unit = getSelectedUnit(state);
+
+    if (event.key === "Escape") {
+      if (uiState.pendingPass) { uiState.pendingPass = false; rerender(); return; }
+      if (uiState.mode) { cancelCurrentInteraction(uiState); uiState.legalDestinations = []; rerender(); return; }
+      uiState.selectedUnitId = null; rerender();
+      return;
+    }
+
+    if (event.key === "Tab") {
+      event.preventDefault();
+      // Cycle through unactivated units
+      const phase = state.phase;
+      const allIds = [
+        ...state.players.playerA.reserveUnitIds,
+        ...state.players.playerA.battlefieldUnitIds
+      ];
+      const currentIdx = allIds.indexOf(uiState.selectedUnitId);
+      for (let i = 1; i <= allIds.length; i++) {
+        const nextId = allIds[(currentIdx + i) % allIds.length];
+        const u = state.units[nextId];
+        if (!u) continue;
+        const activated = phase === "movement" ? u.status.movementActivated
+          : phase === "assault" ? u.status.assaultActivated
+          : phase === "combat" ? u.status.combatActivated : true;
+        if (!activated) { selectUnit(nextId); return; }
+      }
+      // If all activated, just cycle
+      if (allIds.length) {
+        selectUnit(allIds[(currentIdx + 1) % allIds.length]);
+      }
+      return;
+    }
+
+    // Quick action keys
+    if (state.activePlayer === "playerA" && unit && unit.owner === "playerA") {
+      if (event.key === "m" && state.phase === "movement" && !unit.status.engaged && unit.status.location === "battlefield") {
+        beginMoveInteraction(state, uiState, unit.id); computeLegalDestinations(); rerender();
+      }
+      if (event.key === "d" && state.phase === "movement" && unit.status.location === "reserves") {
+        beginDeployInteraction(state, uiState, unit.id); computeLegalDestinations(); rerender();
+      }
+      if (event.key === "h") {
+        const result = store.dispatch({ type: "HOLD_UNIT", payload: { playerId: "playerA", unitId: unit.id } });
+        if (!result.ok) showError(result.message);
+        else { autoSelectNextUnit(); rerender(); }
+      }
+      if (event.key === "r" && state.phase === "assault" && !unit.status.engaged) {
+        beginRunInteraction(state, uiState, unit.id); computeLegalDestinations(); rerender();
+      }
+    }
+  });
+}
+
 function init() {
   store = createStore(buildInitialState());
   bindInputHandlers(store, controller());
-  document.getElementById("gridModeBtn").textContent = `Grid Mode: ${store.getState().rules.gridMode ? "On" : "Off"}`;
+  document.getElementById("gridModeBtn").textContent = `Grid: ${store.getState().rules.gridMode ? "On" : "Off"}`;
   uiState.lastSeenLogCount = store.getState().log.length;
   store.subscribe((state) => {
     publishLogNotifications(state);
     rerender();
     maybeRunBot();
   });
+  autoSelectNextUnit();
   rerender();
   wirePreviewEvents();
+  wireKeyboardShortcuts();
 }
 
 init();

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>StarCraft TMG Engine - Phase 1 Foundation</title>
+  <title>StarCraft TMG Engine</title>
   <link rel="stylesheet" href="./css/styles.css" />
 </head>
 <body>
@@ -11,15 +11,22 @@
     <header class="topbar">
       <div class="topbar-copy">
         <h1>StarCraft TMG Engine</h1>
-        <p class="subtitle">Cleaner command view for reserves, actions, and board control.</p>
+        <div class="shortcut-hints">
+          <span class="hint-key">Tab</span> cycle units
+          <span class="hint-key">M</span> move
+          <span class="hint-key">D</span> deploy
+          <span class="hint-key">H</span> hold
+          <span class="hint-key">R</span> run
+          <span class="hint-key">Esc</span> cancel
+        </div>
       </div>
       <div class="topbar-actions">
-        <button id="gridModeBtn" class="btn secondary">Grid Mode: On</button>
-        <button id="exportBtn" class="btn secondary">Export Save</button>
-        <button id="importBtn" class="btn secondary">Load Save</button>
+        <button id="gridModeBtn" class="btn secondary">Grid: On</button>
+        <button id="exportBtn" class="btn secondary">Export</button>
+        <button id="importBtn" class="btn secondary">Load</button>
         <input id="importFileInput" type="file" accept="application/json" hidden />
         <button id="newGameBtn" class="btn secondary">New Game</button>
-        <button id="passBtn" class="btn primary">Pass</button>
+        <button id="passBtn" class="btn primary">Pass Phase</button>
       </div>
     </header>
 
@@ -28,7 +35,6 @@
         <section class="card state-card">
           <div class="card-heading">
             <h2>Mission Control</h2>
-            <span class="panel-hint">Round flow and score</span>
           </div>
           <div class="kv-grid" id="battleState"></div>
           <div class="progress-grid">
@@ -60,14 +66,17 @@
         <section class="card roster-card">
           <div class="card-heading">
             <h2>Your Forces</h2>
-            <span class="panel-hint">Select a unit to act</span>
           </div>
           <details class="foldout" open>
-            <summary>Your Reserves</summary>
+            <summary>Phase Progress</summary>
+            <div id="phaseChecklist" class="phase-checklist"></div>
+          </details>
+          <details class="foldout" open>
+            <summary>Reserves</summary>
             <div id="playerReserves" class="unit-list"></div>
           </details>
           <details class="foldout" open>
-            <summary>Your Battlefield Units</summary>
+            <summary>Battlefield</summary>
             <div id="playerBattlefield" class="unit-list"></div>
           </details>
         </section>
@@ -75,18 +84,17 @@
 
       <section class="board-panel">
         <div class="board-toolbar">
-          <div id="turnBanner" class="turn-banner playerA">Blue Player Active</div>
+          <div id="turnBanner" class="turn-banner playerA">Blue — Movement Phase</div>
           <div id="modeBanner" class="mode-banner">Select a unit to begin.</div>
         </div>
         <section class="card focus-card">
           <div class="card-heading">
             <h2>Unit Command</h2>
-            <span class="panel-hint">Selection, stats, and actions</span>
           </div>
           <div class="focus-layout">
             <div id="selectedUnitPanel" class="empty-state">No unit selected.</div>
             <div class="actions-pane">
-              <div class="actions-pane-title">Available Actions</div>
+              <div class="actions-pane-title">Actions</div>
               <div id="actionButtons" class="action-stack"></div>
             </div>
           </div>
@@ -100,13 +108,12 @@
         <section class="card intel-card">
           <div class="card-heading">
             <h2>Battle Intel</h2>
-            <span class="panel-hint">Cards, queue, enemy, and log</span>
           </div>
           <details class="foldout" open>
             <summary>Tactical Cards</summary>
             <div id="tacticalCards" class="action-stack"></div>
           </details>
-          <details class="foldout">
+          <details class="foldout" open>
             <summary>Combat Queue</summary>
             <div id="combatQueuePanel" class="objective-control-list"></div>
           </details>
@@ -115,7 +122,7 @@
             <div id="enemyReserves" class="unit-list compact"></div>
           </details>
           <details class="foldout" open>
-            <summary>Enemy Battlefield Units</summary>
+            <summary>Enemy Battlefield</summary>
             <div id="enemyBattlefield" class="unit-list compact"></div>
           </details>
           <details class="foldout" open>
