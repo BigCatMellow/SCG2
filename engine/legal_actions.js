@@ -4,6 +4,7 @@ import { validateDeploy } from "./deployment.js";
 import { validateRun, validateDeclareRangedAttack, validateDeclareCharge } from "./assault.js";
 import { getPlayableCardActions } from "./cards.js";
 import { hasQueuedCombatForUnit } from "./combat.js";
+import { canBurrow, canHide, validateToggleBurrow, validateToggleHidden } from "./statuses.js";
 
 export function getLegalActionsForPlayer(state, playerId) {
   const units = getEligibleUnitsForCurrentPhase(state, playerId);
@@ -31,6 +32,8 @@ export function getLegalActionsForUnit(state, playerId, unitId) {
     descriptors.push({ type: "HOLD_UNIT", unitId, enabled: validateHold(state, playerId, unitId).ok });
     descriptors.push({ type: "MOVE_UNIT", unitId, enabled: !unit.status.engaged, uiHints: { requiresBoardClick: true } });
     descriptors.push({ type: "DISENGAGE_UNIT", unitId, enabled: unit.status.engaged, uiHints: { requiresBoardClick: true } });
+    if (canBurrow(unit)) descriptors.push({ type: "TOGGLE_BURROW", unitId, enabled: validateToggleBurrow(state, playerId, unitId).ok });
+    if (canHide(unit)) descriptors.push({ type: "TOGGLE_HIDDEN", unitId, enabled: validateToggleHidden(state, playerId, unitId).ok });
     return descriptors;
   }
 
@@ -38,6 +41,8 @@ export function getLegalActionsForUnit(state, playerId, unitId) {
     if (unit.status.location !== "battlefield") return descriptors;
     descriptors.push({ type: "HOLD_UNIT", unitId, enabled: validateHold(state, playerId, unitId).ok });
     descriptors.push({ type: "RUN_UNIT", unitId, enabled: !unit.status.engaged, uiHints: { requiresBoardClick: true } });
+    if (canBurrow(unit)) descriptors.push({ type: "TOGGLE_BURROW", unitId, enabled: validateToggleBurrow(state, playerId, unitId).ok });
+    if (canHide(unit)) descriptors.push({ type: "TOGGLE_HIDDEN", unitId, enabled: validateToggleHidden(state, playerId, unitId).ok });
     descriptors.push({ type: "DECLARE_RANGED_ATTACK", unitId, enabled: validateDeclareRangedAttack(state, playerId, unitId).ok });
     descriptors.push({ type: "DECLARE_CHARGE", unitId, enabled: validateDeclareCharge(state, playerId, unitId).ok });
     return descriptors;

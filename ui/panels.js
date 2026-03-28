@@ -85,15 +85,37 @@ function formatWeaponFull(weapon) {
   const dmg = weapon.damage ?? 1;
   const ap = weapon.armorPenetration ?? 0;
   const keywords = weapon.keywords?.length ? weapon.keywords.map(k => k.replace(/_/g, " ")).join(", ") : "";
+  const surge = weapon.surge ? `${weapon.surge.tags.join(", ")} / ${weapon.surge.dice}` : "";
+  const longRange = weapon.longRangeInches ?? weapon.longRange ?? null;
+  const precision = weapon.precision ? `Precision ${weapon.precision}` : "";
+  const criticalHit = weapon.criticalHit ? `Critical ${weapon.criticalHit}` : "";
+  const antiEvade = weapon.antiEvade ? `Anti-Evade ${weapon.antiEvade}` : "";
+  const indirectFire = weapon.indirectFire ? "Indirect Fire" : "";
+  const burstFireValue = weapon.burstFire
+    ? (typeof weapon.burstFire === "number"
+      ? { rangeInches: weapon.rangeInches, bonusAttacks: weapon.burstFire }
+      : { rangeInches: weapon.burstFire.rangeInches ?? weapon.burstFire.range ?? weapon.rangeInches, bonusAttacks: weapon.burstFire.bonusAttacks ?? weapon.burstFire.attacks ?? weapon.burstFire.value ?? 0 })
+    : null;
+  const burstFire = burstFireValue ? `Burst Fire ${burstFireValue.rangeInches ?? "?"}" +${burstFireValue.bonusAttacks}` : "";
+  const lockedIn = weapon.lockedIn ? `Locked In ${weapon.lockedIn}` : "";
+  const concentratedFire = weapon.concentratedFire ? `Concentrated Fire ${weapon.concentratedFire}` : "";
+  const bulky = weapon.bulky || weapon.keywords?.includes("bulky") ? "Bulky" : "";
+  const instant = weapon.instant || weapon.keywords?.includes("instant") ? "Instant" : "";
+  const pierce = weapon.pierce
+    ? (Array.isArray(weapon.pierce) ? weapon.pierce : [weapon.pierce]).map(entry => `Pierce ${entry.tag} ${entry.damage}`).join(", ")
+    : "";
+  const extraRules = [precision, criticalHit, antiEvade, burstFire, lockedIn, concentratedFire, bulky, instant, pierce, indirectFire, longRange ? `Long Range ${longRange}"` : ""].filter(Boolean).join(", ");
 
   return `
     <div class="weapon-stat-grid">
       <div class="weapon-stat"><span class="ws-label">Range</span><span class="ws-val">${range}</span></div>
       <div class="weapon-stat"><span class="ws-label">Attacks</span><span class="ws-val">${attacks}/model</span></div>
       <div class="weapon-stat"><span class="ws-label">Hit</span><span class="ws-val">${hit}+</span></div>
+      ${surge ? `<div class="weapon-stat"><span class="ws-label">Surge</span><span class="ws-val">${surge}</span></div>` : ""}
       <div class="weapon-stat"><span class="ws-label">Dmg</span><span class="ws-val">${dmg}</span></div>
       ${ap ? `<div class="weapon-stat"><span class="ws-label">AP</span><span class="ws-val">-${ap}</span></div>` : ""}
     </div>
+    ${extraRules ? `<div class="weapon-keywords">${extraRules}</div>` : ""}
     ${keywords ? `<div class="weapon-keywords">${keywords}</div>` : ""}
   `;
 }
@@ -101,7 +123,28 @@ function formatWeaponFull(weapon) {
 function formatWeaponOneLine(weapon) {
   const attacks = weapon.attacksPerModel ?? weapon.shotsPerModel ?? 1;
   const range = weapon.rangeInches != null ? `${weapon.rangeInches}"` : "Melee";
-  return `${range} range, ${attacks} atk/model, ${weapon.hitTarget ?? "?"}+ to hit, ${weapon.damage ?? 1} dmg`;
+  const surge = weapon.surge ? `, Surge ${weapon.surge.tags.join("/")} ${weapon.surge.dice}` : "";
+  const burstFireValue = weapon.burstFire
+    ? (typeof weapon.burstFire === "number"
+      ? { rangeInches: weapon.rangeInches, bonusAttacks: weapon.burstFire }
+      : { rangeInches: weapon.burstFire.rangeInches ?? weapon.burstFire.range ?? weapon.rangeInches, bonusAttacks: weapon.burstFire.bonusAttacks ?? weapon.burstFire.attacks ?? weapon.burstFire.value ?? 0 })
+    : null;
+  const extras = [];
+  if (weapon.precision) extras.push(`Precision ${weapon.precision}`);
+  if (weapon.criticalHit) extras.push(`Crit ${weapon.criticalHit}`);
+  if (weapon.antiEvade) extras.push(`Anti-Evade ${weapon.antiEvade}`);
+  if (burstFireValue) extras.push(`Burst ${burstFireValue.rangeInches ?? "?"}" +${burstFireValue.bonusAttacks}`);
+  if (weapon.lockedIn) extras.push(`Locked In ${weapon.lockedIn}`);
+  if (weapon.concentratedFire) extras.push(`Concentrated ${weapon.concentratedFire}`);
+  if (weapon.bulky || weapon.keywords?.includes("bulky")) extras.push("Bulky");
+  if (weapon.instant || weapon.keywords?.includes("instant")) extras.push("Instant");
+  if (weapon.indirectFire) extras.push("Indirect");
+  if (weapon.longRangeInches ?? weapon.longRange) extras.push(`Long ${weapon.longRangeInches ?? weapon.longRange}"`);
+  if (weapon.pierce) {
+    const entries = Array.isArray(weapon.pierce) ? weapon.pierce : [weapon.pierce];
+    extras.push(entries.map(entry => `Pierce ${entry.tag} ${entry.damage}`).join("/"));
+  }
+  return `${range} range, ${attacks} atk/model, ${weapon.hitTarget ?? "?"}+ to hit, ${weapon.damage ?? 1} dmg${surge}${extras.length ? `, ${extras.join(", ")}` : ""}`;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -286,16 +329,20 @@ export function renderSelectedUnit(state, uiState) {
       <div class="selected-stat"><div class="k">Supply</div><div class="v">${unit.currentSupplyValue}</div></div>
       <div class="selected-stat"><div class="k">Models</div><div class="v">${alive}/${total}</div></div>
       <div class="selected-stat"><div class="k">Armor</div><div class="v">${defense.armorSave ?? "—"}+</div></div>
+      <div class="selected-stat"><div class="k">Evade</div><div class="v">${defense.evadeTarget ? `${defense.evadeTarget}+` : "—"}</div></div>
       <div class="selected-stat"><div class="k">Tough</div><div class="v">${defense.toughness ?? "—"}</div></div>
       <div class="selected-stat"><div class="k">Location</div><div class="v">${titleCase(unit.status.location)}</div></div>
     </div>
     <div class="badge-row" style="margin-top:6px;">
       ${unit.status.engaged ? '<span class="badge warn">Engaged — must Disengage before moving</span>' : ''}
+      ${unit.status.hidden ? '<span class="badge good">Hidden</span>' : ''}
+      ${unit.status.burrowed ? '<span class="badge good">Burrowed</span>' : ''}
       ${unit.status.outOfCoherency ? '<span class="badge warn">Out of Coherency — cannot contest objectives</span>' : ''}
       ${unit.status.movementActivated ? '<span class="badge good">Movement ✓</span>' : ''}
       ${unit.status.assaultActivated ? '<span class="badge good">Assault ✓</span>' : ''}
       ${unit.status.combatActivated ? '<span class="badge good">Combat ✓</span>' : ''}
     </div>
+    ${defense.dodge ? `<div class="selected-detail"><div class="k">Defense Rule</div><div class="v">Dodge ${defense.dodge}</div></div>` : ""}
     ${abilities !== "None" ? `<div class="selected-detail"><div class="k">Abilities</div><div class="v">${abilities}</div></div>` : ""}
     <div class="selected-detail">
       <div class="k">Ranged Weapons</div>
@@ -406,7 +453,7 @@ export function renderCombatQueue(state) {
 
   state.combatQueue.forEach((entry, index) => {
     const attacker = state.units[entry.attackerId];
-    const defender = state.units[entry.defenderId];
+    const defender = state.units[entry.targetId];
     if (!attacker || !defender) return;
 
     const isYours = attacker.owner === "playerA";

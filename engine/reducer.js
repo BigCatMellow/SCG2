@@ -4,8 +4,9 @@ import { resolveHold, resolveMove, resolveDisengage } from "./movement.js";
 import { resolveDeploy } from "./deployment.js";
 import { resolveRun, resolveDeclareRangedAttack, resolveDeclareCharge } from "./assault.js";
 import { resolvePlayCard } from "./cards.js";
-import { resolveCombatForUnit, hasQueuedCombatForUnit } from "./combat.js";
+import { resolveCombatForUnit, hasQueuedCombatForUnit, setChargePrimaryTarget } from "./combat.js";
 import { cloneState } from "./state.js";
+import { resolveToggleBurrow, resolveToggleHidden } from "./statuses.js";
 
 export function dispatch(state, action) {
   const working = cloneState(state);
@@ -26,8 +27,14 @@ export function dispatch(state, action) {
       return resolveDeclareRangedAttack(working, action.payload.playerId, action.payload.unitId, action.payload.targetId ?? null);
     case "DECLARE_CHARGE":
       return resolveDeclareCharge(working, action.payload.playerId, action.payload.unitId, action.payload.targetId ?? null);
+    case "TOGGLE_BURROW":
+      return resolveToggleBurrow(working, action.payload.playerId, action.payload.unitId);
+    case "TOGGLE_HIDDEN":
+      return resolveToggleHidden(working, action.payload.playerId, action.payload.unitId);
     case "PLAY_CARD":
       return resolvePlayCard(working, action.payload.playerId, action.payload.cardInstanceId, action.payload.targetUnitId ?? null);
+    case "SET_CHARGE_PRIMARY_TARGET":
+      return setChargePrimaryTarget(working, action.payload.playerId, action.payload.unitId, action.payload.targetId);
     case "RESOLVE_COMBAT_UNIT": {
       const { playerId, unitId } = action.payload;
       const unit = working.units[unitId];

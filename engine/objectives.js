@@ -6,6 +6,7 @@ export function getObjectiveControlRange(state) {
 
 function isUnitContestingObjective(unit, objective, range) {
   if (unit.status.location !== "battlefield") return false;
+  if (unit.status.burrowed) return false;
   return unit.modelIds.some(modelId => {
     const model = unit.models[modelId];
     if (!model.alive || model.x == null || model.y == null) return false;

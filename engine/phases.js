@@ -70,7 +70,11 @@ export function beginRound(state) {
   onRoundStart(state);
   state.combatQueue = [];
   refreshAllSupply(state);
-  return beginActivationPhase(state, "movement", `Round ${state.round} begins. Movement Phase active.`);
+  return beginActivationPhase(
+    state,
+    "movement",
+    `Round ${state.round} begins. Movement Phase active. Supply Pool is now ${state.players.playerA.supplyPool} for both players.`
+  );
 }
 
 export function beginMovementPhase(state) {

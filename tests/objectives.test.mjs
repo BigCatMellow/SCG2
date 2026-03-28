@@ -58,6 +58,25 @@ test('scoreObjectivesForRound awards VP only for controlled markers', () => {
   assert.equal(state.players.playerB.vp, 0);
 });
 
+test('burrowed units do not contest objectives', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_roach_1', templateId: 'roach_t3' }],
+    armyB: [{ id: 'red_marines_1', templateId: 'marine_squad' }],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  placeUnitAt(state, 'blue_roach_1', 18, 10);
+  placeUnitAt(state, 'red_marines_1', 30, 30);
+  state.units.blue_roach_1.status.burrowed = true;
+  state.units.blue_roach_1.status.hidden = true;
+
+  const snapshot = getObjectiveControlSnapshot(state);
+
+  assert.equal(snapshot.obj2.playerASupply, 0);
+  assert.equal(snapshot.obj2.controller, null);
+});
+
 test('beginCleanupPhase on final round resolves winner from VP totals', () => {
   const state = buildState();
   state.round = state.mission.roundLimit;

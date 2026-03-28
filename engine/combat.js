@@ -3,16 +3,176 @@ import { distance, pointInBoard, circleOverlapsTerrain, circleOverlapsCircle, ci
 import { recomputeUnitCurrentSupply, refreshAllSupply } from "./supply.js";
 import { getModifiedValue, onEvent } from "./effects.js";
 import { refreshEngagement } from "./movement.js";
+import { applyCloseRanks } from "./statuses.js";
+import {
+  canTargetWithRangedWeapon,
+  getAntiEvadeValue,
+  getLongRangeValue,
+  targetGetsEvadeOpportunity
+} from "./visibility.js";
 
 const MELEE_REACH_INCHES = 1.5;
 const CHARGE_MAX_RANGE_INCHES = 8;
 const PILE_IN_DISTANCE_INCHES = 3;
 const CONSOLIDATE_DISTANCE_INCHES = 3;
+const ENGAGEMENT_RANGE_INCHES = 1;
+const BASE_TO_BASE_TOLERANCE = 0.05;
 
 function getAliveModels(unit) {
   return unit.modelIds
     .map(modelId => unit.models[modelId])
     .filter(model => model.alive && model.x != null && model.y != null);
+}
+
+function getModelEdgeDistance(a, aRadius, b, bRadius) {
+  return distance(a, b) - aRadius - bRadius;
+}
+
+function isWithinEnemyEngagement(attackerUnit, attackerModel, targetUnit) {
+  return getAliveModels(targetUnit).some(targetModel =>
+    getModelEdgeDistance(attackerModel, attackerUnit.base.radiusInches, targetModel, targetUnit.base.radiusInches) <= ENGAGEMENT_RANGE_INCHES + 1e-6
+  );
+}
+
+function isInBaseContact(unit, model, friendlyModel) {
+  const edgeDistance = getModelEdgeDistance(model, unit.base.radiusInches, friendlyModel, unit.base.radiusInches);
+  return Math.abs(edgeDistance) <= BASE_TO_BASE_TOLERANCE;
+}
+
+function getMeleeRankProfile(attacker, target) {
+  const aliveAttackers = getAliveModels(attacker);
+  const fightingRankModels = aliveAttackers.filter(model => isWithinEnemyEngagement(attacker, model, target));
+  const fightingRankIds = new Set(fightingRankModels.map(model => model.id));
+  const supportingRankModels = aliveAttackers.filter(model => {
+    if (fightingRankIds.has(model.id)) return false;
+    return fightingRankModels.some(friendlyModel => isInBaseContact(attacker, model, friendlyModel));
+  });
+
+  return {
+    fightingRankModels,
+    supportingRankModels,
+    eligibleModelCount: fightingRankModels.length + supportingRankModels.length
+  };
+}
+
+function chooseNearestEnemyUnit(model, enemyUnits) {
+  let best = null;
+  let bestDistance = Infinity;
+  for (const enemyUnit of enemyUnits) {
+    for (const enemyModel of getAliveModels(enemyUnit)) {
+      const d = getModelEdgeDistance(model, 0, enemyModel, 0);
+      if (d < bestDistance) {
+        bestDistance = d;
+        best = enemyUnit;
+      }
+    }
+  }
+  return best;
+}
+
+function getEngagedEnemyUnitsForMelee(state, attacker) {
+  return Object.values(state.units).filter(enemy => {
+    if (enemy.owner === attacker.owner || enemy.status.location !== "battlefield") return false;
+    return getAliveModels(attacker).some(model => isWithinEnemyEngagement(attacker, model, enemy));
+  });
+}
+
+function getMeleeTargetProfiles(attacker, enemyUnits, primaryTargetId = null) {
+  const profiles = new Map(enemyUnits.map(enemy => [enemy.id, {
+    fightingRankModels: [],
+    supportingRankModels: [],
+    eligibleModelCount: 0
+  }]));
+  const fighterAssignments = new Map();
+  const aliveAttackers = getAliveModels(attacker);
+
+  for (const model of aliveAttackers) {
+    const engagedEnemies = enemyUnits.filter(enemy => isWithinEnemyEngagement(attacker, model, enemy));
+    if (!engagedEnemies.length) continue;
+
+    const assignedEnemy = engagedEnemies.find(enemy => enemy.id === primaryTargetId)
+      ?? chooseNearestEnemyUnit(model, engagedEnemies)
+      ?? engagedEnemies[0];
+    fighterAssignments.set(model.id, assignedEnemy.id);
+    const profile = profiles.get(assignedEnemy.id);
+    profile.fightingRankModels.push(model);
+  }
+
+  for (const model of aliveAttackers) {
+    if (fighterAssignments.has(model.id)) continue;
+    const supportingAssignments = aliveAttackers
+      .filter(friendlyModel => fighterAssignments.has(friendlyModel.id) && isInBaseContact(attacker, model, friendlyModel))
+      .map(friendlyModel => fighterAssignments.get(friendlyModel.id));
+    if (!supportingAssignments.length) continue;
+    const assignedEnemyId = supportingAssignments.find(enemyId => enemyId === primaryTargetId)
+      ?? supportingAssignments[0];
+    const profile = profiles.get(assignedEnemyId);
+    profile.supportingRankModels.push(model);
+  }
+
+  for (const profile of profiles.values()) {
+    profile.eligibleModelCount = profile.fightingRankModels.length + profile.supportingRankModels.length;
+  }
+
+  return profiles;
+}
+
+export function getMeleeTargetSelection(state, unitId) {
+  const attacker = state.units[unitId];
+  if (!attacker || attacker.status.location !== "battlefield") return null;
+
+  const declarations = state.combatQueue.filter(entry =>
+    entry.type === "charge_attack" && entry.attackerId === unitId
+  );
+  if (!declarations.length) return null;
+
+  const engagedEnemies = getEngagedEnemyUnitsForMelee(state, attacker);
+  if (engagedEnemies.length < 2) return null;
+
+  const currentPrimaryTargetId = declarations[0].primaryTargetId ?? declarations[0].targetId;
+  const options = engagedEnemies.map(enemy => {
+    const profile = getMeleeTargetProfiles(attacker, engagedEnemies, enemy.id).get(enemy.id)
+      ?? { fightingRankModels: [], supportingRankModels: [], eligibleModelCount: 0 };
+    return {
+      targetId: enemy.id,
+      name: enemy.name,
+      fightingRank: profile.fightingRankModels.length,
+      supportingRank: profile.supportingRankModels.length,
+      assignedModels: profile.eligibleModelCount,
+      isCurrentPrimary: enemy.id === currentPrimaryTargetId
+    };
+  });
+
+  return {
+    unitId,
+    attackerName: attacker.name,
+    currentPrimaryTargetId,
+    options
+  };
+}
+
+export function setChargePrimaryTarget(state, playerId, unitId, targetId) {
+  const attacker = state.units[unitId];
+  if (!attacker) return { ok: false, code: "UNKNOWN_UNIT", message: "Unit not found." };
+  if (attacker.owner !== playerId) return { ok: false, code: "WRONG_OWNER", message: "You do not control that unit." };
+
+  const selection = getMeleeTargetSelection(state, unitId);
+  if (!selection) {
+    return { ok: false, code: "NO_SELECTION_NEEDED", message: "This unit does not need a melee target selection." };
+  }
+
+  const target = state.units[targetId];
+  if (!target || !selection.options.some(option => option.targetId === targetId)) {
+    return { ok: false, code: "INVALID_TARGET", message: "Choose one of the engaged enemy units." };
+  }
+
+  state.combatQueue = state.combatQueue.map(entry => (
+    entry.type === "charge_attack" && entry.attackerId === unitId
+      ? { ...entry, primaryTargetId: targetId }
+      : entry
+  ));
+  appendLog(state, "combat", `${attacker.name} focuses its melee push toward ${target.name}.`);
+  return { ok: true, state };
 }
 
 function getLeaderPoint(unit) {
@@ -116,6 +276,66 @@ function rollSuccesses(attempts, target, rng) {
   return successes;
 }
 
+function rollDiceExpression(expression, rng) {
+  if (expression == null) return 0;
+  if (typeof expression === "number") return Math.max(0, Math.floor(expression));
+  const normalized = String(expression).trim().toUpperCase();
+  if (!normalized) return 0;
+
+  const diceMatch = normalized.match(/^D(3|6)([+-]\d+)?$/);
+  if (diceMatch) {
+    const [, facesRaw, modifierRaw] = diceMatch;
+    const faces = Number(facesRaw);
+    const modifier = modifierRaw ? Number(modifierRaw) : 0;
+    return Math.max(0, Math.floor(rng() * faces) + 1 + modifier);
+  }
+
+  const flatValue = Number.parseInt(normalized, 10);
+  return Number.isNaN(flatValue) ? 0 : Math.max(0, flatValue);
+}
+
+function getPrecisionValue(weapon) {
+  return Math.max(0, Math.floor(weapon.precision ?? 0));
+}
+
+function getCriticalHitValue(weapon) {
+  return Math.max(0, Math.floor(weapon.criticalHit ?? 0));
+}
+
+function getBurstFireRule(weapon) {
+  if (!weapon?.burstFire) return null;
+  if (typeof weapon.burstFire === "number") {
+    return { rangeInches: weapon.rangeInches ?? 0, bonusAttacks: Math.max(0, Math.floor(weapon.burstFire)) };
+  }
+  return {
+    rangeInches: Math.max(0, Number(weapon.burstFire.rangeInches ?? weapon.burstFire.range ?? 0)),
+    bonusAttacks: Math.max(0, Math.floor(weapon.burstFire.bonusAttacks ?? weapon.burstFire.attacks ?? weapon.burstFire.value ?? 0))
+  };
+}
+
+function getLockedInValue(weapon) {
+  return Math.max(0, Math.floor(weapon?.lockedIn ?? 0));
+}
+
+function getConcentratedFireValue(weapon) {
+  return Math.max(0, Math.floor(weapon?.concentratedFire ?? 0));
+}
+
+function getPierceDamage(weapon, target) {
+  const entries = Array.isArray(weapon.pierce)
+    ? weapon.pierce
+    : weapon.pierce
+      ? [weapon.pierce]
+      : [];
+
+  let best = null;
+  for (const entry of entries) {
+    if (!entry?.tag || !target.tags.includes(entry.tag)) continue;
+    if (best == null || Number(entry.damage) > best) best = Number(entry.damage);
+  }
+  return best;
+}
+
 function woundTargetForProfile(strength, toughness) {
   if (strength >= toughness * 2) return 2;
   if (strength > toughness) return 3;
@@ -151,20 +371,31 @@ function isUnitReceivingCover(state, unit) {
   });
 }
 
-function applyDamageToUnit(unit, totalDamage) {
+function applyDamageToUnit(unit, totalDamage, options = {}) {
+  const casualtyCap = options.casualtyCap == null ? null : Math.max(0, Math.floor(options.casualtyCap));
   let remaining = totalDamage;
   const ordered = unit.modelIds.map(modelId => unit.models[modelId]).filter(model => model.alive);
+  let casualties = 0;
+  let appliedDamage = 0;
 
   for (const model of ordered) {
     if (remaining <= 0) break;
+    if (casualtyCap != null && casualties >= casualtyCap) break;
     model.woundsRemaining -= remaining;
     if (model.woundsRemaining <= 0) {
-      remaining = Math.abs(model.woundsRemaining);
+      const spill = Math.abs(model.woundsRemaining);
+      appliedDamage += remaining - spill;
+      remaining = spill;
       model.alive = false;
       model.x = null;
       model.y = null;
       model.woundsRemaining = 0;
+      casualties += 1;
+      if (casualtyCap != null && casualties >= casualtyCap) {
+        remaining = 0;
+      }
     } else {
+      appliedDamage += remaining;
       remaining = 0;
     }
   }
@@ -174,9 +405,115 @@ function applyDamageToUnit(unit, totalDamage) {
     unit.leadingModelId = nextLeader ?? unit.leadingModelId;
   }
 
-  const removed = ordered.filter(model => !model.alive).length;
   recomputeUnitCurrentSupply(unit);
-  return removed;
+  return {
+    casualties,
+    appliedDamage,
+    discardedDamage: Math.max(0, totalDamage - appliedDamage)
+  };
+}
+
+function resolveImpactHits(state, attacker, target, rng, options = {}) {
+  const impact = attacker.impact;
+  if (!impact) return null;
+  if (target?.status?.hidden) {
+    appendLog(state, "combat", `${attacker.name} triggers Impact against ${target.name}, but the target stays hidden and avoids the collision.`);
+    return {
+      attempts: 0,
+      hits: 0,
+      saved: 0,
+      unsaved: 0,
+      totalDamage: 0,
+      casualties: 0,
+      hitTarget: impact.hitTarget,
+      damage: impact.damage ?? 1,
+      preventedByHidden: true
+    };
+  }
+
+  const aliveAttackerModels = options.eligibleModelCount ?? getAliveModels(attacker).length;
+  if (!aliveAttackerModels) return null;
+
+  const attempts = aliveAttackerModels * (impact.dicePerModel ?? 0);
+  if (attempts <= 0) return null;
+
+  const hits = rollSuccesses(attempts, impact.hitTarget, rng);
+  const saveTarget = getBestSaveTarget(target, 0);
+  const saved = rollSuccesses(hits, saveTarget, rng);
+  const unsaved = Math.max(0, hits - saved);
+  const totalDamage = unsaved * (impact.damage ?? 1);
+  const damageResult = applyDamageToUnit(target, totalDamage);
+  const casualties = damageResult.casualties;
+
+  appendLog(
+    state,
+    "combat",
+    `${attacker.name} triggers Impact against ${target.name}: ${attempts} impact dice, ${hits} impact hits, ${saved} saves, ${casualties} casualties.`
+  );
+
+  return {
+    attempts,
+    hits,
+    saved,
+    unsaved,
+    totalDamage,
+    casualties,
+    hitTarget: impact.hitTarget,
+    damage: impact.damage ?? 1
+  };
+}
+
+function resolveSurge(weapon, target, wounds, rng) {
+  if (!weapon.surge || wounds <= 0) return null;
+  const surgeTags = weapon.surge.tags ?? [];
+  const matchedTags = surgeTags.filter(tag => target.tags.includes(tag));
+  if (!matchedTags.length) return null;
+
+  const roll = rollDiceExpression(weapon.surge.dice, rng);
+  const applied = Math.min(wounds, roll);
+  return {
+    tags: surgeTags,
+    matchedTags,
+    dice: weapon.surge.dice,
+    roll,
+    applied
+  };
+}
+
+function resolveCriticalHit(weapon, wounds) {
+  const applied = Math.min(wounds, getCriticalHitValue(weapon));
+  if (applied <= 0) return null;
+  return {
+    applied,
+    value: getCriticalHitValue(weapon)
+  };
+}
+
+function resolveDodge(target, bypassedArmour) {
+  const dodge = Math.max(0, Math.floor(target?.defense?.dodge ?? 0));
+  if (dodge <= 0 || bypassedArmour <= 0) return null;
+  const prevented = Math.min(dodge, bypassedArmour);
+  return {
+    value: dodge,
+    prevented
+  };
+}
+
+function resolveEvade(state, attacker, target, weapon, isMelee, visible, unsaved, rng) {
+  if (unsaved <= 0) return null;
+  if (!targetGetsEvadeOpportunity(state, attacker, target, weapon, isMelee, visible)) return null;
+
+  const baseTarget = Math.max(2, Math.min(6, Math.round(target.defense.evadeTarget)));
+  const antiEvade = getAntiEvadeValue(weapon);
+  const evadeTarget = Math.max(2, Math.min(6, baseTarget + antiEvade));
+  const saved = rollSuccesses(unsaved, evadeTarget, rng);
+
+  return {
+    baseTarget,
+    antiEvade,
+    target: evadeTarget,
+    saved
+  };
 }
 
 function validateDeclaration(state, declaration) {
@@ -196,19 +533,25 @@ function validateDeclaration(state, declaration) {
   if (!attackerPoint || !targetPoint) return { ok: false, reason: "Attacker or target has no valid leader position." };
 
   const range = distance(attackerPoint, targetPoint);
+  let visible = true;
+
   if (isMelee) {
     if (range > CHARGE_MAX_RANGE_INCHES + 1e-6) return { ok: false, reason: "Charge target moved out of declared charge range." };
   } else {
+    const maxRange = getLongRangeValue(weapon) ?? weapon.rangeInches;
     const modifiedRange = getModifiedValue(state, {
       timing: "combat_resolve_attack",
       unitId: attacker.id,
       key: "weapon.rangeInches",
-      baseValue: weapon.rangeInches
+      baseValue: maxRange
     }).value;
     if (range > modifiedRange + 1e-6) return { ok: false, reason: "Target out of range." };
+    const targeting = canTargetWithRangedWeapon(state, attacker, target, weapon);
+    if (!targeting.ok) return { ok: false, reason: targeting.reason };
+    visible = targeting.visible !== false;
   }
   if (attacker.owner === target.owner) return { ok: false, reason: "Cannot target friendly units." };
-  return { ok: true, attacker, target, weapon, isMelee, isOverwatch };
+  return { ok: true, attacker, target, weapon, isMelee, isOverwatch, visible };
 }
 
 function resolveSingleAttack(state, declaration, rng) {
@@ -218,9 +561,10 @@ function resolveSingleAttack(state, declaration, rng) {
     return null;
   }
 
-  const { attacker, target, weapon, isMelee, isOverwatch } = validation;
+  const { attacker, target, weapon, isMelee, isOverwatch, visible } = validation;
 
   if (isMelee) {
+    applyCloseRanks(state, attacker, { targetName: target.name });
     const targetPoint = getLeaderPoint(target);
     if (!targetPoint) return null;
     const attackerPoint = getLeaderPoint(attacker);
@@ -242,8 +586,44 @@ function resolveSingleAttack(state, declaration, rng) {
     }
   }
 
-  const aliveAttackerModels = getAliveModels(attacker).length;
-  if (!aliveAttackerModels) return null;
+  const meleeEnemyUnits = isMelee ? getEngagedEnemyUnitsForMelee(state, attacker) : null;
+  const meleeTargetProfiles = isMelee ? getMeleeTargetProfiles(attacker, meleeEnemyUnits, declaration.targetId) : null;
+  const meleeRankProfile = isMelee
+    ? (meleeTargetProfiles.get(target.id) ?? { fightingRankModels: [], supportingRankModels: [], eligibleModelCount: 0 })
+    : null;
+  const primaryTargetFocus = isMelee && (declaration.primaryTargetId ?? declaration.targetId) === target.id;
+
+  const impactResult = isMelee
+    ? resolveImpactHits(state, attacker, target, rng, { eligibleModelCount: meleeRankProfile.eligibleModelCount })
+    : null;
+  if (isMelee && getAliveModels(target).length <= 0) {
+    appendLog(state, "combat", `${target.name} is destroyed by Impact before ${attacker.name} can make melee attacks.`);
+    return {
+      type: "combat_attack_resolved",
+      payload: {
+        mode: "melee",
+        attackerId: attacker.id,
+        targetId: target.id,
+        weaponId: weapon.id,
+        attempts: 0,
+        hits: 0,
+        wounds: 0,
+        saved: 0,
+        unsaved: 0,
+        totalDamage: 0,
+        casualties: 0,
+        impact: impactResult
+      }
+    };
+  }
+
+  const aliveAttackerModels = isMelee ? meleeRankProfile.eligibleModelCount : getAliveModels(attacker).length;
+  if (!aliveAttackerModels) {
+    if (isMelee) {
+      appendLog(state, "combat", `${attacker.name} has no models assigned to ${target.name} after target allocation and cannot make melee attacks.`);
+    }
+    return null;
+  }
 
   const attemptsPerModel = getModifiedValue(state, {
     timing: "combat_resolve_attack",
@@ -258,7 +638,11 @@ function resolveSingleAttack(state, declaration, rng) {
     key: "weapon.hitTarget",
     baseValue: weapon.hitTarget
   }).value;
-  const hitTarget = isOverwatch ? Math.max(hitTargetBase, 6) : hitTargetBase;
+  const longRangePenalty = !isMelee && weapon.rangeInches != null && getLongRangeValue(weapon) != null
+    && distance(getLeaderPoint(attacker), getLeaderPoint(target)) > weapon.rangeInches + 1e-6
+      ? 1
+      : 0;
+  const hitTarget = isOverwatch ? Math.max(hitTargetBase + longRangePenalty, 6) : hitTargetBase + longRangePenalty;
 
   const woundTargetBase = woundTargetForProfile(weapon.strength, target.defense.toughness);
   const woundTarget = applyWeaponKeywordsToWoundTarget(weapon, target, woundTargetBase);
@@ -266,14 +650,37 @@ function resolveSingleAttack(state, declaration, rng) {
   const coverApplies = !isMelee && isUnitReceivingCover(state, target);
   if (coverApplies) saveTarget = Math.max(2, saveTarget - 1);
 
-  const rawAttempts = aliveAttackerModels * attemptsPerModel;
+  const burstFireRule = !isMelee ? getBurstFireRule(weapon) : null;
+  const burstFireApplied = Boolean(
+    burstFireRule
+    && distance(getLeaderPoint(attacker), getLeaderPoint(target)) <= burstFireRule.rangeInches + 1e-6
+    && burstFireRule.bonusAttacks > 0
+  );
+  const lockedInBonus = !isMelee && target.status.stationary ? getLockedInValue(weapon) : 0;
+  const modifiedAttemptsPerModel = attemptsPerModel + (burstFireApplied ? burstFireRule.bonusAttacks : 0) + lockedInBonus;
+  const rawAttempts = aliveAttackerModels * modifiedAttemptsPerModel;
   const attempts = Math.max(0, Math.floor(isOverwatch ? rawAttempts / 2 : rawAttempts));
-  const hits = rollSuccesses(attempts, hitTarget, rng);
+  const rolledHits = rollSuccesses(attempts, hitTarget, rng);
+  const precisionApplied = Math.min(Math.max(0, attempts - rolledHits), getPrecisionValue(weapon));
+  const hits = rolledHits + precisionApplied;
   const wounds = rollSuccesses(hits, woundTarget, rng);
-  const saved = rollSuccesses(wounds, saveTarget, rng);
-  const unsaved = Math.max(0, wounds - saved);
-  const totalDamage = unsaved * weapon.damage;
-  const casualties = applyDamageToUnit(target, totalDamage);
+  const criticalHitResult = resolveCriticalHit(weapon, wounds);
+  const surgeResult = resolveSurge(weapon, target, wounds, rng);
+  const rawBypassedArmour = (surgeResult?.applied ?? 0) + (criticalHitResult?.applied ?? 0);
+  const dodgeResult = resolveDodge(target, rawBypassedArmour);
+  const bypassedArmour = Math.max(0, rawBypassedArmour - (dodgeResult?.prevented ?? 0));
+  const saveableWounds = Math.max(0, wounds - rawBypassedArmour + (dodgeResult?.prevented ?? 0));
+  const saved = rollSuccesses(saveableWounds, saveTarget, rng);
+  const unsavedBeforeEvade = Math.max(0, saveableWounds - saved) + bypassedArmour;
+  const evadeResult = resolveEvade(state, attacker, target, weapon, isMelee, visible, unsavedBeforeEvade, rng);
+  const unsaved = Math.max(0, unsavedBeforeEvade - (evadeResult?.saved ?? 0));
+  const damagePerHit = getPierceDamage(weapon, target) ?? weapon.damage;
+  const totalDamage = unsaved * damagePerHit;
+  const concentratedFireCap = getConcentratedFireValue(weapon);
+  const damageResult = applyDamageToUnit(target, totalDamage, {
+    casualtyCap: concentratedFireCap > 0 ? concentratedFireCap : null
+  });
+  const casualties = damageResult.casualties;
 
   const targetStillAlive = getAliveModels(target).length > 0;
   if (isMelee && !targetStillAlive) {
@@ -286,7 +693,7 @@ function resolveSingleAttack(state, declaration, rng) {
   appendLog(
     state,
     "combat",
-    `${attacker.name} ${isMelee ? "charges" : isOverwatch ? "fires overwatch at" : "attacks"} ${target.name} with ${weapon.name}: ${attempts} attacks, ${hits} hits, ${wounds} wounds, ${saved} saves${coverApplies ? " (cover)" : ""}, ${casualties} casualties.`
+    `${attacker.name} ${isMelee ? "charges" : isOverwatch ? "fires overwatch at" : "attacks"} ${target.name} with ${weapon.name}: ${attempts} attacks, ${hits} hits${precisionApplied ? ` (including ${precisionApplied} Precision)` : ""}, ${wounds} wounds${criticalHitResult ? `, Critical Hit ${criticalHitResult.applied} bypassed armour` : ""}${surgeResult ? `, Surge ${surgeResult.dice} rolled ${surgeResult.roll} vs ${surgeResult.matchedTags.join("/")} -> ${surgeResult.applied} bypassed armour` : ""}${dodgeResult ? `, Dodge prevented ${dodgeResult.prevented} bypassed hits` : ""}, ${saved} saves${coverApplies ? " (cover)" : ""}${evadeResult ? `, ${evadeResult.saved} evade saves on ${evadeResult.target}+` : ""}${!visible && !isMelee ? ", indirect fire without line of sight" : ""}${longRangePenalty ? ", long range penalty applied" : ""}${burstFireApplied ? `, Burst Fire +${burstFireRule.bonusAttacks}` : ""}${lockedInBonus ? `, Locked In +${lockedInBonus}` : ""}${getAntiEvadeValue(weapon) ? `, Anti-Evade ${getAntiEvadeValue(weapon)}` : ""}${damagePerHit !== weapon.damage ? `, Pierce damage ${damagePerHit}` : ""}${concentratedFireCap > 0 ? `, Concentrated Fire cap ${concentratedFireCap}${damageResult.discardedDamage > 0 ? ` (discarded ${damageResult.discardedDamage} damage)` : ""}` : ""}${isMelee ? `, Fighting Rank ${meleeRankProfile.fightingRankModels.length}, Supporting Rank ${meleeRankProfile.supportingRankModels.length}, Assigned Models ${aliveAttackerModels}${primaryTargetFocus ? ", Primary Target Focus" : ""}` : ""}, ${casualties} casualties.`
   );
 
   return {
@@ -301,10 +708,53 @@ function resolveSingleAttack(state, declaration, rng) {
       wounds,
       saved,
       unsaved,
-      totalDamage,
-      casualties
+      casualties,
+      impact: impactResult,
+      surge: surgeResult,
+      precision: precisionApplied,
+      criticalHit: criticalHitResult,
+      evade: evadeResult,
+      dodge: dodgeResult,
+      antiEvade: getAntiEvadeValue(weapon),
+      burstFire: burstFireApplied ? burstFireRule : null,
+      lockedIn: lockedInBonus,
+      concentratedFire: concentratedFireCap > 0 ? { cap: concentratedFireCap, discardedDamage: damageResult.discardedDamage } : null,
+      fightingRank: isMelee ? meleeRankProfile.fightingRankModels.length : null,
+      supportingRank: isMelee ? meleeRankProfile.supportingRankModels.length : null,
+      assignedModels: isMelee ? aliveAttackerModels : null,
+      primaryTargetFocus: isMelee ? primaryTargetFocus : null,
+      visible,
+      longRangePenalty: Boolean(longRangePenalty),
+      damagePerHit,
+      totalDamage: damageResult.appliedDamage
     }
   };
+}
+
+function expandMeleeDeclarations(state, declarations) {
+  const expanded = [...declarations];
+  const existingKeys = new Set(declarations.map(entry => `${entry.attackerId}:${entry.targetId}:${entry.type}`));
+
+  for (const declaration of declarations) {
+    if (declaration.type !== "charge_attack") continue;
+    const attacker = state.units[declaration.attackerId];
+    if (!attacker || attacker.status.location !== "battlefield") continue;
+    const engagedEnemies = getEngagedEnemyUnitsForMelee(state, attacker);
+    for (const enemy of engagedEnemies) {
+      const key = `${attacker.id}:${enemy.id}:${declaration.type}`;
+      if (existingKeys.has(key)) continue;
+      existingKeys.add(key);
+      expanded.push({
+        ...declaration,
+        targetId: enemy.id,
+        primaryTargetId: declaration.primaryTargetId ?? declaration.targetId
+      });
+    }
+  }
+
+  return expanded.map(entry => entry.type === "charge_attack"
+    ? { ...entry, primaryTargetId: entry.primaryTargetId ?? entry.targetId }
+    : entry);
 }
 
 export function hasQueuedCombatForUnit(state, unitId) {
@@ -315,9 +765,9 @@ export function hasQueuedCombatForUnit(state, unitId) {
 
 export function resolveCombatForUnit(state, unitId, { rng = Math.random } = {}) {
   const events = [];
-  const declarations = state.combatQueue.filter(entry =>
+  const declarations = expandMeleeDeclarations(state, state.combatQueue.filter(entry =>
     ["ranged_attack", "charge_attack", "overwatch_attack"].includes(entry.type) && entry.attackerId === unitId
-  );
+  ));
 
   if (!declarations.length) {
     return { ok: true, state, events };
@@ -343,7 +793,10 @@ export function resolveCombatForUnit(state, unitId, { rng = Math.random } = {}) 
 export function resolveCombatPhase(state, { rng = Math.random } = {}) {
   const events = [];
   state.lastCombatReport = [];
-  const declarations = state.combatQueue.filter(entry => ["ranged_attack", "charge_attack", "overwatch_attack"].includes(entry.type));
+  const declarations = expandMeleeDeclarations(
+    state,
+    state.combatQueue.filter(entry => ["ranged_attack", "charge_attack", "overwatch_attack"].includes(entry.type))
+  );
 
   if (!declarations.length) {
     appendLog(state, "combat", "No attacks were declared in Assault. Combat ends without attacks.");

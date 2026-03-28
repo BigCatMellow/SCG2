@@ -4,6 +4,7 @@ import { pointInBoard, pathLength, pathBlockedForCircle, pathTravelCost, gridDis
 import { autoArrangeModels, applyModelPlacementsAndResolveCoherency } from "./coherency.js";
 import { refreshAllSupply } from "./supply.js";
 import { getModifiedValue } from "./effects.js";
+import { applyBurrowedActivationEffects, removeStealthStatuses } from "./statuses.js";
 
 const ENGAGEMENT_RANGE = 1;
 
@@ -58,6 +59,7 @@ function validateShared(state, playerId, unitId) {
 
 function overlappingModelsAtPoint(state, unit, point, ignoreModelIds = new Set()) {
   for (const otherUnit of Object.values(state.units)) {
+    if (otherUnit.status?.burrowed) continue;
     for (const otherModel of Object.values(otherUnit.models)) {
       if (!otherModel.alive || otherModel.x == null || otherModel.y == null || ignoreModelIds.has(otherModel.id)) continue;
       if (circleOverlapsCircle(point, unit.base.radiusInches, { x: otherModel.x, y: otherModel.y }, otherUnit.base.radiusInches)) return otherModel.id;
@@ -120,9 +122,10 @@ export function resolveHold(state, playerId, unitId) {
   const validation = validateHold(state, playerId, unitId);
   if (!validation.ok) return validation;
   const unit = state.units[unitId];
+  applyBurrowedActivationEffects(state, unit);
   unit.status.stationary = true;
   markUnitActivatedForCurrentPhase(state, unitId);
-  appendLog(state, "action", `${unit.name} holds position.`);
+  appendLog(state, "action", `${unit.name} holds position.${unit.status.burrowed ? " Burrowed status is maintained." : unit.status.hidden ? " Hidden status is maintained." : ""}`);
   endActivationAndPassTurn(state);
   return { ok: true, state, events: [{ type: "unit_held", payload: { unitId } }] };
 }
@@ -162,18 +165,20 @@ export function resolveMove(state, playerId, unitId, leadingModelId, path, model
   const validation = validateMove(state, playerId, unitId, leadingModelId, path, modelPlacements);
   if (!validation.ok) return validation;
   const unit = state.units[unitId];
+  applyBurrowedActivationEffects(state, unit);
   unit.leadingModelId = leadingModelId;
   const leader = unit.models[leadingModelId];
   leader.x = validation.derived.end.x;
   leader.y = validation.derived.end.y;
   const coherency = applyModelPlacementsAndResolveCoherency(state, unitId, validation.derived.placements);
+  const brokeStealth = removeStealthStatuses(unit);
   unit.status.stationary = false;
   markUnitActivatedForMovement(state, unitId);
   updateUnitEngagementStatus(state);
   refreshAllSupply(state);
   const removedText = coherency.removedModelIds.length ? ` ${coherency.removedModelIds.length} model(s) could not be set and were removed.` : "";
   const coherencyText = coherency.outOfCoherency ? " Unit is out of coherency." : "";
-  appendLog(state, "action", `${unit.name} moves ${pathLength(path).toFixed(1)}".${removedText}${coherencyText}`);
+  appendLog(state, "action", `${unit.name} moves ${pathLength(path).toFixed(1)}".${brokeStealth ? " It loses Hidden/Burrowed while moving." : ""}${removedText}${coherencyText}`);
   endActivationAndPassTurn(state);
   return { ok: true, state, events: [{ type: "unit_moved", payload: { unitId } }] };
 }
@@ -211,11 +216,13 @@ export function resolveDisengage(state, playerId, unitId, leadingModelId, path, 
   const validation = validateDisengage(state, playerId, unitId, leadingModelId, path, modelPlacements);
   if (!validation.ok) return validation;
   const unit = state.units[unitId];
+  applyBurrowedActivationEffects(state, unit);
   unit.leadingModelId = leadingModelId;
   const leader = unit.models[leadingModelId];
   leader.x = validation.derived.end.x;
   leader.y = validation.derived.end.y;
   const coherency = applyModelPlacementsAndResolveCoherency(state, unitId, validation.derived.placements);
+  const brokeStealth = removeStealthStatuses(unit);
   updateUnitEngagementStatus(state);
   const stillEngaged = pointWithinEnemyGroundEngagement(state, unit, { x: leader.x, y: leader.y });
   if (stillEngaged) {
@@ -249,7 +256,7 @@ export function resolveDisengage(state, playerId, unitId, leadingModelId, path, 
   markUnitActivatedForMovement(state, unitId);
   updateUnitEngagementStatus(state);
   refreshAllSupply(state);
-  appendLog(state, "action", `${unit.name} disengages.${validation.derived.tacticalMass ? " Tactical Mass ignores the next-Assault penalty." : " It cannot Ranged Attack or Charge in the next Assault Phase."}${coherency.outOfCoherency ? " Unit is out of coherency." : ""}`);
+  appendLog(state, "action", `${unit.name} disengages.${brokeStealth ? " It loses Hidden/Burrowed while disengaging." : ""}${validation.derived.tacticalMass ? " Tactical Mass ignores the next-Assault penalty." : " It cannot Ranged Attack or Charge in the next Assault Phase."}${coherency.outOfCoherency ? " Unit is out of coherency." : ""}`);
   endActivationAndPassTurn(state);
   return { ok: true, state, events: [{ type: "unit_disengaged", payload: { unitId } }] };
 }

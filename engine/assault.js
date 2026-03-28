@@ -5,9 +5,12 @@ import { autoArrangeModels, applyModelPlacementsAndResolveCoherency } from "./co
 import { refreshAllSupply } from "./supply.js";
 import { getModifiedValue } from "./effects.js";
 import { refreshEngagement } from "./movement.js";
+import { canTargetWithRangedWeapon, getLongRangeValue, hasInstantWeapon } from "./visibility.js";
+import { applyBurrowedActivationEffects, removeStealthStatuses } from "./statuses.js";
 
 const RUN_BONUS = 2;
 const CHARGE_DECLARE_RANGE = 8;
+const MELEE_REACH_INCHES = 1.5;
 
 function getOpponent(playerId) {
   return playerId === "playerA" ? "playerB" : "playerA";
@@ -16,6 +19,7 @@ function getOpponent(playerId) {
 function findNearestEnemyUnitInRange(state, unit) {
   const primaryWeapon = unit.rangedWeapons?.[0] ?? null;
   if (!primaryWeapon) return null;
+  const maxRange = getLongRangeValue(primaryWeapon) ?? primaryWeapon.rangeInches;
   const leader = unit.models[unit.leadingModelId];
   if (!leader || leader.x == null || leader.y == null) return null;
   const enemies = state.players[getOpponent(unit.owner)].battlefieldUnitIds
@@ -27,7 +31,8 @@ function findNearestEnemyUnitInRange(state, unit) {
       return { enemy, range: distance(leader, enemyLeader) };
     })
     .filter(Boolean)
-    .filter(entry => entry.range <= primaryWeapon.rangeInches + 1e-6)
+    .filter(entry => entry.range <= maxRange + 1e-6)
+    .filter(entry => canTargetWithRangedWeapon(state, unit, entry.enemy, primaryWeapon).ok)
     .sort((a, b) => a.range - b.range);
 
   return enemies[0]?.enemy ?? null;
@@ -99,12 +104,14 @@ export function resolveRun(state, playerId, unitId, leadingModelId, path, modelP
   if (!validation.ok) return validation;
 
   const unit = state.units[unitId];
+  applyBurrowedActivationEffects(state, unit);
   unit.leadingModelId = leadingModelId;
   const leader = unit.models[leadingModelId];
   leader.x = validation.derived.end.x;
   leader.y = validation.derived.end.y;
   const coherency = applyModelPlacementsAndResolveCoherency(state, unitId, validation.derived.placements);
 
+  const brokeStealth = removeStealthStatuses(unit);
   unit.status.stationary = false;
   unit.status.cannotRangedAttackNextAssault = true;
   markUnitActivatedForCurrentPhase(state, unitId);
@@ -114,7 +121,7 @@ export function resolveRun(state, playerId, unitId, leadingModelId, path, modelP
   appendLog(
     state,
     "action",
-    `${unit.name} runs ${validation.derived.runDistance.toFixed(1)}" (movement cost ${validation.derived.travelCost.toFixed(1)} / max ${validation.derived.maxDistance}").${coherency.outOfCoherency ? " Unit is out of coherency." : ""}`
+    `${unit.name} runs ${validation.derived.runDistance.toFixed(1)}" (movement cost ${validation.derived.travelCost.toFixed(1)} / max ${validation.derived.maxDistance}").${brokeStealth ? " It loses Hidden/Burrowed while running." : ""}${coherency.outOfCoherency ? " Unit is out of coherency." : ""}`
   );
 
   endActivationAndPassTurn(state);
@@ -133,8 +140,13 @@ function validateSpecifiedTarget(state, unit, targetUnitId) {
   if (!targetLeader || targetLeader.x == null || targetLeader.y == null || !leader || leader.x == null || leader.y == null) {
     return { ok: false, code: "BAD_TARGET", message: "Target or attacker does not have a valid leader position." };
   }
-  if (distance(leader, targetLeader) > primaryWeapon.rangeInches + 1e-6) {
+  const maxRange = getLongRangeValue(primaryWeapon) ?? primaryWeapon.rangeInches;
+  if (distance(leader, targetLeader) > maxRange + 1e-6) {
     return { ok: false, code: "BAD_TARGET", message: "Selected target is out of range." };
+  }
+  const targeting = canTargetWithRangedWeapon(state, unit, target, primaryWeapon);
+  if (!targeting.ok) {
+    return { ok: false, code: "BAD_TARGET", message: targeting.reason };
   }
   return { ok: true, target };
 }
@@ -155,10 +167,23 @@ function validateSpecifiedChargeTarget(state, unit, targetUnitId) {
   return { ok: true, target };
 }
 
+function rollD6(rng) {
+  return Math.floor(rng() * 6) + 1;
+}
+
+function getChargeAttemptDetails(unit, targetUnit) {
+  const leader = unit.models[unit.leadingModelId];
+  const targetLeader = targetUnit.models[targetUnit.leadingModelId];
+  const currentDistance = distance(leader, targetLeader);
+  const requiredDistance = Math.max(0, Math.ceil(currentDistance - MELEE_REACH_INCHES));
+  return { currentDistance, requiredDistance };
+}
+
 export function validateDeclareRangedAttack(state, playerId, unitId, targetUnitId = null) {
   const shared = validateShared(state, playerId, unitId);
   if (!shared.ok) return shared;
   const unit = shared.unit;
+  if (unit.status.burrowed) return { ok: false, code: "BURROWED", message: "Burrowed units cannot declare ranged attacks." };
   if (!unit.rangedWeapons?.length) return { ok: false, code: "NO_RANGED_PROFILE", message: "Unit has no ranged attack profile." };
   const rangedPermission = getModifiedValue(state, {
     timing: "assault_declare_ranged",
@@ -185,10 +210,12 @@ export function resolveDeclareRangedAttack(state, playerId, unitId, targetUnitId
 
   const unit = state.units[unitId];
   const weaponId = unit.rangedWeapons?.[0]?.id ?? null;
+  applyBurrowedActivationEffects(state, unit);
+  const brokeStealth = removeStealthStatuses(unit);
   state.combatQueue.push({ type: "ranged_attack", attackerId: unitId, targetId: validation.derived.targetId, weaponId });
   markUnitActivatedForCurrentPhase(state, unitId);
 
-  appendLog(state, "action", `${unit.name} declares ranged attack on ${state.units[validation.derived.targetId].name} for Combat.`);
+  appendLog(state, "action", `${unit.name} declares ranged attack on ${state.units[validation.derived.targetId].name} for Combat.${brokeStealth ? " It loses Hidden/Burrowed when it reveals its position." : ""}`);
 
   endActivationAndPassTurn(state);
   return { ok: true, state, events: [{ type: "ranged_attack_declared", payload: { attackerId: unitId, targetId: validation.derived.targetId } }] };
@@ -198,6 +225,7 @@ export function validateDeclareCharge(state, playerId, unitId, targetUnitId = nu
   const shared = validateShared(state, playerId, unitId);
   if (!shared.ok) return shared;
   const unit = shared.unit;
+  if (unit.status.burrowed) return { ok: false, code: "BURROWED", message: "Burrowed units cannot declare charges." };
   if (!unit.meleeWeapons?.length) return { ok: false, code: "NO_MELEE_PROFILE", message: "Unit has no melee profile." };
   if (unit.status.cannotChargeThisAssault) {
     return { ok: false, code: "CHARGE_BLOCKED", message: "This unit cannot declare charge this Assault Phase." };
@@ -214,26 +242,66 @@ export function validateDeclareCharge(state, playerId, unitId, targetUnitId = nu
   return { ok: true, derived: { targetId: target.id } };
 }
 
-export function resolveDeclareCharge(state, playerId, unitId, targetUnitId = null) {
+export function resolveDeclareCharge(state, playerId, unitId, targetUnitId = null, { rng = Math.random } = {}) {
   const validation = validateDeclareCharge(state, playerId, unitId, targetUnitId);
   if (!validation.ok) return validation;
 
   const unit = state.units[unitId];
   const targetUnit = state.units[validation.derived.targetId];
   const weaponId = unit.meleeWeapons?.[0]?.id ?? null;
+  const meleeWeapon = unit.meleeWeapons?.find(entry => entry.id === weaponId) ?? unit.meleeWeapons?.[0] ?? null;
   const overwatchWeaponId = targetUnit.rangedWeapons?.[0]?.id ?? null;
+  const instantWeapon = hasInstantWeapon(meleeWeapon);
+  applyBurrowedActivationEffects(state, unit);
+  const brokeStealth = removeStealthStatuses(unit);
+  const { currentDistance, requiredDistance } = getChargeAttemptDetails(unit, targetUnit);
+  const chargeDie = rollD6(rng);
+  const chargeTotal = unit.speed + chargeDie;
+  const margin = chargeTotal - requiredDistance;
+  const success = chargeTotal >= requiredDistance;
 
-  if (overwatchWeaponId && !targetUnit.status.overwatchUsedThisRound) {
+  if (instantWeapon) {
+    appendLog(
+      state,
+      "action",
+      `${unit.name}'s ${meleeWeapon?.name ?? "melee weapon"} has Instant, so ${targetUnit.name} cannot react with Overwatch.`
+    );
+  } else if (overwatchWeaponId && !targetUnit.status.overwatchUsedThisRound) {
     state.combatQueue.push({ type: "overwatch_attack", attackerId: targetUnit.id, targetId: unitId, weaponId: overwatchWeaponId });
     targetUnit.status.overwatchUsedThisRound = true;
     appendLog(state, "action", `${targetUnit.name} sets Overwatch response against ${unit.name}.`);
   }
 
-  state.combatQueue.push({ type: "charge_attack", attackerId: unitId, targetId: validation.derived.targetId, weaponId });
   markUnitActivatedForCurrentPhase(state, unitId);
+  appendLog(
+    state,
+    "action",
+    `${unit.name} attempts a charge on ${targetUnit.name}: distance ${currentDistance.toFixed(1)}", need ${requiredDistance}", rolled ${chargeDie} + Speed ${unit.speed} = ${chargeTotal}.${brokeStealth ? " It loses Hidden/Burrowed when it bursts into the open." : ""} ${success ? `Success by ${margin}".` : `Failed by ${Math.abs(margin)}".`}`
+  );
 
-  appendLog(state, "action", `${unit.name} declares charge on ${targetUnit.name} for Combat.`);
+  const events = [{
+    type: "charge_roll_resolved",
+    payload: {
+      attackerId: unitId,
+      targetId: validation.derived.targetId,
+      currentDistance,
+      requiredDistance,
+      chargeDie,
+      speed: unit.speed,
+      total: chargeTotal,
+      success,
+      margin
+    }
+  }];
+
+  if (success) {
+    state.combatQueue.push({ type: "charge_attack", attackerId: unitId, targetId: validation.derived.targetId, weaponId });
+    appendLog(state, "action", `${unit.name} locks in the charge and will fight ${targetUnit.name} in Combat.`);
+    events.push({ type: "charge_declared", payload: { attackerId: unitId, targetId: validation.derived.targetId } });
+  } else {
+    appendLog(state, "action", `${unit.name} fails the charge and will not make a melee attack this round.`);
+  }
 
   endActivationAndPassTurn(state);
-  return { ok: true, state, events: [{ type: "charge_declared", payload: { attackerId: unitId, targetId: validation.derived.targetId } }] };
+  return { ok: true, state, events };
 }

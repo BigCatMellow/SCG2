@@ -9,12 +9,21 @@ import { screenToBoardPoint } from "./board.js";
 import { getTacticalCard } from "../data/tactical_cards.js";
 import { snapPointToGrid } from "../engine/geometry.js";
 import { getLegalMoveDestinations, getLegalDeployDestinations, getLegalDisengageDestinations, getLegalRunDestinations } from "../engine/legal_actions.js";
+import { canBurrow, canHide } from "../engine/statuses.js";
+import { getMeleeTargetSelection } from "../engine/combat.js";
 
 const DEFAULT_SETUP = {
   missionId: "take_and_hold",
   deploymentId: "crossfire",
   firstPlayerMarkerHolder: "playerA",
   armyA: [
+    { id: "swarm_kerrigan", templateId: "kerrigan" },
+    { id: "swarm_raptor_t2", templateId: "raptor_t2" },
+    { id: "swarm_roach_t3", templateId: "roach_t3" },
+    { id: "swarm_zergling_t3", templateId: "zergling_t3" },
+    { id: "swarm_zergling_t2", templateId: "zergling_t2" }
+  ],
+  armyB: [
     { id: "raiders_raynor", templateId: "jim_raynor" },
     { id: "raiders_marines_t2", templateId: "marine_t2" },
     { id: "raiders_marauder_1", templateId: "marauder_t1" },
@@ -22,15 +31,8 @@ const DEFAULT_SETUP = {
     { id: "raiders_marauder_3", templateId: "marauder_t1" },
     { id: "raiders_medic", templateId: "medic_t1" }
   ],
-  armyB: [
-    { id: "swarm_kerrigan", templateId: "kerrigan" },
-    { id: "swarm_raptor_t2", templateId: "raptor_t2" },
-    { id: "swarm_roach_t3", templateId: "roach_t3" },
-    { id: "swarm_zergling_t3", templateId: "zergling_t3" },
-    { id: "swarm_zergling_t2", templateId: "zergling_t2" }
-  ],
-  tacticalCardsA: ["barracks_proxy", "academy", "orbital_command"],
-  tacticalCardsB: ["lair", "evolution_chamber", "roach_warren", "malignant_creep"],
+  tacticalCardsA: ["lair", "evolution_chamber", "roach_warren", "malignant_creep"],
+  tacticalCardsB: ["barracks_proxy", "academy", "orbital_command"],
   rules: { gridMode: true }
 };
 
@@ -71,7 +73,10 @@ const uiState = {
   notifications: [],
   lastSeenLogCount: 0,
   legalDestinations: [],
-  pendingPass: false
+  pendingPass: false,
+  storyModalQueue: [],
+  activeStoryModal: null,
+  pendingCombatChoice: null
 };
 
 let store;
@@ -86,15 +91,7 @@ function selectUnit(unitId) {
   uiState.selectedUnitId = unitId;
   cancelCurrentInteraction(uiState);
   uiState.legalDestinations = [];
-  // On mobile, switch to board tab when selecting a unit
-  switchToBoard();
   rerender();
-}
-
-function switchToBoard() {
-  if (window.innerWidth > 768) return;
-  document.querySelectorAll("[data-tab]").forEach(p => p.classList.toggle("tab-visible", p.dataset.tab === "board"));
-  document.querySelectorAll(".mobile-tabs .tab-btn").forEach(b => b.classList.toggle("active", b.dataset.target === "board"));
 }
 
 function getSelectedUnit(state) {
@@ -240,6 +237,8 @@ function rerender() {
   };
   renderAll(store.getState(), uiState, handlers);
   renderNotifications();
+  renderStoryModal();
+  renderCombatChoiceModal();
 }
 
 function showError(message) {
@@ -253,9 +252,15 @@ function showError(message) {
   }, 4200);
 }
 
-function pushToastNotification(message, tone = "info", durationMs = 5200) {
+function pushToastNotification(message, tone = "info", durationMs = 5200, options = {}) {
   const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  uiState.notifications.push({ id, message, tone });
+  uiState.notifications.push({
+    id,
+    message,
+    tone,
+    prominent: Boolean(options.prominent),
+    title: options.title ?? "Update"
+  });
   if (uiState.notifications.length > 5) uiState.notifications.shift();
   rerender();
   window.setTimeout(() => {
@@ -273,12 +278,404 @@ function renderNotifications() {
   stack.innerHTML = "";
   uiState.notifications.forEach(notification => {
     const toast = document.createElement("div");
-    toast.className = `toast ${notification.tone}`;
+    toast.className = `toast ${notification.tone} ${notification.prominent ? "prominent" : ""}`;
     toast.innerHTML = `
-      <div class="toast-meta">Battle Update</div>
+      <div class="toast-meta">${notification.title}</div>
       <div>${notification.message}</div>
     `;
     stack.appendChild(toast);
+  });
+}
+
+function getStoryModalConfig(entry) {
+  if (entry.type === "combat") {
+    return {
+      tone: "combat",
+      kicker: "Combat Result",
+      title: "Attack Resolved"
+    };
+  }
+  if (entry.type === "card") {
+    return {
+      tone: "action",
+      kicker: "Tactical Card",
+      title: "Card Played"
+    };
+  }
+  if (entry.type === "action") {
+    return {
+      tone: "action",
+      kicker: "Key Action",
+      title: entry.text.includes("attempts a charge") ? "Charge Roll" : "Action Resolved"
+    };
+  }
+  if (entry.type === "score") {
+    return {
+      tone: "score",
+      kicker: "Scoring",
+      title: "Objectives Updated"
+    };
+  }
+  return {
+    tone: "phase",
+    kicker: "Phase Update",
+    title: entry.text.includes("Round") ? "New Round" : "Phase Change"
+  };
+}
+
+function queueStoryModal(entry, state) {
+  const isCustom = Object.prototype.hasOwnProperty.call(entry, "body");
+  const config = isCustom
+    ? { tone: entry.tone, kicker: entry.kicker, title: entry.title }
+    : getStoryModalConfig(entry);
+  uiState.storyModalQueue.push({
+    id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    entryType: entry.type ?? "custom",
+    tone: config.tone,
+    kicker: config.kicker,
+    title: config.title,
+    body: isCustom ? entry.body : entry.text,
+    subtitle: entry.subtitle ?? `Round ${state.round} • ${state.phase[0].toUpperCase()}${state.phase.slice(1)} Phase`
+  });
+  if (!uiState.activeStoryModal) {
+    uiState.activeStoryModal = uiState.storyModalQueue.shift();
+  }
+}
+
+function dismissStoryModal() {
+  if (!uiState.activeStoryModal) return;
+  uiState.activeStoryModal = uiState.storyModalQueue.shift() ?? null;
+  rerender();
+  maybeRunBot();
+}
+
+function openCombatChoiceModal(selection) {
+  uiState.pendingCombatChoice = selection;
+  rerender();
+}
+
+function dismissCombatChoiceModal() {
+  if (!uiState.pendingCombatChoice) return;
+  uiState.pendingCombatChoice = null;
+  rerender();
+}
+
+function resolveCombatForSelectedUnit(unitId) {
+  const result = store.dispatch({
+    type: "RESOLVE_COMBAT_UNIT",
+    payload: { playerId: "playerA", unitId }
+  });
+  if (!result.ok) {
+    showError(result.message);
+    return;
+  }
+  uiState.pendingCombatChoice = null;
+  autoSelectNextUnit();
+  rerender();
+}
+
+function confirmCombatChoice(targetId) {
+  const selection = uiState.pendingCombatChoice;
+  if (!selection) return;
+  const retargetResult = store.dispatch({
+    type: "SET_CHARGE_PRIMARY_TARGET",
+    payload: { playerId: "playerA", unitId: selection.unitId, targetId }
+  });
+  if (!retargetResult.ok) {
+    showError(retargetResult.message);
+    return;
+  }
+  resolveCombatForSelectedUnit(selection.unitId);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function renderStoryStat(label, value, accent = "") {
+  return `<div class="story-stat ${accent}"><div class="story-stat-label">${escapeHtml(label)}</div><div class="story-stat-value">${escapeHtml(value)}</div></div>`;
+}
+
+function buildStoryBlock(text) {
+  const combatMatch = text.match(/^(.*?) (attacks|fires overwatch at|charges) (.*?) with (.*?): (\d+) attacks, (\d+) hits(?: \(including (\d+) Precision\))?, (\d+) wounds(?:, Critical Hit (\d+) bypassed armour)?(?:, Surge (.*?) rolled (\d+) vs (.*?) -> (\d+) bypassed armour)?(?:, Dodge prevented (\d+) bypassed hits)?, (\d+) saves(?: \((cover)\))?(?:, (\d+) evade saves on (\d+)\+)?(?:, indirect fire without line of sight)?(?:, long range penalty applied)?(?:, Burst Fire \+(\d+))?(?:, Locked In \+(\d+))?(?:, Anti-Evade (\d+))?(?:, Pierce damage (\d+))?(?:, Concentrated Fire cap (\d+)(?: \(discarded (\d+) damage\))?)?(?:, Fighting Rank (\d+), Supporting Rank (\d+), Assigned Models (\d+)(?:, Primary Target Focus)?)?, (\d+) casualties\.$/);
+  if (combatMatch) {
+      const [, attacker, verb, target, weapon, attacks, hits, precisionApplied, wounds, criticalApplied, surgeDie, surgeRoll, surgeTags, surgeApplied, dodgePrevented, saves, cover, evadeSaved, evadeTarget, burstFireBonus, lockedInBonus, antiEvade, pierceDamage, concentratedFireCap, concentratedFireDiscarded, fightingRank, supportingRank, assignedModels, casualties] = combatMatch;
+      const longRangeApplied = text.includes("long range penalty applied");
+      const indirectFireApplied = text.includes("indirect fire without line of sight");
+      const primaryTargetFocus = text.includes("Primary Target Focus");
+      const actionLabel = verb === "fires overwatch at" ? "Overwatch" : verb === "charges" ? "Charge Attack" : "Ranged Attack";
+      return `
+        <div class="story-lead"><strong>${escapeHtml(attacker)}</strong> resolved a ${escapeHtml(actionLabel.toLowerCase())} into <strong>${escapeHtml(target)}</strong> with <strong>${escapeHtml(weapon)}</strong>.</div>
+        <div class="story-stat-grid">
+          ${renderStoryStat("Attacks", attacks)}
+          ${renderStoryStat("Hits", hits)}
+          ${precisionApplied ? renderStoryStat("Precision", precisionApplied, "success") : ""}
+          ${renderStoryStat("Wounds", wounds)}
+          ${criticalApplied ? renderStoryStat("Crit", criticalApplied, "impact") : ""}
+          ${surgeApplied ? renderStoryStat("Surge", surgeApplied, Number(surgeApplied) > 0 ? "impact" : "") : ""}
+          ${burstFireBonus ? renderStoryStat("Burst", burstFireBonus, "success") : ""}
+          ${lockedInBonus ? renderStoryStat("Locked In", lockedInBonus, "success") : ""}
+          ${fightingRank ? renderStoryStat("Fight Rank", fightingRank, "success") : ""}
+          ${supportingRank ? renderStoryStat("Support", supportingRank, "success") : ""}
+          ${assignedModels ? renderStoryStat("Assigned", assignedModels, "success") : ""}
+          ${dodgePrevented ? renderStoryStat("Dodge", dodgePrevented, "success") : ""}
+          ${renderStoryStat("Saves", saves)}
+          ${evadeSaved ? renderStoryStat("Evade", evadeSaved, "success") : ""}
+          ${renderStoryStat("Casualties", casualties, Number(casualties) > 0 ? "impact" : "")}
+        </div>
+        <div class="story-note-row">
+          <span class="story-chip">${escapeHtml(actionLabel)}</span>
+          ${criticalApplied ? `<span class="story-chip">Critical Hit bypassed ${escapeHtml(criticalApplied)}</span>` : ""}
+          ${surgeApplied ? `<span class="story-chip">Surge ${escapeHtml(surgeDie)} rolled ${escapeHtml(surgeRoll)} vs ${escapeHtml(surgeTags)}</span>` : ""}
+          ${dodgePrevented ? `<span class="story-chip">Dodge cancelled ${escapeHtml(dodgePrevented)} bypass hits</span>` : ""}
+          ${evadeSaved ? `<span class="story-chip">Evade ${escapeHtml(evadeSaved)} on ${escapeHtml(evadeTarget)}+</span>` : ""}
+          ${indirectFireApplied ? '<span class="story-chip">Indirect Fire</span>' : ""}
+          ${longRangeApplied ? '<span class="story-chip">Long Range Penalty</span>' : ""}
+          ${burstFireBonus ? `<span class="story-chip">Burst Fire +${escapeHtml(burstFireBonus)}</span>` : ""}
+          ${lockedInBonus ? `<span class="story-chip">Locked In +${escapeHtml(lockedInBonus)}</span>` : ""}
+          ${fightingRank ? `<span class="story-chip">Fighting Rank ${escapeHtml(fightingRank)}</span>` : ""}
+          ${supportingRank ? `<span class="story-chip">Supporting Rank ${escapeHtml(supportingRank)}</span>` : ""}
+          ${assignedModels ? `<span class="story-chip">Assigned Models ${escapeHtml(assignedModels)}</span>` : ""}
+          ${primaryTargetFocus ? '<span class="story-chip">Primary Target</span>' : ""}
+          ${antiEvade ? `<span class="story-chip">Anti-Evade ${escapeHtml(antiEvade)}</span>` : ""}
+          ${pierceDamage ? `<span class="story-chip">Pierce Damage ${escapeHtml(pierceDamage)}</span>` : ""}
+          ${concentratedFireCap ? `<span class="story-chip">Concentrated Fire ${escapeHtml(concentratedFireCap)}${concentratedFireDiscarded ? `, discarded ${escapeHtml(concentratedFireDiscarded)}` : ""}</span>` : ""}
+          ${cover ? '<span class="story-chip">Target in Cover</span>' : ""}
+        </div>
+      `;
+    }
+
+  const hiddenImpactMatch = text.match(/^(.*?) triggers Impact against (.*?), but the target stays hidden and avoids the collision\.$/);
+  if (hiddenImpactMatch) {
+    const [, attacker, target] = hiddenImpactMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(target)}</strong> stayed concealed and avoided <strong>${escapeHtml(attacker)}</strong>'s impact strike.</div>
+      <div class="story-note-row">
+        <span class="story-chip">Impact Negated</span>
+        <span class="story-chip">Hidden Target</span>
+      </div>
+    `;
+  }
+
+  const impactMatch = text.match(/^(.*?) triggers Impact against (.*?): (\d+) impact dice, (\d+) impact hits, (\d+) saves, (\d+) casualties\.$/);
+  if (impactMatch) {
+    const [, attacker, target, attempts, hits, saves, casualties] = impactMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(attacker)}</strong> crashed into <strong>${escapeHtml(target)}</strong> on the charge.</div>
+      <div class="story-stat-grid">
+        ${renderStoryStat("Impact Dice", attempts)}
+        ${renderStoryStat("Impact Hits", hits)}
+        ${renderStoryStat("Saves", saves)}
+        ${renderStoryStat("Casualties", casualties, Number(casualties) > 0 ? "impact" : "")}
+      </div>
+      <div class="story-note-row">
+        <span class="story-chip">Impact</span>
+        <span class="story-chip">Damage 1</span>
+      </div>
+    `;
+  }
+
+  const chargeRollMatch = text.match(/^(.*?) attempts a charge on (.*?): distance ([\d.]+)", need (\d+)", rolled (\d+) \+ Speed (\d+) = (\d+)\. (Success|Failed) by (\d+)"\.$/);
+  if (chargeRollMatch) {
+    const [, attacker, target, distance, need, die, speed, total, resultWord, margin] = chargeRollMatch;
+    const success = resultWord === "Success";
+    return `
+      <div class="story-lead"><strong>${escapeHtml(attacker)}</strong> tried to reach <strong>${escapeHtml(target)}</strong>.</div>
+      <div class="story-stat-grid">
+        ${renderStoryStat("Distance", `${distance}"`)}
+        ${renderStoryStat("Needed", `${need}"`)}
+        ${renderStoryStat("Die", die)}
+        ${renderStoryStat("Speed", speed)}
+        ${renderStoryStat("Total", total, success ? "success" : "warning")}
+      </div>
+      <div class="story-outcome ${success ? "success" : "warning"}">${success ? `Charge succeeded by ${margin}".` : `Charge failed by ${margin}".`}</div>
+    `;
+  }
+
+  const overwatchMatch = text.match(/^(.*?) sets Overwatch response against (.*?)\.$/);
+  if (overwatchMatch) {
+    const [, defender, attacker] = overwatchMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(defender)}</strong> has reacted to <strong>${escapeHtml(attacker)}</strong>.</div>
+      <div class="story-outcome warning">An Overwatch attack is now queued and will resolve in Combat.</div>
+    `;
+  }
+
+  const instantMatch = text.match(/^(.*?)'s (.*?) has Instant, so (.*?) cannot react with Overwatch\.$/);
+  if (instantMatch) {
+    const [, attacker, weapon, defender] = instantMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(attacker)}</strong> struck first with <strong>${escapeHtml(weapon)}</strong>.</div>
+      <div class="story-outcome success"><strong>${escapeHtml(defender)}</strong> loses the Overwatch reaction window because of Instant.</div>
+      <div class="story-note-row">
+        <span class="story-chip">Instant</span>
+        <span class="story-chip">Overwatch Blocked</span>
+      </div>
+    `;
+  }
+
+  const rangedDeclMatch = text.match(/^(.*?) declares ranged attack on (.*?) for Combat\.$/);
+  if (rangedDeclMatch) {
+    const [, attacker, target] = rangedDeclMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(attacker)}</strong> has targeted <strong>${escapeHtml(target)}</strong>.</div>
+      <div class="story-outcome">That attack is locked into the Combat Phase queue.</div>
+    `;
+  }
+
+  const chargeLockMatch = text.match(/^(.*?) locks in the charge and will fight (.*?) in Combat\.$/);
+  if (chargeLockMatch) {
+    const [, attacker, target] = chargeLockMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(attacker)}</strong> will make a melee attack against <strong>${escapeHtml(target)}</strong>.</div>
+      <div class="story-outcome success">The charge is confirmed and queued for Combat.</div>
+    `;
+  }
+
+  const chargeFailMatch = text.match(/^(.*?) fails the charge and will not make a melee attack this round\.$/);
+  if (chargeFailMatch) {
+    const [, attacker] = chargeFailMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(attacker)}</strong> did not get in.</div>
+      <div class="story-outcome warning">No melee attack was queued from this charge attempt.</div>
+    `;
+  }
+
+  const closeRanksMatch = text.match(/^(.*?) closes ranks and emerges from Burrowed formation(?: against (.*?))?\.$/);
+  if (closeRanksMatch) {
+    const [, unitName, targetName] = closeRanksMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(unitName)}</strong> surfaced and tightened formation${targetName ? ` before fighting <strong>${escapeHtml(targetName)}</strong>` : ""}.</div>
+      <div class="story-outcome success">Burrowed and Hidden are removed, and the melee sequence continues above ground.</div>
+      <div class="story-note-row">
+        <span class="story-chip">Close Ranks</span>
+        <span class="story-chip">Burrowed Removed</span>
+      </div>
+    `;
+  }
+
+  const noAssignedModelsMatch = text.match(/^(.*?) has no models assigned to (.*?) after target allocation and cannot make melee attacks\.$/);
+  if (noAssignedModelsMatch) {
+    const [, attacker, target] = noAssignedModelsMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(attacker)}</strong> could not put any fighting or supporting models into <strong>${escapeHtml(target)}</strong>.</div>
+      <div class="story-outcome warning">That melee batch was skipped after target allocation.</div>
+      <div class="story-note-row">
+        <span class="story-chip">Target Allocation</span>
+        <span class="story-chip">No Assigned Models</span>
+      </div>
+    `;
+  }
+
+  const cardMatch = text.match(/^(Blue|Red) plays (.*?)(?: on (.*?))?\.$/);
+  if (cardMatch) {
+    const [, player, cardName, target] = cardMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(player)}</strong> used <strong>${escapeHtml(cardName)}</strong>${target ? ` on <strong>${escapeHtml(target)}</strong>` : ""}.</div>
+      <div class="story-outcome">Its effect is now active for the relevant timing window.</div>
+    `;
+  }
+
+  const sentences = text.split(/(?<=\.)\s+/).filter(Boolean);
+  return sentences.map(sentence => `<div class="story-paragraph">${escapeHtml(sentence)}</div>`).join("");
+}
+
+function buildStoryModalBody(modal) {
+  const blocks = String(modal.body).split("\n").filter(Boolean);
+  if (blocks.length <= 1) return buildStoryBlock(blocks[0] ?? "");
+  return blocks.map((block, index) => `<div class="story-sequence-block ${index > 0 ? "stacked" : ""}">${buildStoryBlock(block)}</div>`).join("");
+}
+
+function renderStoryModal() {
+  const root = document.getElementById("storyModalRoot");
+  if (!root) return;
+  root.className = uiState.activeStoryModal ? "story-modal-root active" : "story-modal-root";
+  if (!uiState.activeStoryModal) {
+    root.innerHTML = "";
+    return;
+  }
+
+  const modal = uiState.activeStoryModal;
+  root.innerHTML = `
+    <div class="story-modal-backdrop"></div>
+    <section class="story-modal ${modal.tone}" role="dialog" aria-modal="true" aria-labelledby="storyModalTitle">
+      <div class="story-modal-header">
+        <div>
+          <div class="story-modal-kicker">${modal.kicker}</div>
+          <div id="storyModalTitle" class="story-modal-title">${modal.title}</div>
+          <div class="story-modal-subtitle">${modal.subtitle}</div>
+        </div>
+      </div>
+      <div class="story-modal-body">
+        ${buildStoryModalBody(modal)}
+      </div>
+      <div class="story-modal-footer">
+        <div class="story-modal-queue">${uiState.storyModalQueue.length ? `${uiState.storyModalQueue.length} more update(s) queued.` : "No more queued updates."}</div>
+        <button id="storyModalCloseBtn" class="btn primary story-modal-close">Continue</button>
+      </div>
+    </section>
+  `;
+
+  root.querySelector(".story-modal-backdrop")?.addEventListener("click", dismissStoryModal);
+  root.querySelector("#storyModalCloseBtn")?.addEventListener("click", dismissStoryModal);
+}
+
+function renderCombatChoiceModal() {
+  const root = document.getElementById("combatChoiceRoot");
+  if (!root) return;
+
+  const selection = uiState.pendingCombatChoice;
+  if (!selection) {
+    root.className = "combat-choice-root";
+    root.innerHTML = "";
+    return;
+  }
+
+  root.className = "combat-choice-root active";
+  root.innerHTML = `
+    <div class="combat-choice-backdrop"></div>
+    <section class="combat-choice-modal" role="dialog" aria-modal="true" aria-labelledby="combatChoiceTitle">
+      <header class="combat-choice-header">
+        <div>
+          <div class="combat-choice-kicker">Melee Target Choice</div>
+          <h2 id="combatChoiceTitle" class="combat-choice-title">Choose where ${escapeHtml(selection.attackerName)} pushes hardest.</h2>
+          <div class="combat-choice-subtitle">This charge is tied into multiple enemies. Pick the unit that gets primary target focus before combat resolves.</div>
+        </div>
+      </header>
+      <div class="combat-choice-body">
+        ${selection.options.map(option => `
+          <button class="combat-choice-option ${option.isCurrentPrimary ? "current" : ""}" data-target-id="${escapeHtml(option.targetId)}">
+            <div class="combat-choice-option-header">
+              <div>
+                <div class="combat-choice-option-name">${escapeHtml(option.name)}</div>
+                <div class="combat-choice-option-meta">${option.isCurrentPrimary ? "Current focus" : "Available focus"}</div>
+              </div>
+              <span class="combat-choice-chip">${option.assignedModels} assigned</span>
+            </div>
+            <div class="combat-choice-stats">
+              ${renderStoryStat("Fighting Rank", option.fightingRank)}
+              ${renderStoryStat("Supporting Rank", option.supportingRank)}
+              ${renderStoryStat("Assigned", option.assignedModels, option.isCurrentPrimary ? "success" : "")}
+            </div>
+          </button>
+        `).join("")}
+      </div>
+      <footer class="combat-choice-footer">
+        <div class="combat-choice-footer-copy">Pick a target to resolve this melee sequence.</div>
+        <button id="combatChoiceCancelBtn" class="btn secondary">Cancel</button>
+      </footer>
+    </section>
+  `;
+
+  root.querySelector(".combat-choice-backdrop")?.addEventListener("click", dismissCombatChoiceModal);
+  root.querySelector("#combatChoiceCancelBtn")?.addEventListener("click", dismissCombatChoiceModal);
+  root.querySelectorAll("[data-target-id]").forEach(button => {
+    button.addEventListener("click", () => confirmCombatChoice(button.getAttribute("data-target-id")));
   });
 }
 
@@ -288,13 +685,97 @@ function getNotificationTone(logEntryType) {
   return "info";
 }
 
+function shouldUseModalForEntry(entry) {
+  if (["combat", "phase", "score", "card"].includes(entry.type)) return true;
+  if (entry.type !== "action") return false;
+  return [
+    "attempts a charge",
+    "declares ranged attack",
+    "has Instant",
+    "closes ranks",
+    "sets Overwatch",
+    "locks in the charge",
+    "fails the charge"
+  ].some(fragment => entry.text.includes(fragment));
+}
+
+function isChargeSequenceAction(entry) {
+  return entry.type === "action" && [
+    "has Instant",
+    "closes ranks",
+    "sets Overwatch",
+    "attempts a charge",
+    "locks in the charge",
+    "fails the charge"
+  ].some(fragment => entry.text.includes(fragment));
+}
+
+function buildModalFromEntries(entries, state, title, kicker, tone) {
+  queueStoryModal({
+    type: "custom",
+    tone,
+    kicker,
+    title,
+    body: entries.map(entry => entry.text).join("\n"),
+    subtitle: `Round ${state.round} • ${state.phase[0].toUpperCase()}${state.phase.slice(1)} Phase`
+  }, state);
+}
+
+function getToastConfig(entry) {
+  if (entry.type === "action") {
+    if (entry.text.includes("deploys")) return { title: "Deployment", prominent: true, durationMs: 7000 };
+    if (entry.text.includes("moves")) return { title: "Movement", prominent: true, durationMs: 6500 };
+    if (entry.text.includes("runs")) return { title: "Run", prominent: true, durationMs: 6500 };
+    if (entry.text.includes("disengages")) return { title: "Disengage", prominent: true, durationMs: 7000 };
+    if (entry.text.includes("holds position")) return { title: "Hold", prominent: false, durationMs: 4500 };
+    if (entry.text.includes("declares ranged attack")) return { title: "Attack Declared", prominent: true, durationMs: 6500 };
+    if (entry.text.includes("sets Overwatch")) return { title: "Overwatch", prominent: true, durationMs: 6500 };
+    if (entry.text.includes("locks in the charge")) return { title: "Charge Confirmed", prominent: true, durationMs: 6500 };
+    if (entry.text.includes("fails the charge")) return { title: "Charge Failed", prominent: true, durationMs: 7000 };
+  }
+  if (entry.type === "info") {
+    return { title: "Battlefield", prominent: false, durationMs: 5200 };
+  }
+  return { title: "Update", prominent: false, durationMs: 5200 };
+}
+
 function publishLogNotifications(state) {
   if (uiState.lastSeenLogCount >= state.log.length) return;
   const newEntries = state.log.slice(uiState.lastSeenLogCount);
   uiState.lastSeenLogCount = state.log.length;
-  newEntries.forEach(entry => {
-    pushToastNotification(entry.text, getNotificationTone(entry.type));
-  });
+  for (let index = 0; index < newEntries.length; index += 1) {
+    const entry = newEntries[index];
+
+    if (isChargeSequenceAction(entry)) {
+      const grouped = [entry];
+      while (index + 1 < newEntries.length && isChargeSequenceAction(newEntries[index + 1])) {
+        grouped.push(newEntries[index + 1]);
+        index += 1;
+      }
+      buildModalFromEntries(grouped, state, "Charge Sequence", "Reaction Window", "action");
+      continue;
+    }
+
+    if (entry.type === "combat") {
+      const grouped = [entry];
+      while (index + 1 < newEntries.length && newEntries[index + 1].type === "combat" && grouped.length < 3) {
+        grouped.push(newEntries[index + 1]);
+        index += 1;
+      }
+      buildModalFromEntries(grouped, state, "Combat Sequence", "Combat Result", "combat");
+      continue;
+    }
+
+    if (shouldUseModalForEntry(entry)) {
+      queueStoryModal(entry, state);
+      continue;
+    }
+    const toastConfig = getToastConfig(entry);
+    pushToastNotification(entry.text, getNotificationTone(entry.type), toastConfig.durationMs, {
+      prominent: toastConfig.prominent,
+      title: toastConfig.title
+    });
+  }
 }
 
 
@@ -367,6 +848,22 @@ function buildActionButtons() {
   }));
 
   if (state.phase === "movement") {
+    if (canBurrow(unit)) {
+      buttons.unshift(actionButton(unit.status.burrowed ? "Emerge" : "Burrow", "secondary", () => {
+        const result = store.dispatch({ type: "TOGGLE_BURROW", payload: { playerId: "playerA", unitId: unit.id } });
+        if (!result.ok) showError(result.message);
+        else { autoSelectNextUnit(); rerender(); }
+      }, unit.status.engaged, "Unit must be unengaged to burrow or emerge."));
+    }
+
+    if (canHide(unit)) {
+      buttons.unshift(actionButton(unit.status.hidden ? "Reveal" : "Hide", "secondary", () => {
+        const result = store.dispatch({ type: "TOGGLE_HIDDEN", payload: { playerId: "playerA", unitId: unit.id } });
+        if (!result.ok) showError(result.message);
+        else { autoSelectNextUnit(); rerender(); }
+      }, unit.status.engaged || unit.status.burrowed, unit.status.burrowed ? "Burrowed units are already Hidden." : "Unit must be unengaged to hide or reveal."));
+    }
+
     buttons.unshift(actionButton("Move", "primary", () => {
       beginMoveInteraction(state, uiState, unit.id);
       computeLegalDestinations();
@@ -383,17 +880,33 @@ function buildActionButtons() {
   }
 
   if (state.phase === "assault") {
+    if (canBurrow(unit)) {
+      buttons.unshift(actionButton(unit.status.burrowed ? "Emerge" : "Burrow", "secondary", () => {
+        const result = store.dispatch({ type: "TOGGLE_BURROW", payload: { playerId: "playerA", unitId: unit.id } });
+        if (!result.ok) showError(result.message);
+        else { autoSelectNextUnit(); rerender(); }
+      }, unit.status.engaged, "Unit must be unengaged to burrow or emerge."));
+    }
+
+    if (canHide(unit)) {
+      buttons.unshift(actionButton(unit.status.hidden ? "Reveal" : "Hide", "secondary", () => {
+        const result = store.dispatch({ type: "TOGGLE_HIDDEN", payload: { playerId: "playerA", unitId: unit.id } });
+        if (!result.ok) showError(result.message);
+        else { autoSelectNextUnit(); rerender(); }
+      }, unit.status.engaged || unit.status.burrowed, unit.status.burrowed ? "Burrowed units are already Hidden." : "Unit must be unengaged to hide or reveal."));
+    }
+
     buttons.unshift(actionButton("Charge", "warn", () => {
       beginDeclareChargeInteraction(uiState);
       uiState.legalDestinations = [];
       rerender();
-    }, !(unit.meleeWeapons?.length) || unit.status.cannotChargeThisAssault, unit.status.cannotChargeThisAssault ? "This unit cannot charge again this assault phase." : "This unit has no melee weapons."));
+    }, !(unit.meleeWeapons?.length) || unit.status.cannotChargeThisAssault || unit.status.burrowed, unit.status.burrowed ? "Burrowed units cannot charge." : unit.status.cannotChargeThisAssault ? "This unit cannot charge again this assault phase." : "This unit has no melee weapons."));
 
     buttons.unshift(actionButton("Ranged", "secondary", () => {
       beginDeclareRangedInteraction(uiState);
       uiState.legalDestinations = [];
       rerender();
-    }, !(unit.rangedWeapons?.length) || unit.status.cannotRangedAttackThisAssault, unit.status.cannotRangedAttackThisAssault ? "This unit has already made a ranged declaration this assault phase." : "This unit has no ranged weapons."));
+    }, !(unit.rangedWeapons?.length) || unit.status.cannotRangedAttackThisAssault || unit.status.burrowed, unit.status.burrowed ? "Burrowed units cannot make ranged declarations." : unit.status.cannotRangedAttackThisAssault ? "This unit has already made a ranged declaration this assault phase." : "This unit has no ranged weapons."));
 
     buttons.unshift(actionButton("Run", "primary", () => {
       beginRunInteraction(state, uiState, unit.id);
@@ -409,12 +922,12 @@ function buildActionButtons() {
     );
 
     buttons.unshift(actionButton("Resolve Combat", "primary", () => {
-      const result = store.dispatch({
-        type: "RESOLVE_COMBAT_UNIT",
-        payload: { playerId: "playerA", unitId: unit.id }
-      });
-      if (!result.ok) showError(result.message);
-      else { autoSelectNextUnit(); rerender(); }
+      const selection = getMeleeTargetSelection(state, unit.id);
+      if (selection) {
+        openCombatChoiceModal(selection);
+        return;
+      }
+      resolveCombatForSelectedUnit(unit.id);
     }, !hasQueuedAttacks, "No queued attacks for this unit."));
     return buttons;
   }
@@ -605,6 +1118,8 @@ function handleModelClick(unitId) {
 
 async function maybeRunBot() {
   if (uiState.locked) return;
+  if (uiState.activeStoryModal || uiState.storyModalQueue.length) return;
+  if (uiState.pendingCombatChoice) return;
   const state = store.getState();
   if (state.activePlayer !== "playerB") return;
   if (!["movement", "assault", "combat"].includes(state.phase)) return;
@@ -629,6 +1144,9 @@ function resetGame() {
   uiState.selectedUnitId = null;
   uiState.legalDestinations = [];
   uiState.pendingPass = false;
+  uiState.storyModalQueue = [];
+  uiState.activeStoryModal = null;
+  uiState.pendingCombatChoice = null;
   cancelCurrentInteraction(uiState);
   const nextState = buildInitialState();
   uiState.lastSeenLogCount = nextState.log.length;
@@ -670,6 +1188,9 @@ function importSaveFile(file) {
       uiState.selectedUnitId = null;
       uiState.legalDestinations = [];
       uiState.pendingPass = false;
+      uiState.storyModalQueue = [];
+      uiState.activeStoryModal = null;
+      uiState.pendingCombatChoice = null;
       cancelCurrentInteraction(uiState);
       uiState.lastSeenLogCount = importedState.log?.length ?? 0;
       store.replaceState(importedState);
@@ -753,22 +1274,31 @@ function wirePreviewEvents() {
     uiState.previewUnit = null;
     rerender();
   });
-  // Touch support for mobile
-  svg.addEventListener("touchmove", event => {
-    if (!uiState.mode) return;
-    const touch = event.touches[0];
-    if (!touch) return;
-    event.preventDefault();
-    const point = screenToBoardPoint(svg, touch.clientX, touch.clientY);
-    updatePreviewFromPoint(point);
-    rerender();
-  }, { passive: false });
 }
 
 /* ── Keyboard shortcuts ── */
 function wireKeyboardShortcuts() {
   document.addEventListener("keydown", event => {
     if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") return;
+    if (uiState.activeStoryModal && ["Escape", "Enter", " "].includes(event.key)) {
+      event.preventDefault();
+      dismissStoryModal();
+      return;
+    }
+    if (uiState.pendingCombatChoice) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        dismissCombatChoiceModal();
+        return;
+      }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const targetId = uiState.pendingCombatChoice.currentPrimaryTargetId
+          ?? uiState.pendingCombatChoice.options[0]?.targetId;
+        if (targetId) confirmCombatChoice(targetId);
+        return;
+      }
+    }
     const state = store.getState();
     const unit = getSelectedUnit(state);
 

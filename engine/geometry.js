@@ -84,6 +84,7 @@ export function pathBlockedForCircle(path, radius, state, ignoreModelIds = new S
       if (!isFirstPathPoint && !pointInBoard(sample, state.board, radius)) return true;
       if (circleOverlapsTerrain(sample, radius, state.board.terrain)) return true;
       for (const unit of Object.values(state.units)) {
+        if (unit.status?.burrowed) continue;
         for (const model of Object.values(unit.models)) {
           if (!model.alive || model.x == null || model.y == null || ignoreModelIds.has(model.id)) continue;
           if (circleOverlapsCircle(sample, radius, { x: model.x, y: model.y }, unit.base.radiusInches)) return true;

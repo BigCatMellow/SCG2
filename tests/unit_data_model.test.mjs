@@ -22,3 +22,14 @@ test('unit runtime state carries rich combat model fields', () => {
   assert.equal(unit.rangedWeapons[0].strength, 4);
   assert.equal(unit.meleeWeapons[0].attacksPerModel, 1);
 });
+
+test('zergling and roach templates carry faction keyword data', () => {
+  const zergling = createUnitStateFromTemplate('zergling_t3', 'playerA', 'zergling_test');
+  const roach = createUnitStateFromTemplate('roach_t3', 'playerA', 'roach_test');
+
+  assert.equal(zergling.abilities.includes('burrow'), true);
+  assert.equal(zergling.impact?.dicePerModel, 1);
+  assert.equal(roach.abilities.includes('burrowed_regen'), true);
+  assert.equal(roach.rangedWeapons[0].surge?.dice, 'D3+1');
+  assert.deepEqual(roach.rangedWeapons[0].surge?.tags, ['Light']);
+});

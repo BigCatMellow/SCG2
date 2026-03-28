@@ -12,7 +12,8 @@ export const UNIT_DATA = {
     defense: {
       toughness: 3,
       armorSave: 4,
-      invulnerableSave: null
+      invulnerableSave: null,
+      evadeTarget: 6
     },
     rangedWeapons: [
       {
@@ -24,6 +25,7 @@ export const UNIT_DATA = {
         strength: 4,
         armorPenetration: 1,
         damage: 1,
+        surge: { tags: ["Light"], dice: "D3" },
         keywords: ["rapid_fire"]
       }
     ],
@@ -59,7 +61,8 @@ export const UNIT_DATA = {
     defense: {
       toughness: 6,
       armorSave: 3,
-      invulnerableSave: 5
+      invulnerableSave: 5,
+      evadeTarget: 5
     },
     rangedWeapons: [
       {
@@ -104,7 +107,8 @@ export const UNIT_DATA = {
     defense: {
       toughness: 4,
       armorSave: 4,
-      invulnerableSave: 5
+      invulnerableSave: 5,
+      evadeTarget: 6
     },
     rangedWeapons: [],
     meleeWeapons: [
@@ -131,6 +135,7 @@ export const UNIT_DATA = {
     name: "Zerglings",
     tags: ["Ground", "Biological", "Swarm", "Light", "Infantry"],
     abilities: ["swarm_tactics"],
+    impact: { dicePerModel: 1, hitTarget: 5, damage: 1 },
     speed: 8,
     size: 1,
     base: { shape: "circle", diameterMm: 25, radiusInches: 0.45 },
@@ -139,7 +144,8 @@ export const UNIT_DATA = {
     defense: {
       toughness: 3,
       armorSave: 6,
-      invulnerableSave: null
+      invulnerableSave: null,
+      evadeTarget: 5
     },
     rangedWeapons: [],
     meleeWeapons: [
@@ -174,7 +180,8 @@ export const UNIT_DATA = {
     defense: {
       toughness: 5,
       armorSave: 3,
-      invulnerableSave: 5
+      invulnerableSave: 5,
+      evadeTarget: 5
     },
     rangedWeapons: [
       {
@@ -219,7 +226,8 @@ export const UNIT_DATA = {
     defense: {
       toughness: 3,
       armorSave: 4,
-      invulnerableSave: null
+      invulnerableSave: null,
+      evadeTarget: 6
     },
     rangedWeapons: [
       {
@@ -231,6 +239,7 @@ export const UNIT_DATA = {
         strength: 4,
         armorPenetration: 1,
         damage: 1,
+        surge: { tags: ["Light"], dice: "D3" },
         keywords: ["rapid_fire"]
       }
     ],
@@ -266,7 +275,8 @@ export const UNIT_DATA = {
     defense: {
       toughness: 5,
       armorSave: 4,
-      invulnerableSave: null
+      invulnerableSave: null,
+      evadeTarget: 6
     },
     rangedWeapons: [
       {
@@ -278,6 +288,8 @@ export const UNIT_DATA = {
         strength: 5,
         armorPenetration: 1,
         damage: 2,
+        surge: { tags: ["Armoured"], dice: "D3" },
+        pierce: { tag: "Armoured", damage: 2 },
         keywords: ["blast"]
       }
     ],
@@ -313,7 +325,8 @@ export const UNIT_DATA = {
     defense: {
       toughness: 4,
       armorSave: 5,
-      invulnerableSave: null
+      invulnerableSave: null,
+      evadeTarget: 6
     },
     rangedWeapons: [
       {
@@ -359,7 +372,9 @@ export const UNIT_DATA = {
     defense: {
       toughness: 6,
       armorSave: 3,
-      invulnerableSave: 4
+      invulnerableSave: 4,
+      evadeTarget: 4,
+      dodge: 1
     },
     rangedWeapons: [
       {
@@ -371,6 +386,8 @@ export const UNIT_DATA = {
         strength: 6,
         armorPenetration: 2,
         damage: 2,
+        surge: { tags: ["Light", "Armoured"], dice: "D3" },
+        indirectFire: true,
         keywords: ["psionic"]
       }
     ],
@@ -383,6 +400,7 @@ export const UNIT_DATA = {
         strength: 7,
         armorPenetration: 3,
         damage: 2,
+        criticalHit: 2,
         keywords: ["lethal"]
       }
     ],
@@ -396,6 +414,7 @@ export const UNIT_DATA = {
     name: "Raptor (Zergling) T2",
     tags: ["Ground", "Biological", "Swarm", "Elite", "Melee"],
     abilities: ["leap_strike"],
+    impact: { dicePerModel: 2, hitTarget: 5, damage: 1 },
     speed: 9,
     size: 1,
     base: { shape: "circle", diameterMm: 25, radiusInches: 0.45 },
@@ -404,7 +423,8 @@ export const UNIT_DATA = {
     defense: {
       toughness: 4,
       armorSave: 5,
-      invulnerableSave: null
+      invulnerableSave: null,
+      evadeTarget: 5
     },
     rangedWeapons: [],
     meleeWeapons: [
@@ -416,6 +436,7 @@ export const UNIT_DATA = {
         strength: 4,
         armorPenetration: 1,
         damage: 1,
+        surge: { tags: ["Light", "Armoured"], dice: "D6" },
         keywords: ["anti_infantry"]
       }
     ],
@@ -430,7 +451,8 @@ export const UNIT_DATA = {
     id: "roach_t3",
     name: "Roach T3",
     tags: ["Ground", "Biological", "Elite", "Armoured"],
-    abilities: ["burrowed_regen"],
+    abilities: ["burrow", "burrowed_regen"],
+    impact: { dicePerModel: 2, hitTarget: 4, damage: 1 },
     speed: 5,
     size: 1,
     base: { shape: "circle", diameterMm: 32, radiusInches: 0.6 },
@@ -439,7 +461,8 @@ export const UNIT_DATA = {
     defense: {
       toughness: 6,
       armorSave: 4,
-      invulnerableSave: null
+      invulnerableSave: null,
+      evadeTarget: 5
     },
     rangedWeapons: [
       {
@@ -451,6 +474,7 @@ export const UNIT_DATA = {
         strength: 6,
         armorPenetration: 2,
         damage: 2,
+        surge: { tags: ["Light"], dice: "D3+1" },
         keywords: ["corrosive"]
       }
     ],
@@ -477,7 +501,8 @@ export const UNIT_DATA = {
     id: "zergling_t3",
     name: "Zergling T3",
     tags: ["Ground", "Biological", "Swarm", "Core", "Melee"],
-    abilities: ["adrenal_glands"],
+    abilities: ["adrenal_glands", "burrow"],
+    impact: { dicePerModel: 1, hitTarget: 5, damage: 1 },
     speed: 9,
     size: 1,
     base: { shape: "circle", diameterMm: 25, radiusInches: 0.45 },
@@ -486,7 +511,8 @@ export const UNIT_DATA = {
     defense: {
       toughness: 3,
       armorSave: 6,
-      invulnerableSave: null
+      invulnerableSave: null,
+      evadeTarget: 5
     },
     rangedWeapons: [],
     meleeWeapons: [
@@ -498,6 +524,7 @@ export const UNIT_DATA = {
         strength: 3,
         armorPenetration: 0,
         damage: 1,
+        surge: { tags: ["Light"], dice: "D3" },
         keywords: ["anti_infantry"]
       }
     ],
@@ -513,6 +540,7 @@ export const UNIT_DATA = {
     name: "Zergling T2",
     tags: ["Ground", "Biological", "Swarm", "Core", "Melee"],
     abilities: ["metabolic_boost"],
+    impact: { dicePerModel: 1, hitTarget: 5, damage: 1 },
     speed: 8,
     size: 1,
     base: { shape: "circle", diameterMm: 25, radiusInches: 0.45 },
@@ -521,7 +549,8 @@ export const UNIT_DATA = {
     defense: {
       toughness: 3,
       armorSave: 6,
-      invulnerableSave: null
+      invulnerableSave: null,
+      evadeTarget: 5
     },
     rangedWeapons: [],
     meleeWeapons: [
@@ -533,6 +562,7 @@ export const UNIT_DATA = {
         strength: 3,
         armorPenetration: 0,
         damage: 1,
+        surge: { tags: ["Light"], dice: "D3" },
         keywords: ["anti_infantry"]
       }
     ],
@@ -576,7 +606,24 @@ export function createUnitStateFromTemplate(templateId, owner, unitId) {
     };
   }
 
-  const rangedWeapons = template.rangedWeapons?.map(weapon => ({ ...weapon })) ?? [];
+  const rangedWeapons = template.rangedWeapons?.map(weapon => ({
+    ...weapon,
+    surge: weapon.surge ? { ...weapon.surge, tags: [...(weapon.surge.tags ?? [])] } : null,
+    pierce: Array.isArray(weapon.pierce)
+      ? weapon.pierce.map(entry => ({ ...entry }))
+      : weapon.pierce
+        ? { ...weapon.pierce }
+        : null
+  })) ?? [];
+  const meleeWeapons = template.meleeWeapons?.map(weapon => ({
+    ...weapon,
+    surge: weapon.surge ? { ...weapon.surge, tags: [...(weapon.surge.tags ?? [])] } : null,
+    pierce: Array.isArray(weapon.pierce)
+      ? weapon.pierce.map(entry => ({ ...entry }))
+      : weapon.pierce
+        ? { ...weapon.pierce }
+        : null
+  })) ?? [];
 
   return {
     id: unitId,
@@ -588,12 +635,14 @@ export function createUnitStateFromTemplate(templateId, owner, unitId) {
     models,
     tags: [...template.tags],
     abilities: [...(template.abilities ?? [])],
+    impact: template.impact ? { ...template.impact } : null,
     speed: template.speed,
     size: template.size,
+    woundsPerModel: template.woundsPerModel,
     base: { ...template.base },
     defense: { ...template.defense },
-    rangedWeapons,
-    meleeWeapons: template.meleeWeapons?.map(weapon => ({ ...weapon })) ?? [],
+      rangedWeapons,
+      meleeWeapons,
     ranged: rangedWeapons.length
       ? {
           rangeInches: rangedWeapons[0].rangeInches,
@@ -609,6 +658,8 @@ export function createUnitStateFromTemplate(templateId, owner, unitId) {
       assaultActivated: false,
       combatActivated: false,
       engaged: false,
+      hidden: false,
+      burrowed: false,
       outOfCoherency: false,
       stationary: false,
       cannotRangedAttackNextAssault: false,
