@@ -614,6 +614,16 @@ function getWeaponName(state, payload) {
   return weaponPool?.find(weapon => weapon.id === payload.weaponId)?.name ?? payload.weaponId ?? "attack profile";
 }
 
+function renderStorySection(title, items, accent = "") {
+  if (!items?.length) return "";
+  return `
+    <div class="story-section ${accent}">
+      <div class="story-section-title">${escapeHtml(title)}</div>
+      <div class="story-summary-list">${items.map(item => `<div class="story-summary-item">${escapeHtml(item)}</div>`).join("")}</div>
+    </div>
+  `;
+}
+
 function buildCombatPayloadBlock(payload, state) {
   const attacker = getUnitName(state, payload.attackerId);
   const target = getUnitName(state, payload.targetId);
@@ -629,6 +639,7 @@ function buildCombatPayloadBlock(payload, state) {
     payload.visible === false ? "Indirect Fire" : "",
     payload.longRangePenalty ? "Long Range Penalty" : "",
     payload.antiEvade ? `Anti-Evade ${payload.antiEvade}` : "",
+    payload.automaticHits ? `Hits ${payload.automaticHits.count}` : "",
     payload.damagePerHit && payload.damagePerHit > 1 ? `Damage ${payload.damagePerHit}` : "",
     payload.primaryTargetFocus ? "Primary Target" : ""
   ].filter(Boolean);
@@ -638,6 +649,7 @@ function buildCombatPayloadBlock(payload, state) {
       ${renderStoryStat("Attacks", payload.attempts)}
       ${renderStoryStat("Hits", payload.hits)}
       ${payload.precision ? renderStoryStat("Precision", payload.precision, "success") : ""}
+      ${payload.automaticHits ? renderStoryStat("Auto Hits", payload.automaticHits.count, "impact") : ""}
       ${renderStoryStat("Wounds", payload.wounds)}
       ${payload.criticalHit?.applied ? renderStoryStat("Crit", payload.criticalHit.applied, "impact") : ""}
       ${payload.surge?.applied ? renderStoryStat("Surge", payload.surge.applied, "impact") : ""}
@@ -660,6 +672,9 @@ function buildCombatPayloadBlock(payload, state) {
   }
   if (payload.surge?.applied) {
     notes.push(`Surge rolled ${payload.surge.roll} on ${payload.surge.dice} and turned ${payload.surge.applied} wound(s) into bypassed armour against ${payload.surge.matchedTags.join("/")}.`);
+  }
+  if (payload.automaticHits?.count) {
+    notes.push(`Hits added ${payload.automaticHits.count} automatic armour-pool hit(s) at ${payload.automaticHits.damage} damage each, and they did not roll to wound or generate Surge.`);
   }
   if (payload.criticalHit?.applied) {
     notes.push(`Critical Hit pushed ${payload.criticalHit.applied} wound(s) straight past armour.`);
@@ -696,13 +711,38 @@ function buildCombatPayloadBlock(payload, state) {
     );
   }
 
+  const ruleNotes = [
+    `Attack order here is: hit rolls, wound rolls, armour-pool effects, saves, then damage.`,
+    payload.precision ? `Precision moved ${payload.precision} failed hit dice straight into the armour pool, so those dice counted as hits without rolling to wound.` : null,
+    payload.automaticHits?.count ? `Hits adds automatic armour-pool hits. Those dice skip the hit and wound steps and do not generate Surge.` : null,
+    payload.surge?.applied ? `Surge happens after wounds are created. Matching wounds are pushed past armour before normal saves are rolled.` : null,
+    payload.criticalHit?.applied ? `Critical Hit bypasses armour by moving wounds straight toward damage before save rolls.` : null,
+    payload.dodge?.prevented ? `Dodge cancels a limited number of bypass-armour hits before damage is applied.` : null,
+    payload.evade?.saved ? `Evade happens after armour results are known, letting the defender avoid hits that would otherwise deal damage.` : null,
+    payload.visible === false ? `Indirect Fire let this attack ignore line of sight for targeting.` : null,
+    payload.longRangePenalty ? `Long Range extended the shot beyond base range, but the attack paid a hit penalty to do it.` : null,
+    payload.burstFire?.bonusAttacks ? `Burst Fire increases attack volume when the target is inside the weapon's close-range band.` : null,
+    payload.lockedIn ? `Locked In adds attacks because the target counted as stationary when this shot was resolved.` : null,
+    payload.antiEvade ? `Anti-Evade makes the defender's evade roll harder.` : null,
+    payload.fightingRank != null ? `Only models in fighting rank, plus models supporting them from base contact, were allowed to contribute to this melee batch.` : null
+  ].filter(Boolean);
+
+  const nextStepNotes = [
+    payload.casualties > 0 ? `${target} lost ${payload.casualties} model(s), so its supply and board presence may have changed immediately.` : `${target} kept all of its models alive through this exchange.`,
+    payload.mode === "melee"
+      ? (payload.totalDamage > 0 ? `This was a melee resolution, so the result can change who stays engaged and who can strike back next.` : `No damage got through in melee, so the units may stay tied up for later combat activations.`)
+      : `This attack was queued from Assault and resolved in Combat, so the next important step is the next combat activation or reaction already in queue.`
+  ].filter(Boolean);
+
   return `
     <div class="story-lead"><strong>${escapeHtml(attacker)}</strong> resolved a ${escapeHtml(actionLabel.toLowerCase())} into <strong>${escapeHtml(target)}</strong> with <strong>${escapeHtml(weapon)}</strong>.</div>
     ${statGrid}
     <div class="story-note-row">
       ${chips.map(chip => `<span class="story-chip">${escapeHtml(chip)}</span>`).join("")}
     </div>
-    ${notes.length ? `<div class="story-summary-list">${notes.map(note => `<div class="story-summary-item">${escapeHtml(note)}</div>`).join("")}</div>` : ""}
+    ${renderStorySection("What Happened", notes)}
+    ${renderStorySection("Why It Worked", ruleNotes, "teaching")}
+    ${renderStorySection("What This Means", nextStepNotes, "next")}
   `;
 }
 
@@ -801,6 +841,7 @@ function buildStoryBlock(text) {
         ${renderStoryStat("Total", total, success ? "success" : "warning")}
       </div>
       <div class="story-outcome ${success ? "success" : "warning"}">${success ? `Charge succeeded by ${margin}".` : `Charge failed by ${margin}".`}</div>
+      ${renderStorySection("Why It Worked", [`Charge total = die + Speed. That total must meet or beat the distance needed to end in melee range.`], "teaching")}
     `;
   }
 
@@ -810,6 +851,7 @@ function buildStoryBlock(text) {
     return `
       <div class="story-lead"><strong>${escapeHtml(defender)}</strong> has reacted to <strong>${escapeHtml(attacker)}</strong>.</div>
       <div class="story-outcome warning">An Overwatch attack is now queued and will resolve in Combat.</div>
+      ${renderStorySection("Why It Worked", [`Overwatch is a reaction to a charge declaration. The defender gets to fire before the charge attack resolves unless another rule blocks that reaction.`], "teaching")}
     `;
   }
 
@@ -832,6 +874,7 @@ function buildStoryBlock(text) {
     return `
       <div class="story-lead"><strong>${escapeHtml(attacker)}</strong> has targeted <strong>${escapeHtml(target)}</strong>.</div>
       <div class="story-outcome">That attack is locked into the Combat Phase queue.</div>
+      ${renderStorySection("Why It Worked", [`Ranged attacks are declared in Assault, but they resolve later in Combat. This popup means the target was legal and the attack is now queued.`], "teaching")}
     `;
   }
 
@@ -841,6 +884,7 @@ function buildStoryBlock(text) {
     return `
       <div class="story-lead"><strong>${escapeHtml(attacker)}</strong> will make a melee attack against <strong>${escapeHtml(target)}</strong>.</div>
       <div class="story-outcome success">The charge is confirmed and queued for Combat.</div>
+      ${renderStorySection("Why It Worked", [`The charge roll was high enough to reach melee range, so the unit gets a charge attack in Combat.`], "teaching")}
     `;
   }
 
@@ -850,6 +894,7 @@ function buildStoryBlock(text) {
     return `
       <div class="story-lead"><strong>${escapeHtml(attacker)}</strong> did not get in.</div>
       <div class="story-outcome warning">No melee attack was queued from this charge attempt.</div>
+      ${renderStorySection("Why It Worked", [`The charge total came up short, so the unit keeps its activation but does not gain a melee attack from that declaration.`], "teaching")}
     `;
   }
 
@@ -863,6 +908,7 @@ function buildStoryBlock(text) {
         <span class="story-chip">Close Ranks</span>
         <span class="story-chip">Burrowed Removed</span>
       </div>
+      ${renderStorySection("Why It Worked", [`A burrowed unit cannot stay concealed while completing melee above ground, so Close Ranks surfaces it before the attack finishes resolving.`], "teaching")}
     `;
   }
 
@@ -889,6 +935,7 @@ function buildStoryBlock(text) {
         ${renderStoryStat("Healed", healed, Number(healed) > 0 ? "success" : "")}
       </div>
       <div class="story-outcome success">${escapeHtml(target)} regains ${escapeHtml(healed)} wound(s) right now.</div>
+      ${renderStorySection("Why It Worked", [`Medpack checks nearby support first, then restores wounds immediately. It helps damaged models but does not bring destroyed models back.`], "teaching")}
     `;
   }
 
@@ -903,6 +950,7 @@ function buildStoryBlock(text) {
         <span class="story-chip">No Long Range</span>
         <span class="story-chip">Until End of Round</span>
       </div>
+      ${renderStorySection("Why It Worked", [`Optical Flare is a ranged debuff. It shortens the target's ranged reach and shuts off Long Range for the rest of the round.`], "teaching")}
     `;
   }
 
@@ -915,6 +963,7 @@ function buildStoryBlock(text) {
       <div class="story-note-row">
         <span class="story-chip">${escapeHtml(sources)}</span>
       </div>
+      ${renderStorySection("Why It Worked", [`Life Support reduces damage after the attack gets through, which can keep models alive even after hits and failed saves are already known.`], "teaching")}
     `;
   }
 
@@ -928,6 +977,7 @@ function buildStoryBlock(text) {
         <span class="story-chip">Activated in ${escapeHtml(phase)}</span>
         <span class="story-chip">Damage -${escapeHtml(reducedBy)}</span>
       </div>
+      ${renderStorySection("Why It Worked", [`Zealous Round trades the unit's unused activation in this phase for damage reduction right now.`], "teaching")}
     `;
   }
 
@@ -1000,6 +1050,7 @@ function buildStoryBlock(text) {
     return `
       <div class="story-lead"><strong>${escapeHtml(player)}</strong> used <strong>${escapeHtml(cardName)}</strong>${target ? ` on <strong>${escapeHtml(target)}</strong>` : ""}.</div>
       <div class="story-outcome">${escapeHtml(effectSummary)}</div>
+      ${renderStorySection("What To Watch For", [`The effect is now live on its allowed target and timing window. The next relevant roll, move, or phase step will use the modified values.`], "next")}
     `;
   }
 
@@ -1342,7 +1393,7 @@ function describeTacticalCardForModal(card, targetName = null) {
   const pieces = modifiers.map(modifier => {
     const targetLabel = targetName ? `${targetName}` : "the target";
     if (modifier.key === "weapon.hitTarget" && modifier.operation === "add" && modifier.value < 0) {
-      return `${targetLabel} hits ${Math.abs(modifier.value)} better ${durationText}`;
+      return `${targetLabel} improves its hit roll by ${Math.abs(modifier.value)} ${durationText}`;
     }
     if (modifier.key === "weapon.attacksPerModel" && modifier.operation === "add" && modifier.value > 0) {
       return `${targetLabel} gains +${modifier.value} melee attack per model ${durationText}`;
@@ -1356,8 +1407,10 @@ function describeTacticalCardForModal(card, targetName = null) {
     return null;
   }).filter(Boolean);
 
-  if (pieces.length) return pieces.join(". ") + ".";
-  return `This card changes ${card.target.replace(/_/g, " ")} behavior ${durationText}.`;
+  if (pieces.length) {
+    return `${pieces.join(". ")}. Rule timing: this card is played in the ${card.phase} phase and lasts ${durationText}.`;
+  }
+  return `This card changes ${card.target.replace(/_/g, " ")} behavior ${durationText}. Rule timing: play it in the ${card.phase} phase.`;
 }
 
 function buildActionButtons() {

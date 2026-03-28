@@ -86,11 +86,17 @@ function formatWeaponFull(weapon) {
   const ap = weapon.armorPenetration ?? 0;
   const keywords = weapon.keywords?.length ? weapon.keywords.map(k => k.replace(/_/g, " ")).join(", ") : "";
   const surge = weapon.surge ? `${weapon.surge.tags.join(", ")} / ${weapon.surge.dice}` : "";
+  const hits = weapon.hits
+    ? (typeof weapon.hits === "number"
+      ? `Hits ${weapon.hits} (${weapon.damage ?? 1})`
+      : `Hits ${weapon.hits.count ?? weapon.hits.value ?? weapon.hits.hits ?? 0} (${weapon.hits.damage ?? weapon.damage ?? 1})`)
+    : "";
   const longRange = weapon.longRangeInches ?? weapon.longRange ?? null;
   const precision = weapon.precision ? `Precision ${weapon.precision}` : "";
   const criticalHit = weapon.criticalHit ? `Critical ${weapon.criticalHit}` : "";
   const antiEvade = weapon.antiEvade ? `Anti-Evade ${weapon.antiEvade}` : "";
   const indirectFire = weapon.indirectFire ? "Indirect Fire" : "";
+  const pinpoint = weapon.pinpoint || weapon.keywords?.includes("pinpoint") ? "Pinpoint" : "";
   const burstFireValue = weapon.burstFire
     ? (typeof weapon.burstFire === "number"
       ? { rangeInches: weapon.rangeInches, bonusAttacks: weapon.burstFire }
@@ -104,7 +110,7 @@ function formatWeaponFull(weapon) {
   const pierce = weapon.pierce
     ? (Array.isArray(weapon.pierce) ? weapon.pierce : [weapon.pierce]).map(entry => `Pierce ${entry.tag} ${entry.damage}`).join(", ")
     : "";
-  const extraRules = [precision, criticalHit, antiEvade, burstFire, lockedIn, concentratedFire, bulky, instant, pierce, indirectFire, longRange ? `Long Range ${longRange}"` : ""].filter(Boolean).join(", ");
+  const extraRules = [hits, precision, criticalHit, antiEvade, burstFire, lockedIn, concentratedFire, bulky, instant, pinpoint, pierce, indirectFire, longRange ? `Long Range ${longRange}"` : ""].filter(Boolean).join(", ");
 
   return `
     <div class="weapon-stat-grid">
@@ -124,6 +130,9 @@ function formatWeaponOneLine(weapon) {
   const attacks = weapon.attacksPerModel ?? weapon.shotsPerModel ?? 1;
   const range = weapon.rangeInches != null ? `${weapon.rangeInches}"` : "Melee";
   const surge = weapon.surge ? `, Surge ${weapon.surge.tags.join("/")} ${weapon.surge.dice}` : "";
+  const hits = weapon.hits
+    ? `, Hits ${typeof weapon.hits === "number" ? weapon.hits : weapon.hits.count ?? weapon.hits.value ?? weapon.hits.hits ?? 0} (${typeof weapon.hits === "number" ? weapon.damage ?? 1 : weapon.hits.damage ?? weapon.damage ?? 1})`
+    : "";
   const burstFireValue = weapon.burstFire
     ? (typeof weapon.burstFire === "number"
       ? { rangeInches: weapon.rangeInches, bonusAttacks: weapon.burstFire }
@@ -139,12 +148,13 @@ function formatWeaponOneLine(weapon) {
   if (weapon.bulky || weapon.keywords?.includes("bulky")) extras.push("Bulky");
   if (weapon.instant || weapon.keywords?.includes("instant")) extras.push("Instant");
   if (weapon.indirectFire) extras.push("Indirect");
+  if (weapon.pinpoint || weapon.keywords?.includes("pinpoint")) extras.push("Pinpoint");
   if (weapon.longRangeInches ?? weapon.longRange) extras.push(`Long ${weapon.longRangeInches ?? weapon.longRange}"`);
   if (weapon.pierce) {
     const entries = Array.isArray(weapon.pierce) ? weapon.pierce : [weapon.pierce];
     extras.push(entries.map(entry => `Pierce ${entry.tag} ${entry.damage}`).join("/"));
   }
-  return `${range} range, ${attacks} atk/model, ${weapon.hitTarget ?? "?"}+ to hit, ${weapon.damage ?? 1} dmg${surge}${extras.length ? `, ${extras.join(", ")}` : ""}`;
+  return `${range} range, ${attacks} atk/model, ${weapon.hitTarget ?? "?"}+ to hit, ${weapon.damage ?? 1} dmg${surge}${hits}${extras.length ? `, ${extras.join(", ")}` : ""}`;
 }
 
 /* ══════════════════════════════════════════════════════════════

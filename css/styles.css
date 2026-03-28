@@ -438,11 +438,30 @@ kbd { display: inline-block; padding: 0 3px; border-radius: 3px; background: rgb
   gap: 8px;
   margin-top: 12px;
 }
+.story-section {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+.story-section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(235, 242, 250, 0.62);
+}
 .story-summary-item {
   border-left: 3px solid rgba(146,177,212,.4);
   padding-left: 10px;
   color: var(--muted);
   line-height: 1.45;
+}
+.story-section.teaching .story-summary-item {
+  border-left-color: rgba(102, 191, 255, 0.68);
+  color: rgba(232, 245, 255, 0.96);
+}
+.story-section.next .story-summary-item {
+  border-left-color: rgba(120, 255, 182, 0.68);
+  color: rgba(236, 255, 244, 0.96);
 }
 .story-chip {
   display: inline-flex;

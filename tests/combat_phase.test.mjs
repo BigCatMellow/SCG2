@@ -384,7 +384,7 @@ test('surge bypasses armour when the target matches the weapon surge tags', () =
   assert.equal(state.lastCombatReport[0].surge?.dice, 'D3');
   assert.equal(state.lastCombatReport[0].surge?.applied, 2);
   assert.equal(state.lastCombatReport[0].saved, 0);
-  assert.equal(state.lastCombatReport[0].casualties, 6);
+  assert.equal(state.lastCombatReport[0].casualties, 8);
 });
 
 test('life support reduces damage from nearby medics with stabilizer medpacks', () => {
@@ -485,6 +485,38 @@ test('precision converts failed hit dice into extra hits', () => {
   assert.ok(state.lastCombatReport[0].casualties >= 2);
 });
 
+test('hits keyword adds automatic armour-pool hits without generating surge', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_marines_1', templateId: 'marine_t2' }],
+    armyB: [{ id: 'red_zerglings_1', templateId: 'zergling_squad' }],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  placeUnitAt(state, 'blue_marines_1', 10, 10);
+  placeUnitAt(state, 'red_zerglings_1', 12, 10);
+  Object.assign(state.units.blue_marines_1.rangedWeapons[0], {
+    shotsPerModel: 1,
+    hitTarget: 6,
+    damage: 1,
+    surge: { tags: ['Light'], dice: 'D6' },
+    hits: { count: 2, damage: 2 }
+  });
+
+  const rolls = [
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0
+  ];
+  let index = 0;
+  state.combatQueue.push({ type: 'ranged_attack', attackerId: 'blue_marines_1', targetId: 'red_zerglings_1' });
+  resolveCombatPhase(state, { rng: () => rolls[index++] ?? 0 });
+
+  assert.deepEqual(state.lastCombatReport[0].automaticHits, { count: 2, damage: 2 });
+  assert.equal(state.lastCombatReport[0].surge, null);
+  assert.equal(state.lastCombatReport[0].hits, 2);
+  assert.equal(state.lastCombatReport[0].totalDamage, 4);
+});
+
 test('long range allows attacks beyond base range with a hit penalty', () => {
   const state = createInitialGameState({
     missionId: 'take_and_hold',
@@ -578,8 +610,8 @@ test('hidden target can use evade to cancel unsaved ranged hits', () => {
   state.combatQueue.push({ type: 'ranged_attack', attackerId: 'blue_marines_1', targetId: 'red_zerglings_1' });
   resolveCombatPhase(state, { rng: () => rolls[index++] ?? 0 });
 
-  assert.equal(state.lastCombatReport[0].evade?.saved, 6);
-  assert.equal(state.lastCombatReport[0].casualties, 0);
+  assert.equal(state.lastCombatReport[0].evade?.saved, 5);
+  assert.equal(state.lastCombatReport[0].casualties, 1);
 });
 
 test('anti-evade worsens the target evade roll', () => {

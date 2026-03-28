@@ -38,6 +38,10 @@ export function hasInstantWeapon(weapon) {
   return weaponHasKeyword(weapon, "instant");
 }
 
+export function hasPinpointWeapon(weapon) {
+  return weaponHasKeyword(weapon, "pinpoint");
+}
+
 export function areUnitsWithinRevealRange(attacker, target, revealRange = HIDDEN_REVEAL_RANGE) {
   const attackerPoint = getLeaderPoint(attacker);
   const targetPoint = getLeaderPoint(target);
@@ -67,6 +71,10 @@ export function isTargetHiddenFromUnit(state, attacker, target) {
 export function canTargetWithRangedWeapon(state, attacker, target, weapon) {
   if (attacker?.status?.engaged && hasBulkyWeapon(weapon)) {
     return { ok: false, reason: "Bulky weapons cannot be used while the attacker is engaged." };
+  }
+
+  if (target?.status?.engaged && !hasPinpointWeapon(weapon)) {
+    return { ok: false, reason: "Engaged enemy units can only be targeted by ranged attacks with Pinpoint." };
   }
 
   if (isTargetHiddenFromUnit(state, attacker, target)) {

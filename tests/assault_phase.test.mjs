@@ -197,6 +197,33 @@ test('bulky ranged weapons cannot be declared while engaged', () => {
   assert.match(declareResult.message, /bulky/i);
 });
 
+test('engaged enemy units cannot be targeted by normal ranged attacks', () => {
+  const state = buildState();
+  placeLeaderAt(state, 'blue_marines_1', 5, 5);
+  placeLeaderAt(state, 'red_zealots_1', 10, 5);
+  advanceToNextPhase(state);
+  state.units.red_zealots_1.status.engaged = true;
+
+  const declareResult = resolveDeclareRangedAttack(state, 'playerA', 'blue_marines_1', 'red_zealots_1');
+
+  assert.equal(declareResult.ok, false);
+  assert.match(declareResult.message, /engaged/i);
+});
+
+test('pinpoint ranged weapons can target engaged enemy units', () => {
+  const state = buildState();
+  placeLeaderAt(state, 'blue_marines_1', 5, 5);
+  placeLeaderAt(state, 'red_zealots_1', 10, 5);
+  advanceToNextPhase(state);
+  state.units.red_zealots_1.status.engaged = true;
+  state.units.blue_marines_1.rangedWeapons[0].pinpoint = true;
+
+  const declareResult = resolveDeclareRangedAttack(state, 'playerA', 'blue_marines_1', 'red_zealots_1');
+
+  assert.equal(declareResult.ok, true);
+  assert.equal(state.combatQueue[0].targetId, 'red_zealots_1');
+});
+
 test('indirect fire can be declared without line of sight', () => {
   const state = createInitialGameState({
     missionId: 'take_and_hold',

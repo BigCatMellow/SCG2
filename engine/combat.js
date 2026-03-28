@@ -353,6 +353,20 @@ function getCriticalHitValue(weapon) {
   return Math.max(0, Math.floor(weapon.criticalHit ?? 0));
 }
 
+function getAutomaticHitsRule(weapon) {
+  if (!weapon?.hits) return null;
+  if (typeof weapon.hits === "number") {
+    return {
+      count: Math.max(0, Math.floor(weapon.hits)),
+      damage: Math.max(1, Math.floor(weapon.damage ?? 1))
+    };
+  }
+  return {
+    count: Math.max(0, Math.floor(weapon.hits.count ?? weapon.hits.value ?? weapon.hits.hits ?? 0)),
+    damage: Math.max(1, Math.floor(weapon.hits.damage ?? weapon.damage ?? 1))
+  };
+}
+
 function getBurstFireRule(weapon) {
   if (!weapon?.burstFire) return null;
   if (typeof weapon.burstFire === "number") {
@@ -418,6 +432,35 @@ function getObjectiveDefenseBonus(state, unit) {
 
 function hasAncillaryCarapaceAvailable(target) {
   return target?.abilities?.includes("ancillary_carapace") && !target?.status?.ancillaryCarapaceUsedThisPhase;
+}
+
+function createArmourPoolEntries(count, damage, options = {}) {
+  const entryCount = Math.max(0, Math.floor(count));
+  const entryDamage = Math.max(1, Math.floor(damage ?? 1));
+  return Array.from({ length: entryCount }, () => ({
+    damage: entryDamage,
+    surgeEligible: options.surgeEligible !== false,
+    source: options.source ?? "standard"
+  }));
+}
+
+function popHighestDamageEntries(entries, count, predicate = null) {
+  if (count <= 0 || !entries.length) return [];
+  const indexed = entries
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => (predicate ? predicate(entry) : true))
+    .sort((a, b) => {
+      if (b.entry.damage !== a.entry.damage) return b.entry.damage - a.entry.damage;
+      return a.index - b.index;
+    })
+    .slice(0, count)
+    .sort((a, b) => b.index - a.index);
+
+  const removed = [];
+  for (const { index } of indexed) {
+    removed.push(entries.splice(index, 1)[0]);
+  }
+  return removed;
 }
 
 function getPhaseActivationStatus(unit, phase) {
@@ -555,39 +598,48 @@ function resolveImpactHits(state, attacker, target, rng, options = {}) {
   };
 }
 
-function resolveSurge(weapon, target, wounds, rng) {
-  if (!weapon.surge || wounds <= 0) return null;
+function resolveSurge(weapon, target, surgeEligibleEntries, rng) {
+  if (!weapon.surge || surgeEligibleEntries.length <= 0) return null;
   const surgeTags = weapon.surge.tags ?? [];
   const matchedTags = surgeTags.filter(tag => target.tags.includes(tag));
   if (!matchedTags.length) return null;
 
   const roll = rollDiceExpression(weapon.surge.dice, rng);
-  const applied = Math.min(wounds, roll);
+  const appliedEntries = popHighestDamageEntries(surgeEligibleEntries, roll);
+  const applied = appliedEntries.length;
   return {
     tags: surgeTags,
     matchedTags,
     dice: weapon.surge.dice,
     roll,
-    applied
+    applied,
+    entries: appliedEntries
   };
 }
 
-function resolveCriticalHit(weapon, wounds) {
-  const applied = Math.min(wounds, getCriticalHitValue(weapon));
+function resolveCriticalHit(weapon, armourPoolEntries) {
+  const appliedEntries = popHighestDamageEntries(armourPoolEntries, getCriticalHitValue(weapon));
+  const applied = appliedEntries.length;
   if (applied <= 0) return null;
   return {
     applied,
-    value: getCriticalHitValue(weapon)
+    value: getCriticalHitValue(weapon),
+    entries: appliedEntries
   };
 }
 
-function resolveDodge(target, bypassedArmour) {
+function resolveDodge(target, bypassedEntries) {
   const dodge = Math.max(0, Math.floor(target?.defense?.dodge ?? 0));
-  if (dodge <= 0 || bypassedArmour <= 0) return null;
-  const prevented = Math.min(dodge, bypassedArmour);
+  if (dodge <= 0 || bypassedEntries.length <= 0) return null;
+  const preventedEntries = bypassedEntries
+    .slice()
+    .sort((a, b) => b.damage - a.damage)
+    .slice(0, dodge);
+  const prevented = preventedEntries.length;
   return {
     value: dodge,
-    prevented
+    prevented,
+    entries: preventedEntries
   };
 }
 
@@ -760,22 +812,39 @@ function resolveSingleAttack(state, declaration, rng) {
   const attempts = Math.max(0, Math.floor(isOverwatch ? rawAttempts / 2 : rawAttempts));
   const rolledHits = rollSuccesses(attempts, hitTarget, rng);
   const precisionApplied = Math.min(Math.max(0, attempts - rolledHits), getPrecisionValue(weapon));
-  const hits = rolledHits + precisionApplied;
-  const wounds = rollSuccesses(hits, woundTarget, rng);
-  const criticalHitResult = resolveCriticalHit(weapon, wounds);
-  const surgeResult = resolveSurge(weapon, target, wounds, rng);
-  const rawBypassedArmour = (surgeResult?.applied ?? 0) + (criticalHitResult?.applied ?? 0);
-  const dodgeResult = resolveDodge(target, rawBypassedArmour);
-  const bypassedArmour = Math.max(0, rawBypassedArmour - (dodgeResult?.prevented ?? 0));
-  const saveableWounds = Math.max(0, wounds - rawBypassedArmour + (dodgeResult?.prevented ?? 0));
+  const wounds = rollSuccesses(rolledHits, woundTarget, rng);
+  const damagePerHit = getPierceDamage(weapon, target) ?? weapon.damage;
+  const automaticHitsRule = getAutomaticHitsRule(weapon);
+  const automaticHitEntries = createArmourPoolEntries(automaticHitsRule?.count ?? 0, automaticHitsRule?.damage ?? damagePerHit, {
+    surgeEligible: false,
+    source: "hits"
+  });
+  const armourPoolEntries = [
+    ...createArmourPoolEntries(wounds, damagePerHit, { source: "wound" }),
+    ...createArmourPoolEntries(precisionApplied, damagePerHit, { source: "precision" }),
+    ...automaticHitEntries
+  ];
+  const surgeEligibleEntries = armourPoolEntries.filter(entry => entry.surgeEligible);
+  const criticalHitResult = resolveCriticalHit(weapon, armourPoolEntries);
+  const surgeResult = resolveSurge(weapon, target, surgeEligibleEntries, rng);
+  const bypassedEntries = [...(criticalHitResult?.entries ?? []), ...(surgeResult?.entries ?? [])];
+  const dodgeResult = resolveDodge(target, bypassedEntries);
+  const preventedByDodge = new Set((dodgeResult?.entries ?? []).map(entry => entry));
+  const finalBypassedEntries = bypassedEntries.filter(entry => !preventedByDodge.has(entry));
+  for (const preventedEntry of dodgeResult?.entries ?? []) {
+    armourPoolEntries.push(preventedEntry);
+  }
+  const saveableWounds = armourPoolEntries.length;
   const ancillaryCarapaceResult = resolveAncillaryCarapace(target, saveableWounds);
   if (ancillaryCarapaceResult) saveTarget = Math.max(2, saveTarget - ancillaryCarapaceResult.bonus);
   const saved = rollSuccesses(saveableWounds, saveTarget, rng);
-  const unsavedBeforeEvade = Math.max(0, saveableWounds - saved) + bypassedArmour;
+  popHighestDamageEntries(armourPoolEntries, saved);
+  const unsavedBeforeEvade = armourPoolEntries.length + finalBypassedEntries.length;
   const evadeResult = resolveEvade(state, attacker, target, weapon, isMelee, visible, unsavedBeforeEvade, rng);
-  const unsaved = Math.max(0, unsavedBeforeEvade - (evadeResult?.saved ?? 0));
-  const damagePerHit = getPierceDamage(weapon, target) ?? weapon.damage;
-  const rawTotalDamage = unsaved * damagePerHit;
+  const allDamageEntries = [...finalBypassedEntries, ...armourPoolEntries];
+  popHighestDamageEntries(allDamageEntries, Math.max(0, evadeResult?.saved ?? 0));
+  const unsaved = allDamageEntries.length;
+  const rawTotalDamage = allDamageEntries.reduce((sum, entry) => sum + entry.damage, 0);
   const lifeSupportResult = resolveLifeSupport(state, target, rawTotalDamage);
   const zealousRoundResult = resolveZealousRound(state, target, Math.max(0, rawTotalDamage - (lifeSupportResult?.reducedBy ?? 0)));
   const totalDamage = Math.max(0, rawTotalDamage - (lifeSupportResult?.reducedBy ?? 0) - (zealousRoundResult?.reducedBy ?? 0));
@@ -796,7 +865,7 @@ function resolveSingleAttack(state, declaration, rng) {
   appendLog(
     state,
     "combat",
-    `${attacker.name} ${isMelee ? "charges" : isOverwatch ? "fires overwatch at" : "attacks"} ${target.name} with ${weapon.name}: ${attempts} attacks, ${hits} hits${precisionApplied ? ` (including ${precisionApplied} Precision)` : ""}, ${wounds} wounds${criticalHitResult ? `, Critical Hit ${criticalHitResult.applied} bypassed armour` : ""}${surgeResult ? `, Surge ${surgeResult.dice} rolled ${surgeResult.roll} vs ${surgeResult.matchedTags.join("/")} -> ${surgeResult.applied} bypassed armour` : ""}${dodgeResult ? `, Dodge prevented ${dodgeResult.prevented} bypassed hits` : ""}, ${saved} saves${ancillaryCarapaceResult ? " (Ancillary Carapace)" : ""}${objectiveDefenseBonus ? ` (objective armor +${objectiveDefenseBonus})` : ""}${coverApplies ? " (cover)" : ""}${evadeResult ? `, ${evadeResult.saved} evade saves on ${evadeResult.target}+${evadeResult.lurkingBonus ? " with Lurking" : ""}` : ""}${!visible && !isMelee ? ", indirect fire without line of sight" : ""}${longRangePenalty ? ", long range penalty applied" : ""}${burstFireApplied ? `, Burst Fire +${burstFireRule.bonusAttacks}` : ""}${lockedInBonus ? `, Locked In +${lockedInBonus}` : ""}${getAntiEvadeValue(weapon) ? `, Anti-Evade ${getAntiEvadeValue(weapon)}` : ""}${damagePerHit !== weapon.damage ? `, Pierce damage ${damagePerHit}` : ""}${lifeSupportResult ? `, Life Support reduced damage by ${lifeSupportResult.reducedBy}` : ""}${zealousRoundResult ? `, Zealous Round reduced damage by ${zealousRoundResult.reducedBy}` : ""}${concentratedFireCap > 0 ? `, Concentrated Fire cap ${concentratedFireCap}${damageResult.discardedDamage > 0 ? ` (discarded ${damageResult.discardedDamage} damage)` : ""}` : ""}${isMelee ? `, Fighting Rank ${meleeRankProfile.fightingRankModels.length}, Supporting Rank ${meleeRankProfile.supportingRankModels.length}, Assigned Models ${aliveAttackerModels}${primaryTargetFocus ? ", Primary Target Focus" : ""}` : ""}, ${casualties} casualties.`
+    `${attacker.name} ${isMelee ? "charges" : isOverwatch ? "fires overwatch at" : "attacks"} ${target.name} with ${weapon.name}: ${attempts} attacks, ${rolledHits + precisionApplied + automaticHitEntries.length} hits${precisionApplied ? ` (including ${precisionApplied} Precision)` : ""}${automaticHitEntries.length ? ` (including ${automaticHitEntries.length} automatic Hits)` : ""}, ${wounds} wounds${criticalHitResult ? `, Critical Hit ${criticalHitResult.applied} bypassed armour` : ""}${surgeResult ? `, Surge ${surgeResult.dice} rolled ${surgeResult.roll} vs ${surgeResult.matchedTags.join("/")} -> ${surgeResult.applied} bypassed armour` : ""}${dodgeResult ? `, Dodge prevented ${dodgeResult.prevented} bypassed hits` : ""}, ${saved} saves${ancillaryCarapaceResult ? " (Ancillary Carapace)" : ""}${objectiveDefenseBonus ? ` (objective armor +${objectiveDefenseBonus})` : ""}${coverApplies ? " (cover)" : ""}${evadeResult ? `, ${evadeResult.saved} evade saves on ${evadeResult.target}+${evadeResult.lurkingBonus ? " with Lurking" : ""}` : ""}${!visible && !isMelee ? ", indirect fire without line of sight" : ""}${longRangePenalty ? ", long range penalty applied" : ""}${burstFireApplied ? `, Burst Fire +${burstFireRule.bonusAttacks}` : ""}${lockedInBonus ? `, Locked In +${lockedInBonus}` : ""}${getAntiEvadeValue(weapon) ? `, Anti-Evade ${getAntiEvadeValue(weapon)}` : ""}${damagePerHit !== weapon.damage ? `, Pierce damage ${damagePerHit}` : ""}${automaticHitEntries.length ? `, Hits ${automaticHitEntries.length} (${automaticHitsRule.damage} damage each)` : ""}${lifeSupportResult ? `, Life Support reduced damage by ${lifeSupportResult.reducedBy}` : ""}${zealousRoundResult ? `, Zealous Round reduced damage by ${zealousRoundResult.reducedBy}` : ""}${concentratedFireCap > 0 ? `, Concentrated Fire cap ${concentratedFireCap}${damageResult.discardedDamage > 0 ? ` (discarded ${damageResult.discardedDamage} damage)` : ""}` : ""}${isMelee ? `, Fighting Rank ${meleeRankProfile.fightingRankModels.length}, Supporting Rank ${meleeRankProfile.supportingRankModels.length}, Assigned Models ${aliveAttackerModels}${primaryTargetFocus ? ", Primary Target Focus" : ""}` : ""}, ${casualties} casualties.`
   );
 
   return {
@@ -807,7 +876,7 @@ function resolveSingleAttack(state, declaration, rng) {
       targetId: target.id,
       weaponId: weapon.id,
       attempts,
-      hits,
+      hits: rolledHits + precisionApplied + automaticHitEntries.length,
       wounds,
       saved,
       unsaved,
@@ -815,6 +884,9 @@ function resolveSingleAttack(state, declaration, rng) {
       impact: impactResult,
       surge: surgeResult,
       precision: precisionApplied,
+      automaticHits: automaticHitEntries.length
+        ? { count: automaticHitEntries.length, damage: automaticHitsRule.damage }
+        : null,
       criticalHit: criticalHitResult,
       evade: evadeResult,
       ancillaryCarapace: ancillaryCarapaceResult,

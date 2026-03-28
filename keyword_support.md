@@ -13,19 +13,19 @@ This file tracks how closely the codebase matches the tabletop keyword glossary.
 
 | Keyword | Status | Notes |
 | --- | --- | --- |
-| `SURGE` | partial | Implemented for the current playable roster as a first-pass bypass-armour mechanic with popup support. Coverage now includes Marines, Kerrigan, Raptors, upgraded Zerglings, and Roach acid spit. Full batch targeting, spillover, evade, and split-target handling are still missing. |
-| `IMPACT` | partial | Implemented for charging units with explicit data. Coverage now includes Raptors, Roaches, and Zerglings in the playable roster. It now respects the current fighting/supporting rank and melee target-focus allocation pass, but still lacks fuller per-model edge cases and broader roster coverage. |
-| `PRECISION` | partial | Implemented as a first-pass conversion of failed hit dice into extra hits before wound rolls. Still missing fuller batch-level interactions and upgrade/card wiring. |
+| `SURGE` | partial | Surge now resolves from the armour pool instead of the old wound-count shortcut, so it plays more correctly with Precision, Critical Hit, Dodge, and saves. Split-target allocation and a few edge-case interactions are still missing. |
+| `IMPACT` | partial | Implemented for charging units with explicit data. Coverage now includes Raptors, Roaches, and Zerglings in the playable roster. It respects fighting/supporting rank and melee target focus, but still lacks player-facing split allocation of Impact dice across multiple eligible enemies. |
+| `PRECISION` | partial | Precision now moves failed hit dice directly into the armour pool instead of faking extra wound rolls, which is much closer to the glossary. It still needs fuller batch-level interactions and broader upgrade/card wiring. |
 | `ANTI-EVADE` | partial | Anti-Evade now worsens evade target numbers during combat. Broader roster data coverage and more keyword interactions are still missing. |
 | `BURST FIRE` | partial | Burst Fire now increases ranged RoA against nearby targets. It is still resolved with leader-to-leader range simplification rather than full per-model checks. |
 | `CONCENTRATED FIRE` | partial | Concentrated Fire now caps casualties and discards overflow damage, and the combat UI now surfaces those capped batches more clearly. It still needs broader roster data coverage and fuller interaction coverage. |
-| `HITS` | missing | Automatic-hit pipeline is not implemented yet. |
+| `HITS` | implemented | `HITS X (Y)` now adds automatic armour-pool hits at their own damage value and correctly skips Surge generation. |
 | `INDIRECT FIRE` | partial | Ranged attacks can now ignore line of sight when the weapon has Indirect Fire, and the combat popups explain when that happened. Still missing fuller terrain/elevation nuance. |
 | `INSTANT` | partial | Instant now shuts down Overwatch-style reaction windows during charge declarations, but broader reaction-ability coverage is still missing because the engine does not yet model many other reaction abilities. |
 | `LOCKED IN` | partial | Locked In now adds RoA against stationary targets during ranged attacks. It still needs broader roster data coverage and any future interaction with more detailed status timing. |
 | `LONG RANGE` | partial | Weapons can now attack out to their long-range band and take a hit penalty beyond base range. Still simplified at unit level rather than per-model batching. |
 | `PIERCE` | partial | Matching target tags can now raise damage per unsaved hit. Still missing broader card/upgrade wiring and richer keyword data coverage. |
-| `PINPOINT` | missing | No precision target-selection support yet. |
+| `PINPOINT` | implemented | Ranged target legality now blocks attacks into engaged enemy units unless the weapon has Pinpoint, which cleanly overrides that restriction. |
 | `CRITICAL HIT` | partial | Implemented as armour-bypassing hits before saves. Still missing interaction with evade/dodge and broader data coverage. |
 | `DODGE` | partial | Dodge now cancels a limited number of bypass-armour hits before damage is applied. Still missing broader roster data coverage and some edge-case interactions. |
 
@@ -48,7 +48,7 @@ This file tracks how closely the codebase matches the tabletop keyword glossary.
 
 ## High-Value Next Steps
 
-1. Finish `SURGE` by adding evade interaction, split-target declarations, and template exceptions.
-2. Add real roster data for the newly-supported RoA keywords so Burst Fire / Locked In / Concentrated Fire show up in live matches more often.
+1. Finish the remaining `SURGE` edge cases, especially split-target allocation and rarer exception handling.
+2. Add real roster data for the newly-supported keywords so Pinpoint / Hits / Burst Fire / Locked In / Concentrated Fire show up in live matches more often.
 3. Expand the evade system with richer roster data, reaction timing, and clearer target legality explanations in the UI.
-4. Add true player-facing split-attack allocation beyond primary target focus, especially when melee or impact attacks should be divided across multiple engaged enemies.
+4. Add true player-facing split-attack allocation beyond primary target focus, especially when melee or Impact attacks should be divided across multiple engaged enemies.
