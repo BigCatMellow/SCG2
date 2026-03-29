@@ -143,28 +143,53 @@ export function isTargetHiddenFromUnit(state, attacker, target) {
 }
 
 export function canTargetWithRangedWeapon(state, attacker, target, weapon) {
+  const attackerPoint = getLeaderPoint(attacker);
+  const targetPoint = getLeaderPoint(target);
+  const targetDistance = attackerPoint && targetPoint ? distance(attackerPoint, targetPoint) : null;
   if (attacker?.status?.engaged && hasBulkyWeapon(weapon)) {
-    return { ok: false, reason: "Bulky weapons cannot be used while the attacker is engaged." };
+    return {
+      ok: false,
+      reason: "Bulky weapons cannot be used while the attacker is engaged.",
+      detail: attackerPoint && targetPoint
+        ? `Attacker is engaged, and ${weapon?.name ?? "this weapon"} has Bulky. Range to target was ${targetDistance.toFixed(1)}".`
+        : `${weapon?.name ?? "This weapon"} has Bulky and cannot fire while the attacker is engaged.`
+    };
   }
 
   if (target?.status?.engaged && !hasPinpointWeapon(weapon)) {
-    return { ok: false, reason: "Engaged enemy units can only be targeted by ranged attacks with Pinpoint." };
+    return {
+      ok: false,
+      reason: "Engaged enemy units can only be targeted by ranged attacks with Pinpoint.",
+      detail: `${target?.name ?? "The target"} is engaged in melee, and ${weapon?.name ?? "this weapon"} does not have Pinpoint.`
+    };
   }
 
   if (isTargetHiddenFromUnit(state, attacker, target)) {
-    return { ok: false, reason: "Target is hidden beyond 4 inches." };
+    return {
+      ok: false,
+      reason: "Target is hidden beyond 4 inches.",
+      detail: `${target?.name ?? "The target"} is Hidden, not detected, and ${targetDistance != null ? `is ${targetDistance.toFixed(1)}" away` : "is outside reveal distance"}. Hidden targets can only be revealed for normal targeting within ${HIDDEN_REVEAL_RANGE}".`
+    };
   }
 
   if (isTargetConcealedByGrass(state, attacker, target)) {
-    return { ok: false, reason: "Target is concealed in grass beyond 4 inches." };
+    return {
+      ok: false,
+      reason: "Target is concealed in grass beyond 4 inches.",
+      detail: `${target?.name ?? "The target"} is in grass, ${attacker?.name ?? "the attacker"} is not, no Detection is active, and the units are ${targetDistance != null ? `${targetDistance.toFixed(1)}"` : "more than 4\""} apart. Grass concealment blocks this shot beyond ${HIDDEN_REVEAL_RANGE}".`
+    };
   }
 
   const visible = hasLineOfSight(state, attacker, target);
   if (!visible && !hasIndirectFire(weapon)) {
-    return { ok: false, reason: "Target is not visible." };
+    return {
+      ok: false,
+      reason: "Target is not visible.",
+      detail: `${target?.name ?? "The target"} is outside line of sight from ${attacker?.name ?? "the attacker"}, and ${weapon?.name ?? "this weapon"} does not have Indirect Fire.`
+    };
   }
 
-  return { ok: true, visible };
+  return { ok: true, visible, detail: visible ? "Target is visible." : "Target is not visible, but Indirect Fire allows the attack." };
 }
 
 export function targetGetsEvadeOpportunity(state, attacker, target, weapon, isMelee, visible) {

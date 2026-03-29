@@ -170,7 +170,7 @@ function validateSpecifiedTarget(state, unit, targetUnitId) {
   }
   const targeting = canTargetWithRangedWeapon(state, unit, target, primaryWeapon);
   if (!targeting.ok) {
-    return { ok: false, code: "BAD_TARGET", message: targeting.reason };
+    return { ok: false, code: "BAD_TARGET", message: targeting.reason, detail: targeting.detail ?? null };
   }
   return { ok: true, target };
 }

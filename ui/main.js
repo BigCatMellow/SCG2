@@ -1,4 +1,4 @@
-import { createInitialGameState } from "../engine/state.js";
+import { createInitialGameState, cloneState } from "../engine/state.js";
 import { beginGame } from "../engine/phases.js";
 import { dispatch as engineDispatch } from "../engine/reducer.js";
 import { bindInputHandlers, beginMoveInteraction, beginDeployInteraction, beginDisengageInteraction, beginRunInteraction, beginForceFieldInteraction, beginCreepInteraction, beginOmegaTransferInteraction, beginMedpackInteraction, beginOpticalFlareInteraction, beginDeclareRangedInteraction, beginDeclareChargeInteraction, beginBlinkInteraction, beginPsionicTransferInteraction, cancelCurrentInteraction } from "./input.js";
@@ -82,20 +82,37 @@ const RULE_GLOSSARY = {
 
 function createStore(initialState) {
   let state = initialState;
+  let history = [];
   const listeners = [];
+  const HISTORY_LIMIT = 200;
   return {
     getState() { return state; },
     dispatch(action) {
       const result = engineDispatch(state, action);
       if (result.ok) {
+        history.push(cloneState(state));
+        if (history.length > HISTORY_LIMIT) history = history.slice(history.length - HISTORY_LIMIT);
         state = result.state;
         listeners.forEach(listener => listener(state, result.events ?? []));
       }
       return result;
     },
-    replaceState(nextState) {
+    replaceState(nextState, options = {}) {
       state = nextState;
+      if (options.clearHistory !== false) history = [];
       listeners.forEach(listener => listener(state, []));
+    },
+    canUndo() {
+      return history.length > 0;
+    },
+    getHistoryDepth() {
+      return history.length;
+    },
+    undo() {
+      if (!history.length) return { ok: false, message: "Nothing to undo." };
+      state = history.pop();
+      listeners.forEach(listener => listener(state, []));
+      return { ok: true, state };
     },
     subscribe(listener) {
       listeners.push(listener);
@@ -116,6 +133,7 @@ const uiState = {
   locked: false,
   lastError: null,
   notifications: [],
+  diagnosticHistory: [],
   lastSeenLogCount: 0,
   legalDestinations: [],
   hoveredUnitId: null,
@@ -126,6 +144,8 @@ const uiState = {
   aftermathNarrative: null,
   timelineFocusedKey: null,
   compactActionBar: false,
+  suppressNextBotRun: false,
+  suppressNextBoardNarration: false,
   lastObjectiveSnapshot: null,
   pendingPass: false,
   storyModalQueue: [],
@@ -352,6 +372,8 @@ function rerender() {
     onClearTimelineFocus: clearTimelineFocus,
     onTimelineGlossaryTerm: handleTimelineGlossaryTerm,
     onToggleActionBarCompact: handleActionBarToggle,
+    canUndo: () => store?.canUndo?.() && !uiState.locked,
+    getUndoDepth: () => store?.getHistoryDepth?.() ?? 0,
     buildActionButtons,
     buildCardButtons,
     getModeText,
@@ -530,8 +552,9 @@ function renderSetupModal() {
   root.querySelector("#setupStartBtn")?.addEventListener("click", startConfiguredBattle);
 }
 
-function showError(message) {
+function showError(message, extra = {}) {
   uiState.lastError = message;
+  recordDiagnosticEntry("ui_error", message, extra);
   pushToastNotification(message, "error");
   rerender();
   window.clearTimeout(showError.timer);
@@ -539,6 +562,95 @@ function showError(message) {
     uiState.lastError = null;
     rerender();
   }, 4200);
+}
+
+function recordDiagnosticEntry(kind, message, extra = {}) {
+  const state = store?.getState?.() ?? null;
+  const selectedUnit = state && uiState.selectedUnitId ? state.units[uiState.selectedUnitId] ?? null : null;
+  const hoveredUnit = state && uiState.hoveredUnitId ? state.units[uiState.hoveredUnitId] ?? null : null;
+  uiState.diagnosticHistory.push({
+    kind,
+    message,
+    round: state?.round ?? null,
+    phase: state?.phase ?? null,
+    activePlayer: state?.activePlayer ?? null,
+    mode: uiState.mode ?? null,
+    selectedUnitId: selectedUnit?.id ?? null,
+    selectedUnitName: selectedUnit?.name ?? null,
+    hoveredUnitId: hoveredUnit?.id ?? null,
+    hoveredUnitName: hoveredUnit?.name ?? null,
+    timestamp: new Date().toISOString(),
+    ...extra
+  });
+  if (uiState.diagnosticHistory.length > 300) {
+    uiState.diagnosticHistory = uiState.diagnosticHistory.slice(-300);
+  }
+}
+
+function exportTextFile(filename, content, mimeType = "text/plain") {
+  const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildDiagnosticLogText() {
+  const state = store.getState();
+  const objectiveSnapshot = getObjectiveControlSnapshot(state);
+  const lines = [];
+  lines.push("StarCraft TMG Diagnostic Log");
+  lines.push(`Exported: ${new Date().toISOString()}`);
+  lines.push(`Mission: ${state.mission?.name ?? state.mission?.id ?? "Unknown"}`);
+  lines.push(`Deployment: ${state.deployment?.name ?? state.deployment?.id ?? "Unknown"}`);
+  lines.push(`Round: ${state.round}`);
+  lines.push(`Phase: ${state.phase}`);
+  lines.push(`Active Player: ${state.activePlayer === "playerA" ? "Blue" : "Red"}`);
+  lines.push(`Winner: ${state.winner ? (state.winner === "playerA" ? "Blue" : "Red") : "None"}`);
+  lines.push("");
+  lines.push("Objectives");
+  Object.values(objectiveSnapshot).forEach(result => {
+    const control = result.controller ? (result.controller === "playerA" ? "Blue" : "Red") : (result.contested ? "Contested" : "Uncontrolled");
+    lines.push(`- ${String(result.objectiveId).toUpperCase()}: ${control} | Supply ${result.playerASupply}-${result.playerBSupply}`);
+  });
+  lines.push("");
+  lines.push("Game Log");
+  state.log.forEach((entry, index) => {
+    lines.push(`${index + 1}. [R${entry.round} ${String(entry.phase).toUpperCase()} ${String(entry.type).toUpperCase()}] ${entry.text}`);
+  });
+  lines.push("");
+  lines.push("UI Diagnostics");
+  if (!uiState.diagnosticHistory.length) {
+    lines.push("None.");
+  } else {
+    uiState.diagnosticHistory.forEach((entry, index) => {
+      lines.push(`${index + 1}. [${entry.timestamp}] ${entry.message}`);
+      lines.push(`   Context: round ${entry.round ?? "?"}, phase ${entry.phase ?? "?"}, active ${entry.activePlayer === "playerA" ? "Blue" : entry.activePlayer === "playerB" ? "Red" : "?"}, mode ${entry.mode ?? "none"}`);
+      if (entry.selectedUnitName) lines.push(`   Selected Unit: ${entry.selectedUnitName}${entry.selectedUnitId ? ` (${entry.selectedUnitId})` : ""}`);
+      if (entry.hoveredUnitName) lines.push(`   Hovered Unit: ${entry.hoveredUnitName}${entry.hoveredUnitId ? ` (${entry.hoveredUnitId})` : ""}`);
+      if (entry.detail) lines.push(`   Detail: ${entry.detail}`);
+      if (entry.failedAction) lines.push(`   Action: ${entry.failedAction}`);
+    });
+  }
+  lines.push("");
+  lines.push("Current Battlefield Units");
+  Object.values(state.units)
+    .filter(unit => unit.status?.location === "battlefield")
+    .sort((a, b) => a.owner.localeCompare(b.owner) || a.name.localeCompare(b.name))
+    .forEach(unit => {
+      const alive = unit.modelIds.filter(id => unit.models[id]?.alive).length;
+      const leader = unit.models[unit.leadingModelId];
+      const statuses = Object.entries(unit.status ?? {})
+        .filter(([, value]) => value === true)
+        .map(([key]) => key)
+        .join(", ");
+      lines.push(`- ${unit.owner === "playerA" ? "Blue" : "Red"} | ${unit.name} | ${alive} models | ${unit.currentSupplyValue} supply | ${leader?.x != null && leader?.y != null ? `(${leader.x.toFixed(1)}, ${leader.y.toFixed(1)})` : "off-board"}${statuses ? ` | status: ${statuses}` : ""}`);
+    });
+  return lines.join("\r\n");
 }
 
 function pushToastNotification(message, tone = "info", durationMs = 5200, options = {}) {
@@ -2710,7 +2822,13 @@ function handleModelClick(unitId) {
       type: "DECLARE_RANGED_ATTACK",
       payload: { playerId: "playerA", unitId: selected.id, targetId: clickedUnit.id }
     });
-    if (!result.ok) { showError(result.message); return; }
+    if (!result.ok) {
+      showError(result.message, {
+        detail: result.detail ?? null,
+        failedAction: "DECLARE_RANGED_ATTACK"
+      });
+      return;
+    }
     cancelCurrentInteraction(uiState);
     uiState.legalDestinations = [];
     autoSelectNextUnit();
@@ -2723,7 +2841,13 @@ function handleModelClick(unitId) {
       type: "DECLARE_CHARGE",
       payload: { playerId: "playerA", unitId: selected.id, targetId: clickedUnit.id }
     });
-    if (!result.ok) { showError(result.message); return; }
+    if (!result.ok) {
+      showError(result.message, {
+        detail: result.detail ?? null,
+        failedAction: "DECLARE_CHARGE"
+      });
+      return;
+    }
     cancelCurrentInteraction(uiState);
     uiState.legalDestinations = [];
     autoSelectNextUnit();
@@ -2766,6 +2890,10 @@ function handleModelHover(unitId) {
 }
 
 async function maybeRunBot() {
+  if (uiState.suppressNextBotRun) {
+    uiState.suppressNextBotRun = false;
+    return;
+  }
   if (uiState.locked) return;
   if (uiState.activeStoryModal || uiState.storyModalQueue.length) return;
   if (uiState.pendingCombatChoice) return;
@@ -2800,11 +2928,14 @@ function resetUiForLoadedState(nextState) {
   uiState.boardHighlights = [];
   uiState.aftermathNarrative = null;
   uiState.compactActionBar = false;
+  uiState.suppressNextBotRun = false;
+  uiState.suppressNextBoardNarration = false;
   uiState.lastObjectiveSnapshot = getObjectiveControlSnapshot(nextState);
   uiState.pendingPass = false;
   uiState.storyModalQueue = [];
   uiState.activeStoryModal = null;
   uiState.activeGlossaryTerm = null;
+  uiState.diagnosticHistory = [];
   uiState.shownPhaseTeachingKeys = new Set();
   uiState.pendingCombatChoice = null;
   cancelCurrentInteraction(uiState);
@@ -2815,6 +2946,51 @@ function resetUiForLoadedState(nextState) {
 
 function resetGame() {
   resetUiForLoadedState(buildInitialState());
+}
+
+function clearTransientUiState() {
+  uiState.pendingPass = false;
+  uiState.lastError = null;
+  uiState.notifications = [];
+  uiState.storyModalQueue = [];
+  uiState.activeStoryModal = null;
+  uiState.activeGlossaryTerm = null;
+  uiState.pendingCombatChoice = null;
+  uiState.hoveredUnitId = null;
+  uiState.hoveredObjectiveId = null;
+  uiState.hoveredCombatQueueIndex = null;
+  uiState.selectedCombatQueueIndex = null;
+  uiState.boardHighlights = [];
+  uiState.aftermathNarrative = null;
+  uiState.timelineFocusedKey = null;
+  cancelCurrentInteraction(uiState);
+  uiState.legalDestinations = [];
+  uiState.previewPath = null;
+  uiState.previewUnit = null;
+}
+
+function undoLastStep() {
+  if (!store?.canUndo?.() || uiState.locked) return;
+  clearTransientUiState();
+  uiState.suppressNextBotRun = true;
+  uiState.suppressNextBoardNarration = true;
+  const result = store.undo();
+  if (!result.ok) {
+    uiState.suppressNextBotRun = false;
+    uiState.suppressNextBoardNarration = false;
+    showError(result.message);
+    return;
+  }
+  const nextState = store.getState();
+  uiState.lastSeenLogCount = nextState.log.length;
+  uiState.lastObjectiveSnapshot = getObjectiveControlSnapshot(nextState);
+  if (uiState.selectedUnitId && !nextState.units[uiState.selectedUnitId]) {
+    uiState.selectedUnitId = null;
+  }
+  if (nextState.activePlayer === "playerA") {
+    autoSelectNextUnit();
+  }
+  rerender();
 }
 
 function openSetupModal() {
@@ -2899,16 +3075,20 @@ function exportSaveFile() {
   const state = store.getState();
   const payload = { version: 1, exportedAt: new Date().toISOString(), state };
   const content = JSON.stringify(payload, null, 2);
-  const blob = new Blob([content], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `starcraft-grid-save-${sanitizeSaveFilenamePart(state.mission.id ?? "mission")}.json`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  exportTextFile(`starcraft-grid-save-${sanitizeSaveFilenamePart(state.mission.id ?? "mission")}.json`, content, "application/json");
   pushToastNotification("Save exported.", "success");
+}
+
+function exportDiagnosticLogFile() {
+  const state = store.getState();
+  const content = buildDiagnosticLogText();
+  exportTextFile(
+    `starcraft-grid-log-r${state.round}-${sanitizeSaveFilenamePart(state.phase ?? "phase")}-${sanitizeSaveFilenamePart(state.mission?.id ?? "mission")}.txt`,
+    content
+  );
+  pushToastNotification("Diagnostic log exported.", "success", 5200, {
+    title: "Log Export"
+  });
 }
 
 function isValidImportedState(nextState) {
@@ -2949,7 +3129,9 @@ function controller() {
       document.getElementById("gridModeBtn").textContent = `Grid: ${state.rules.gridMode ? "On" : "Off"}`;
       rerender();
     },
+    onUndo: undoLastStep,
     onOpenArmyBuilder: openArmyBuilder,
+    onExportLog: exportDiagnosticLogFile,
     onExportSave: exportSaveFile,
     onImportSave: () => {
       const input = document.getElementById("importFileInput");
@@ -3168,6 +3350,14 @@ function scheduleBoardHighlightPrune() {
 function updateBoardHighlights(state, events) {
   const now = Date.now();
   const currentSnapshot = getObjectiveControlSnapshot(state);
+  if (uiState.suppressNextBoardNarration) {
+    uiState.suppressNextBoardNarration = false;
+    uiState.boardHighlights = [];
+    uiState.aftermathNarrative = null;
+    uiState.lastObjectiveSnapshot = currentSnapshot;
+    scheduleBoardHighlightPrune();
+    return;
+  }
   pruneBoardHighlights();
   let sequenceOffset = 0;
   const objectiveNarratives = [];
@@ -3341,6 +3531,11 @@ function wirePreviewEvents() {
 function wireKeyboardShortcuts() {
   document.addEventListener("keydown", event => {
     if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") return;
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+      event.preventDefault();
+      undoLastStep();
+      return;
+    }
     if (uiState.activeStoryModal && ["Escape", "Enter", " "].includes(event.key)) {
       event.preventDefault();
       dismissStoryModal();
