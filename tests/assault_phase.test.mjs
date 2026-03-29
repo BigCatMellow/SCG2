@@ -124,6 +124,28 @@ test('movement AI activates guardian shield when clustered allies are exposed', 
   assert.equal(action.payload.unitId, 'blue_sentry_1');
 });
 
+test('movement AI advances out of its home edge instead of idling in the deployment zone', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_marines_1', templateId: 'marine_squad' }],
+    armyB: [{ id: 'red_marines_1', templateId: 'marine_squad' }],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  state.phase = 'movement';
+  state.round = 1;
+  state.activePlayer = 'playerA';
+  state.players.playerA.hand = [];
+  placeLeaderAt(state, 'blue_marines_1', 4, 18);
+  placeLeaderAt(state, 'red_marines_1', 30, 18);
+
+  const action = chooseAction(state, 'playerA');
+
+  assert.equal(action.type, 'MOVE_UNIT');
+  assert.equal(action.payload.unitId, 'blue_marines_1');
+  assert.ok(action.payload.path.at(-1).x > 4);
+});
+
 
 test('declare ranged attack resolves immediately during the assault activation', () => {
   const state = buildState();
