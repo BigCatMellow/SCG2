@@ -1,4 +1,4 @@
-import { distance, pointInsideRect, sampleSegment } from "./geometry.js";
+import { distance, pointInsideRect, pointInsideTerrainKind, sampleSegment } from "./geometry.js";
 
 const HIDDEN_REVEAL_RANGE = 4;
 const DETECTION_RANGE = 6;
@@ -6,6 +6,23 @@ const SUPPORT_REACTION_RANGE = 4;
 
 function isFlyingUnit(unit) {
   return unit?.tags?.includes("Flying") || unit?.abilities?.includes("flying");
+}
+
+function getTerrainModels(unit) {
+  return Object.values(unit?.models ?? {}).filter(model => model.alive && model.x != null && model.y != null);
+}
+
+export function isUnitInsideTerrainKinds(state, unit, kinds = []) {
+  const terrain = state?.board?.terrain ?? [];
+  return getTerrainModels(unit).some(model => pointInsideTerrainKind(model, terrain, kinds));
+}
+
+export function isUnitInGrass(state, unit) {
+  return isUnitInsideTerrainKinds(state, unit, ["grass"]);
+}
+
+export function isUnitOnElevatedCover(state, unit) {
+  return isUnitInsideTerrainKinds(state, unit, ["elevated_cover"]);
 }
 
 export function weaponHasKeyword(weapon, keyword) {
@@ -58,12 +75,43 @@ export function canUnitDetectTarget(detector, target, detectionRange = DETECTION
   return distance(detectorPoint, targetPoint) <= detectionRange + 1e-6;
 }
 
+function getEffectZoneCenter(state, effect) {
+  if (effect?.target?.scope === "unit") {
+    return getLeaderPoint(state.units?.[effect.target.unitId]);
+  }
+  return effect?.zone?.center ?? null;
+}
+
+export function getDetectionZones(state, playerId = null) {
+  return (state.effects ?? [])
+    .filter(effect => effect?.zone?.kind === "detection_field")
+    .map(effect => {
+      const center = getEffectZoneCenter(state, effect);
+      if (!center) return null;
+      return {
+        id: `detection_zone_${effect.id}`,
+        owner: effect.source?.owner ?? null,
+        source: effect.name ?? "Detection Field",
+        center,
+        radius: effect.zone?.radius ?? DETECTION_RANGE
+      };
+    })
+    .filter(Boolean)
+    .filter(zone => !playerId || zone.owner === playerId);
+}
+
 export function isUnitDetected(state, viewerPlayerId, target) {
   if (!target?.status?.hidden && !target?.status?.burrowed) return false;
-  return Object.values(state.units).some(unit =>
+  const unitDetection = Object.values(state.units).some(unit =>
     unit.owner === viewerPlayerId
     && unit.status?.location === "battlefield"
     && canUnitDetectTarget(unit, target)
+  );
+  if (unitDetection) return true;
+  const targetPoint = getLeaderPoint(target);
+  if (!targetPoint) return false;
+  return getDetectionZones(state, viewerPlayerId).some(zone =>
+    distance(zone.center, targetPoint) <= (zone.radius ?? DETECTION_RANGE) + 1e-6
   );
 }
 
@@ -79,6 +127,13 @@ export function hasLineOfSight(state, attacker, target) {
     if (blockers.some(terrain => pointInsideRect(samples[i], terrain.rect))) return false;
   }
   return true;
+}
+
+function isTargetConcealedByGrass(state, attacker, target) {
+  if (!isUnitInGrass(state, target)) return false;
+  if (isUnitDetected(state, attacker?.owner, target)) return false;
+  if (isUnitInGrass(state, attacker)) return false;
+  return !areUnitsWithinRevealRange(attacker, target);
 }
 
 export function isTargetHiddenFromUnit(state, attacker, target) {
@@ -100,6 +155,10 @@ export function canTargetWithRangedWeapon(state, attacker, target, weapon) {
     return { ok: false, reason: "Target is hidden beyond 4 inches." };
   }
 
+  if (isTargetConcealedByGrass(state, attacker, target)) {
+    return { ok: false, reason: "Target is concealed in grass beyond 4 inches." };
+  }
+
   const visible = hasLineOfSight(state, attacker, target);
   if (!visible && !hasIndirectFire(weapon)) {
     return { ok: false, reason: "Target is not visible." };
@@ -111,6 +170,7 @@ export function canTargetWithRangedWeapon(state, attacker, target, weapon) {
 export function targetGetsEvadeOpportunity(state, attacker, target, weapon, isMelee, visible) {
   if (target?.defense?.evadeTarget == null) return false;
   if ((target?.status?.hidden || target?.status?.burrowed) && !isUnitDetected(state, attacker?.owner, target)) return true;
+  if (!isMelee && isUnitInGrass(state, target) && !isUnitDetected(state, attacker?.owner, target)) return true;
   if (!isMelee && target?.abilities?.includes("lurking") && target?.status?.stationary && !target?.status?.lurkingUsedThisRound) return true;
   if (isMelee && target?.abilities?.includes("combat_shield")) return true;
   if (!isMelee && Object.values(state.units).some(unit => {

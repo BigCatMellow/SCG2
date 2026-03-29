@@ -1,7 +1,7 @@
 import { createInitialGameState } from "../engine/state.js";
 import { beginGame } from "../engine/phases.js";
 import { dispatch as engineDispatch } from "../engine/reducer.js";
-import { bindInputHandlers, beginMoveInteraction, beginDeployInteraction, beginDisengageInteraction, beginRunInteraction, beginForceFieldInteraction, beginCreepInteraction, beginOmegaTransferInteraction, beginMedpackInteraction, beginOpticalFlareInteraction, beginDeclareRangedInteraction, beginDeclareChargeInteraction, cancelCurrentInteraction } from "./input.js";
+import { bindInputHandlers, beginMoveInteraction, beginDeployInteraction, beginDisengageInteraction, beginRunInteraction, beginForceFieldInteraction, beginCreepInteraction, beginOmegaTransferInteraction, beginMedpackInteraction, beginOpticalFlareInteraction, beginDeclareRangedInteraction, beginDeclareChargeInteraction, beginBlinkInteraction, beginPsionicTransferInteraction, cancelCurrentInteraction } from "./input.js";
 import { renderAll } from "./renderer.js";
 import { autoArrangeModels } from "../engine/coherency.js";
 import { performBotTurn } from "../ai/bot.js";
@@ -10,14 +10,14 @@ import { getTacticalCard, TACTICAL_CARDS } from "../data/tactical_cards.js";
 import { MISSION_DATA } from "../data/missions.js";
 import { DEPLOYMENT_DATA } from "../data/deployments.js";
 import { snapPointToGrid, distance } from "../engine/geometry.js";
-import { getLegalMoveDestinations, getLegalDeployDestinations, getLegalDisengageDestinations, getLegalRunDestinations } from "../engine/legal_actions.js";
+import { getLegalMoveDestinations, getLegalDeployDestinations, getLegalDisengageDestinations, getLegalRunDestinations, getLegalBlinkDestinations, getLegalPsionicTransferDestinations } from "../engine/legal_actions.js";
 import { canBurrow, canHide, validateCloseRanks } from "../engine/statuses.js";
 import { getCombatActivationPreview, getMeleeTargetSelection } from "../engine/combat.js";
 import { importArmyBuilderRoster, isArmyBuilderPayload, buildSetupFromImportedRosters } from "../engine/army_builder_import.js";
 import { canTargetWithRangedWeapon, getLeaderPoint, getLongRangeValue } from "../engine/visibility.js";
 import { getObjectiveControlSnapshot } from "../engine/objectives.js";
 import { unitCanSourceCreep } from "../engine/creep.js";
-import { canUseOmegaWormNetwork } from "../engine/omega_worms.js";
+import { canUseOmegaWormNetwork, validateOmegaRecall } from "../engine/omega_worms.js";
 import { canUseBoardEntryDeploy } from "../engine/deployment.js";
 
 const DEFAULT_SETUP = {
@@ -54,6 +54,12 @@ const RULE_GLOSSARY = {
   "Dodge": "Dodge cancels a limited number of hits that already bypassed armour before those hits become damage.",
   "Evade": "Evade is a late defensive roll that can avoid hits after armour results are known.",
   "Fighting Rank": "Fighting Rank is the set of models actually close enough to the enemy to contribute attacks in melee.",
+  "Grass": "Grass conceals units at range. If a target is in grass and the attacker is not close enough or detecting it, the shot can be blocked entirely.",
+  "High Ground": "High Ground makes a lower attacker work harder to force damage through. Elevated defenders gain extra protection against ranged attacks from below.",
+  "Creep": "Creep is a Zerg battlefield layer that can speed up friendly movement and shape where the Zerg army wants to fight.",
+  "Power Field": "Power Fields let eligible Protoss reserves warp in from the battlefield instead of only from the table edge.",
+  "Guardian Shield": "Guardian Shield projects a temporary field that removes 1 die from nearby ranged attack pools against friendly units.",
+  "Detection": "Detection reveals hidden or burrowed enemies in range and strips away stealth-based targeting protection.",
   "Hidden": "Hidden protects a unit from normal ranged targeting at longer distance and can unlock special defensive behavior until the unit is revealed.",
   "Hits": "Hits adds automatic armour-pool hits. Those hits skip the normal hit and wound steps and do not generate Surge.",
   "Impact": "Impact happens after a successful charge. Eligible charging models roll impact dice before the main melee attack resolves.",
@@ -65,9 +71,11 @@ const RULE_GLOSSARY = {
   "Overwatch": "Overwatch is a reaction shot triggered by an enemy charge declaration before the charge attack resolves.",
   "Pierce": "Pierce increases damage against targets with matching tags.",
   "Pinpoint": "Pinpoint allows ranged attacks to target engaged enemy units, overriding the normal restriction against shooting into an engagement.",
+  "Point Defense Laser": "Point Defense Laser removes up to 2 dice from a nearby ranged attack, then the drone that fired it is removed from the battlefield.",
   "Precision": "Precision moves some failed hit dice directly into the armour pool, so they still count as hits without rolling to wound.",
   "Supporting Rank": "Supporting Rank models are not in direct contact with the enemy, but they can still help if they are in base contact with a fighting-rank model.",
   "Surge": "Surge converts matching wounds into hits that bypass armour after wounds are created.",
+  "Stimpack": "Stimpack trades non-lethal damage for extra speed and temporary Precision on the unit's attacks for the rest of the round.",
   "Transfusion": "Transfusion is a Queen reaction that reduces incoming damage to a nearby friendly biological unit before it is allocated.",
   "Zealous Round": "Zealous Round trades the unit's unused activation in the current phase for immediate damage reduction."
 };
@@ -177,6 +185,10 @@ function computeLegalDestinations() {
   try {
     if (uiState.mode === "move") {
       uiState.legalDestinations = getLegalMoveDestinations(state, "playerA", unit.id, unit.leadingModelId);
+    } else if (uiState.mode === "blink") {
+      uiState.legalDestinations = getLegalBlinkDestinations(state, "playerA", unit.id);
+    } else if (uiState.mode === "psionic_transfer") {
+      uiState.legalDestinations = getLegalPsionicTransferDestinations(state, "playerA", unit.id);
     } else if (uiState.mode === "deploy") {
       uiState.legalDestinations = getLegalDeployDestinations(state, "playerA", unit.id, unit.leadingModelId);
     } else if (uiState.mode === "disengage") {
@@ -254,6 +266,12 @@ function getModeText() {
   if (uiState.mode === "move" && unit) {
     return `Move ${unit.name} — click a green square within ${unit.speed}" speed. Leader moves first, squad follows in coherency.${progress}`;
   }
+  if (uiState.mode === "blink" && unit) {
+    return `Blink — reposition ${unit.name} up to 6" to a clear destination. Blink ignores pathing, but it still cannot end overlapping terrain, bases, or enemy engagement.${progress}`;
+  }
+  if (uiState.mode === "psionic_transfer" && unit) {
+    return `Psionic Transfer — reposition ${unit.name} up to 6" to a clear destination. It works like a short teleport and still must end clear of enemies and terrain.${progress}`;
+  }
   if (uiState.mode === "disengage" && unit) {
     return `Disengage ${unit.name} — models that can't clear engagement range are destroyed. Can't shoot/charge next phase unless supply exceeds engaged enemies.${progress}`;
   }
@@ -269,6 +287,9 @@ function getModeText() {
   if (uiState.mode === "omega_transfer" && unit) {
     return `Omega Network — choose an emergence point within 3" of a different friendly Omega Worm. The unit must start near one worm and emerge clear of enemies and terrain.${progress}`;
   }
+  if (uiState.mode === "omega_recall" && unit) {
+    return `Omega Recall — ${unit.name} is returning to reserves through a friendly Omega Worm it is touching. This uses the unit's Movement activation.${progress}`;
+  }
   if (uiState.mode === "use_medpack" && unit) {
     return `Medpack — click another friendly biological unit within 4". Healing scales with nearby Medic models.${progress}`;
   }
@@ -276,13 +297,19 @@ function getModeText() {
     const range = unit.abilities?.includes("a_13_flash_grenade_launcher") ? 16 : 12;
     return `Optical Flare — click an enemy within ${range}". It loses 4" of ranged weapon range this round and cannot use Long Range.${progress}`;
   }
+  if (uiState.mode === "guardian_shield" && unit) {
+    return `Guardian Shield — ${unit.name} projects a 4" shield this round. Ranged attacks targeting friendly units inside it lose 1 die from the attack pool.${progress}`;
+  }
+  if (uiState.mode === "stimpack" && unit) {
+    return `Stimpack — ${unit.name} takes 2 non-lethal damage, gains +3 Speed, and gains temporary Precision on ranged and melee attacks for the rest of the round.${progress}`;
+  }
   if (uiState.mode === "declare_ranged" && unit) {
     const wpn = unit.rangedWeapons?.[0];
     const rangeInfo = wpn ? ` ${wpn.name}: ${wpn.rangeInches}" range, ${wpn.hitTarget}+ to hit.` : "";
-    return `Ranged Attack — click a red-highlighted enemy in range.${rangeInfo} Attack resolves in Combat Phase.${progress}`;
+    return `Ranged Attack — click a red-highlighted enemy in range.${rangeInfo} The attack resolves immediately on this activation.${progress}`;
   }
   if (uiState.mode === "declare_charge" && unit) {
-    return `Charge — click an enemy within 8". In Combat Phase, ${unit.name} will pile in and fight in melee. Charge distance = Speed + 1D6.${progress}`;
+    return `Charge — click an enemy within 8". ${unit.name} rolls Speed + 1D6 to connect, then resolves the charge attack immediately if successful.${progress}`;
   }
 
   // Phase-specific guidance when no mode is active
@@ -294,7 +321,7 @@ function getModeText() {
   }
   if (state.phase === "assault") {
     if (checklist.remaining.length > 0) {
-      return `Assault Phase: Declare Ranged Attacks, Charges, Run to reposition, or Hold. Attacks resolve in Combat Phase.${progress}`;
+      return `Assault Phase: Declare Ranged Attacks, Charges, Run to reposition, or Hold. Ranged attacks and successful charges resolve on the acting unit's activation.${progress}`;
     }
     return `All units assigned. Pass to start Combat.${progress}`;
   }
@@ -895,6 +922,15 @@ function buildCombatPayloadBlock(payload, state) {
   if (payload.transfusion?.reducedBy) {
     notes.push(`Transfusion from ${payload.transfusion.sourceName ?? "a nearby Queen"} reduced the damage that got through by ${payload.transfusion.reducedBy}.`);
   }
+  if (payload.stimpack?.precisionBonus) {
+    notes.push(`${attacker} was stimpacked, adding ${payload.stimpack.precisionBonus} temporary Precision to this attack.`);
+  }
+  if (payload.guardianShield?.reducedBy) {
+    notes.push(`Guardian Shield from ${payload.guardianShield.sourceName ?? "a nearby Sentry"} removed ${payload.guardianShield.reducedBy} die from the attack pool before hits were rolled.`);
+  }
+  if (payload.pointDefenseLaser?.reducedBy) {
+    notes.push(`Point Defense Laser from ${payload.pointDefenseLaser.sourceName ?? "a nearby drone"} removed ${payload.pointDefenseLaser.reducedBy} dice, then that drone was removed from the battlefield.`);
+  }
   if (payload.zealousRound?.reducedBy) {
     notes.push(`Zealous Round reduced the damage that got through by ${payload.zealousRound.reducedBy} and activated ${target}.`);
   }
@@ -909,6 +945,7 @@ function buildCombatPayloadBlock(payload, state) {
   const ruleNotes = [
     `Attack order here is: hit rolls, wound rolls, armour-pool effects, saves, then damage.`,
     payload.precision ? `Precision moved ${payload.precision} failed hit dice straight into the armour pool, so those dice counted as hits without rolling to wound.` : null,
+    payload.stimpack?.precisionBonus ? `Stimpack adds temporary Precision to the unit's ranged and melee weapons for the rest of the round.` : null,
     payload.automaticHits?.count ? `Hits adds automatic armour-pool hits. Those dice skip the hit and wound steps and do not generate Surge.` : null,
     payload.surge?.applied ? `Surge happens after wounds are created. Matching wounds are pushed past armour before normal saves are rolled.` : null,
     payload.criticalHit?.applied ? `Critical Hit bypasses armour by moving wounds straight toward damage before save rolls.` : null,
@@ -918,6 +955,8 @@ function buildCombatPayloadBlock(payload, state) {
     payload.longRangePenalty ? `Long Range extended the shot beyond base range, but the attack paid a hit penalty to do it.` : null,
     payload.burstFire?.bonusAttacks ? `Burst Fire increases attack volume when the target is inside the weapon's close-range band.` : null,
     payload.lockedIn ? `Locked In adds attacks because the target counted as stationary when this shot was resolved.` : null,
+    payload.guardianShield?.reducedBy ? `Guardian Shield protects nearby friendly units by removing 1 die from incoming ranged attack pools.` : null,
+    payload.pointDefenseLaser?.reducedBy ? `Point Defense Laser is a sacrificial defense that removes up to 2 dice from a ranged attack, then removes the drone from play.` : null,
     payload.antiEvade ? `Anti-Evade makes the defender's evade roll harder.` : null,
     payload.fightingRank != null ? `Only models in fighting rank, plus models supporting them from base contact, were allowed to contribute to this melee batch.` : null
   ].filter(Boolean);
@@ -948,6 +987,7 @@ function getCombatPayloadGlossaryTerms(payload) {
     payload.surge?.applied ? "Surge" : null,
     payload.automaticHits ? "Hits" : null,
     payload.precision ? "Precision" : null,
+    payload.stimpack?.precisionBonus ? "Stimpack" : null,
     payload.criticalHit?.applied ? "Critical Hit" : null,
     payload.dodge?.prevented ? "Dodge" : null,
     payload.evade?.saved ? "Evade" : null,
@@ -955,6 +995,8 @@ function getCombatPayloadGlossaryTerms(payload) {
     payload.longRangePenalty ? "Long Range" : null,
     payload.burstFire?.bonusAttacks ? "Burst Fire" : null,
     payload.lockedIn ? "Locked In" : null,
+    payload.guardianShield?.reducedBy ? "Guardian Shield" : null,
+    payload.pointDefenseLaser?.reducedBy ? "Point Defense Laser" : null,
     payload.antiEvade ? "Anti-Evade" : null,
     payload.concentratedFire?.cap ? "Concentrated Fire" : null,
     payload.lifeSupport?.reducedBy ? "Life Support" : null,
@@ -1172,6 +1214,37 @@ function buildStoryBlock(text) {
         <span class="story-chip">Until End of Round</span>
       </div>
       ${renderStorySection("Why It Worked", [`Optical Flare is a ranged debuff. It shortens the target's ranged reach and shuts off Long Range for the rest of the round.`], "teaching")}
+    `;
+  }
+
+  const guardianShieldMatch = text.match(/^(.*?) activates Guardian Shield: ranged attacks targeting friendly units within (\d+)" lose 1 die from the attack pool this round\.$/);
+  if (guardianShieldMatch) {
+    const [, source, radius] = guardianShieldMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(source)}</strong> raises <strong>Guardian Shield</strong>.</div>
+      <div class="story-outcome success">Ranged attacks targeting friendly units within ${escapeHtml(radius)}" lose 1 die from the attack pool for the rest of the round.</div>
+      <div class="story-note-row">
+        <span class="story-chip">${escapeHtml(radius)}" Radius</span>
+        <span class="story-chip">Attack Pool -1</span>
+        <span class="story-chip">Until End of Round</span>
+      </div>
+      ${renderStorySection("Why It Worked", ["Guardian Shield is a temporary defensive field. It reduces the size of incoming ranged attack pools, but it does not help in melee."], "teaching")}
+    `;
+  }
+
+  const stimpackMatch = text.match(/^(.*?) uses Stimpack: non-lethal damage (\d+) \((\d+) applied\), Speed \+(\d+), Precision \+(\d+) on ranged and melee weapons this round\.$/);
+  if (stimpackMatch) {
+    const [, source, nonLethal, applied, speedBonus, precisionBonus] = stimpackMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(source)}</strong> uses <strong>Stimpack</strong>.</div>
+      <div class="story-stat-grid">
+        ${renderStoryStat("Non-Lethal", nonLethal, "warning")}
+        ${renderStoryStat("Applied", applied, Number(applied) > 0 ? "warning" : "")}
+        ${renderStoryStat("Speed", `+${speedBonus}`, "success")}
+        ${renderStoryStat("Precision", `+${precisionBonus}`, "impact")}
+      </div>
+      <div class="story-outcome warning">${escapeHtml(source)} pushes harder this round at the cost of non-lethal self-damage.</div>
+      ${renderStorySection("Why It Worked", ["Stimpack trades durability for tempo. It boosts movement immediately and adds temporary Precision to the unit's attacks for the rest of the round."], "teaching")}
     `;
   }
 
@@ -1961,7 +2034,26 @@ function describeTacticalCard(card) {
   return `Phase: ${card.phase}. Target: ${card.target.replace(/_/g, " ")}. Modifiers: ${modifierText || "none"}. Timings: ${timingText}. Duration: ${durationText}.`;
 }
 
-function describeTacticalCardForModal(card, targetName = null) {
+  function describeTacticalCardForModal(card, targetName = null) {
+    const targetLabel = targetName ? `${targetName}` : "the target";
+    if (card.id === "observer" || card.id === "overseer") {
+    return `${targetLabel} gains a 6" detection field for the rest of the round and still gains +1" speed. Hidden or burrowed enemies inside that field are revealed for targeting and lose stealth-based protection. Rule timing: play this in the ${card.phase} phase before the unit repositions or hunts concealed enemies.`;
+  }
+    if (card.id === "warp_prism") {
+      return `${targetLabel} becomes a mobile 6" warp field for the rest of the round and gains +2" speed. Friendly Protoss reserve units can warp in through that field if they stay clear of enemies. Rule timing: play this in the ${card.phase} phase before you need a new warp-in point or a repositioned power anchor.`;
+    }
+    if (card.id === "malignant_creep" || card.id === "accelerating_creep") {
+      return `${targetLabel} gains +2" speed and projects a temporary 6" creep field for the rest of the round. Friendly Zerg units moving through that field can benefit from creep movement support, so this card creates a short-lived lane for faster repositioning. Rule timing: play this in the ${card.phase} phase before several Zerg moves can use the same lane.`;
+    }
+    if (card.id === "hatchery") {
+      return `${targetLabel} gains +1" speed and becomes a temporary 6" hatchery field for the rest of the round. Friendly Zerg reserve units can deploy through that field instead of only using the board edge if they still stay clear of enemy models. Rule timing: play this in the ${card.phase} phase before you want a forward reserve-entry point.`;
+    }
+    if (card.id === "barracks" || card.id === "barracks_proxy") {
+      return `${targetLabel} gains +1" speed and becomes a temporary 6" Terran infantry deployment field for the rest of the round. Friendly Terran infantry reserves can deploy through that field if they stay clear of enemies, which turns the target into a forward rally point. Rule timing: play this in the ${card.phase} phase before reinforcements need a new landing point.`;
+    }
+    if (card.id === "nexus" || card.id === "overcharged_nexus") {
+      return `${targetLabel} gains +1" speed and projects a temporary 6" power field for the rest of the round. Friendly Protoss reserves can warp in through that field, so the card shifts where your reinforcements can arrive on the battlefield. Rule timing: play this in the ${card.phase} phase before you need a new warp anchor.`;
+    }
   const modifiers = card.effect?.modifiers ?? [];
   const duration = card.effect?.duration ?? null;
   const durationText = duration?.eventType === "combat_attack_resolved"
@@ -2060,6 +2152,22 @@ function buildActionButtons() {
       rerender();
     }, unit.status.engaged, "Unit is engaged. Disengage before moving."));
 
+    if (unit.abilities?.includes("blink")) {
+      buttons.unshift(actionButton("Blink", "secondary", () => {
+        beginBlinkInteraction(uiState);
+        computeLegalDestinations();
+        rerender();
+      }, unit.status.engaged || unit.status.burrowed, unit.status.burrowed ? "Burrowed units cannot Blink." : "Unit is engaged. Blink cannot end in enemy engagement."));
+    }
+
+    if (unit.abilities?.includes("psionic_transfer")) {
+      buttons.unshift(actionButton("Transfer", "secondary", () => {
+        beginPsionicTransferInteraction(uiState);
+        computeLegalDestinations();
+        rerender();
+      }, unit.status.engaged || unit.status.burrowed, unit.status.burrowed ? "Burrowed units cannot use Psionic Transfer." : "Unit is engaged. Psionic Transfer cannot end in enemy engagement."));
+    }
+
     if (unit.abilities?.includes("solid_field_projectors")) {
       buttons.unshift(actionButton("Force Field", "secondary", () => {
         beginForceFieldInteraction(uiState);
@@ -2082,6 +2190,21 @@ function buildActionButtons() {
         uiState.legalDestinations = [];
         rerender();
       }, unit.status.engaged, "Unit must be unengaged to use the Omega Worm network."));
+
+      const omegaRecallValidation = validateOmegaRecall(state, "playerA", unit.id);
+      buttons.unshift(actionButton("Return To Worm", "secondary", () => {
+        const result = store.dispatch({
+          type: "OMEGA_RECALL",
+          payload: { playerId: "playerA", unitId: unit.id }
+        });
+        if (!result.ok) showError(result.message);
+        else {
+          cancelCurrentInteraction(uiState);
+          uiState.legalDestinations = [];
+          autoSelectNextUnit();
+          rerender();
+        }
+      }, !omegaRecallValidation.ok, omegaRecallValidation.message ?? "This unit cannot return to an Omega Worm right now."));
     }
 
     if (unit.abilities?.includes("stabilize_wounds")) {
@@ -2094,6 +2217,38 @@ function buildActionButtons() {
         beginOpticalFlareInteraction(uiState);
         uiState.legalDestinations = [];
         rerender();
+      }));
+    }
+
+    if (unit.abilities?.includes("guardian_shield")) {
+      buttons.unshift(actionButton("Guardian Shield", "secondary", () => {
+        const result = store.dispatch({
+          type: "ACTIVATE_GUARDIAN_SHIELD",
+          payload: { playerId: "playerA", unitId: unit.id }
+        });
+        if (!result.ok) showError(result.message);
+        else {
+          cancelCurrentInteraction(uiState);
+          uiState.legalDestinations = [];
+          autoSelectNextUnit();
+          rerender();
+        }
+      }));
+    }
+
+    if (unit.abilities?.includes("stimpack_drill")) {
+      buttons.unshift(actionButton("Stimpack", "warn", () => {
+        const result = store.dispatch({
+          type: "ACTIVATE_STIMPACK",
+          payload: { playerId: "playerA", unitId: unit.id }
+        });
+        if (!result.ok) showError(result.message);
+        else {
+          cancelCurrentInteraction(uiState);
+          uiState.legalDestinations = [];
+          autoSelectNextUnit();
+          rerender();
+        }
       }));
     }
 
@@ -2282,6 +2437,42 @@ function handleBoardClick(point) {
       payload: {
         playerId: "playerA", unitId: unit.id, leadingModelId: unit.leadingModelId,
         path, modelPlacements: autoArrangeModels(state, unit.id, snappedPoint)
+      }
+    });
+    if (!result.ok) return showError(result.message);
+    cancelCurrentInteraction(uiState);
+    uiState.legalDestinations = [];
+    autoSelectNextUnit();
+    rerender();
+    return;
+  }
+
+  if (uiState.mode === "blink") {
+    const result = store.dispatch({
+      type: "BLINK_UNIT",
+      payload: {
+        playerId: "playerA",
+        unitId: unit.id,
+        point: snappedPoint,
+        modelPlacements: autoArrangeModels(state, unit.id, snappedPoint)
+      }
+    });
+    if (!result.ok) return showError(result.message);
+    cancelCurrentInteraction(uiState);
+    uiState.legalDestinations = [];
+    autoSelectNextUnit();
+    rerender();
+    return;
+  }
+
+  if (uiState.mode === "psionic_transfer") {
+    const result = store.dispatch({
+      type: "PSIONIC_TRANSFER_UNIT",
+      payload: {
+        playerId: "playerA",
+        unitId: unit.id,
+        point: snappedPoint,
+        modelPlacements: autoArrangeModels(state, unit.id, snappedPoint)
       }
     });
     if (!result.ok) return showError(result.message);
@@ -2683,6 +2874,10 @@ function updatePreviewFromPoint(point) {
   if (uiState.mode === "move" || uiState.mode === "disengage" || uiState.mode === "run") {
     const leader = unit.models[unit.leadingModelId];
     uiState.previewPath = { path: [{ x: leader.x, y: leader.y }, snappedPoint], state };
+    uiState.previewUnit = { unitId: unit.id, leader: snappedPoint, placements: autoArrangeModels(state, unit.id, snappedPoint) };
+  }
+  if (uiState.mode === "blink" || uiState.mode === "psionic_transfer") {
+    uiState.previewPath = null;
     uiState.previewUnit = { unitId: unit.id, leader: snappedPoint, placements: autoArrangeModels(state, unit.id, snappedPoint) };
   }
   if (uiState.mode === "force_field") {

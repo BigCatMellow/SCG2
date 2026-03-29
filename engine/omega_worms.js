@@ -5,6 +5,7 @@ import { pointInBoard, circleOverlapsTerrain, circleOverlapsCircle, distance } f
 import { refreshEngagement } from "./movement.js";
 import { refreshAllSupply } from "./supply.js";
 import { removeStealthStatuses } from "./statuses.js";
+import { moveUnitToReserves } from "./reserves.js";
 
 const OMEGA_WORM_ACCESS_RANGE = 3;
 
@@ -29,6 +30,17 @@ function getFriendlyOmegaWorms(state, playerId) {
   return Object.values(state.units).filter(unit =>
     unit.owner === playerId && unit.status?.location === "battlefield" && isOmegaWorm(unit)
   );
+}
+
+function getBaseContactWorms(state, playerId, unit) {
+  const leader = getLeaderPoint(unit);
+  if (!leader) return [];
+  return getFriendlyOmegaWorms(state, playerId).filter(worm => {
+    const wormPoint = getLeaderPoint(worm);
+    if (!wormPoint) return false;
+    const required = (unit.base?.radiusInches ?? 0) + (worm.base?.radiusInches ?? 0);
+    return distance(leader, wormPoint) <= required + 1e-6;
+  });
 }
 
 function getAccessWorms(state, playerId, point) {
@@ -75,6 +87,49 @@ export function hasOmegaTransferOptions(state, playerId, unitId) {
   const originWorms = getAccessWorms(state, playerId, leader);
   if (!originWorms.length) return false;
   return getFriendlyOmegaWorms(state, playerId).some(worm => !originWorms.some(origin => origin.id === worm.id));
+}
+
+export function hasOmegaRecallOption(state, playerId, unitId) {
+  const unit = state.units[unitId];
+  if (!unit || unit.owner !== playerId || !canUseOmegaWormNetwork(unit)) return false;
+  if (unit.status?.location !== "battlefield" || unit.status?.engaged) return false;
+  return getBaseContactWorms(state, playerId, unit).length > 0;
+}
+
+export function validateOmegaRecall(state, playerId, unitId) {
+  const unit = state.units[unitId];
+  if (!unit) return { ok: false, code: "UNKNOWN_UNIT", message: "Unit not found." };
+  if (state.phase !== "movement") return { ok: false, code: "WRONG_PHASE", message: "Omega Worm extraction only happens in the Movement Phase." };
+  if (unit.owner !== playerId) return { ok: false, code: "WRONG_OWNER", message: "You do not control that unit." };
+  if (!isUnitEligibleForCurrentPhaseActivation(state, unitId)) return { ok: false, code: "UNIT_NOT_ELIGIBLE", message: "Unit is not eligible to activate." };
+  if (!canUseOmegaWormNetwork(unit)) return { ok: false, code: "NO_WORM_ACCESS", message: "This unit cannot use the Omega Worm network." };
+  if (unit.status.location !== "battlefield") return { ok: false, code: "NOT_ON_BATTLEFIELD", message: "Only battlefield units can re-enter the Omega Worm network." };
+  if (unit.status.engaged) return { ok: false, code: "UNIT_ENGAGED", message: "Engaged units cannot return to reserves through an Omega Worm." };
+  const worms = getBaseContactWorms(state, playerId, unit);
+  if (!worms.length) return { ok: false, code: "NO_CONTACT_WORM", message: "The unit must finish base-to-base with a friendly Omega Worm." };
+  return { ok: true, derived: { wormId: worms[0].id } };
+}
+
+export function resolveOmegaRecall(state, playerId, unitId) {
+  const validation = validateOmegaRecall(state, playerId, unitId);
+  if (!validation.ok) return validation;
+  const unit = state.units[unitId];
+  const worm = state.units[validation.derived.wormId];
+  moveUnitToReserves(state, unitId);
+  markUnitActivatedForMovement(state, unitId);
+  refreshEngagement(state);
+  refreshAllSupply(state);
+  appendLog(
+    state,
+    "action",
+    `${unit.name} slips back into ${worm?.name ?? "a friendly Omega Worm"} and returns to reserves.`
+  );
+  endActivationAndPassTurn(state);
+  return {
+    ok: true,
+    state,
+    events: [{ type: "omega_recall_used", payload: { unitId, wormId: validation.derived.wormId } }]
+  };
 }
 
 export function validateOmegaTransfer(state, playerId, unitId, point, modelPlacements = null) {

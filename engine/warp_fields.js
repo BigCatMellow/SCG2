@@ -8,6 +8,13 @@ function getLeaderPoint(unit) {
   return { x: leader.x, y: leader.y };
 }
 
+function getEffectZoneCenter(state, effect) {
+  if (effect?.target?.scope === "unit") {
+    return getLeaderPoint(state.units?.[effect.target.unitId]);
+  }
+  return effect?.zone?.center ?? null;
+}
+
 export function isWarpConduitSource(unit) {
   return unit?.status?.location === "battlefield" && unit?.abilities?.includes("warp_conduit");
 }
@@ -19,7 +26,7 @@ export function canWarpDeployUnit(unit) {
 }
 
 export function getPowerFieldZones(state) {
-  return Object.values(state.units)
+  const unitZones = Object.values(state.units)
     .filter(isWarpConduitSource)
     .map(unit => {
       const center = getLeaderPoint(unit);
@@ -33,6 +40,22 @@ export function getPowerFieldZones(state) {
       };
     })
     .filter(Boolean);
+  const effectZones = (state.effects ?? [])
+    .filter(effect => effect?.zone?.kind === "warp_field")
+    .map(effect => {
+      const center = getEffectZoneCenter(state, effect);
+      if (!center) return null;
+      return {
+        id: `power_field_${effect.id}`,
+        owner: effect.source?.owner ?? null,
+        sourceUnitId: effect.target?.unitId ?? null,
+        center,
+        radius: effect.zone?.radius ?? POWER_FIELD_RADIUS,
+        sourceKind: effect.name ?? "Warp Field"
+      };
+    })
+    .filter(Boolean);
+  return [...unitZones, ...effectZones];
 }
 
 export function pointInsideFriendlyPowerField(state, playerId, point) {

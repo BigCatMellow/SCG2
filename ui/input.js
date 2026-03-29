@@ -72,6 +72,18 @@ export function beginDisengageInteraction(state, uiState, unitId) {
   uiState.previewUnit = { unitId, leader: { x: leader.x, y: leader.y }, placements: autoArrangeModels(state, unitId, leader) };
 }
 
+export function beginBlinkInteraction(uiState) {
+  uiState.mode = "blink";
+  uiState.previewPath = null;
+  uiState.previewUnit = null;
+}
+
+export function beginPsionicTransferInteraction(uiState) {
+  uiState.mode = "psionic_transfer";
+  uiState.previewPath = null;
+  uiState.previewUnit = null;
+}
+
 
 export function beginDeclareRangedInteraction(uiState) {
   uiState.mode = "declare_ranged";

@@ -22,6 +22,13 @@ function getUnitLeader(unit) {
   return { x: leader.x, y: leader.y };
 }
 
+function getEffectZoneCenter(state, effect) {
+  if (effect?.target?.scope === "unit") {
+    return getUnitLeader(state.units?.[effect.target.unitId]);
+  }
+  return effect?.zone?.center ?? null;
+}
+
 export function unitCanSourceCreep(unit) {
   return unit?.abilities?.includes("source_of_creep");
 }
@@ -34,6 +41,22 @@ export function unitBenefitsFromCreep(unit) {
 
 export function getCreepZones(state) {
   const placedZones = [...(state.board.creepZones ?? [])];
+  const effectZones = (state.effects ?? [])
+    .filter(effect => effect?.zone?.kind === "creep_field")
+    .map(effect => {
+      const center = getEffectZoneCenter(state, effect);
+      if (!center) return null;
+      return {
+        id: `creep_field_${effect.id}`,
+        kind: "creep_field",
+        owner: effect.source?.owner ?? null,
+        sourceUnitId: effect.target?.unitId ?? null,
+        center,
+        radius: effect.zone?.radius ?? CREEP_PATCH_RADIUS,
+        tokenRadius: 0
+      };
+    })
+    .filter(Boolean);
   const sourceZones = Object.values(state.units)
     .filter(unit => unit.status?.location === "battlefield" && unitCanSourceCreep(unit))
     .map(unit => {
@@ -50,7 +73,7 @@ export function getCreepZones(state) {
       };
     })
     .filter(Boolean);
-  return [...placedZones, ...sourceZones];
+  return [...placedZones, ...effectZones, ...sourceZones];
 }
 
 function getPlacedCreepTumors(state) {

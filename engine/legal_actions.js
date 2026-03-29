@@ -1,14 +1,14 @@
 import { getEligibleUnitsForCurrentPhase } from "./activation.js";
-import { validateHold, validateMove, validateDisengage } from "./movement.js";
-import { validateDeploy, canUseBoardEntryDeploy, getFriendlyOmegaWormEntrySources } from "./deployment.js";
+import { validateHold, validateMove, validateDisengage, validateBlink, validatePsionicTransfer } from "./movement.js";
+import { validateDeploy, canUseBoardEntryDeploy, getFriendlyOmegaWormEntrySources, getCardDeploymentZones } from "./deployment.js";
 import { validateRun, validateDeclareRangedAttack, validateDeclareCharge } from "./assault.js";
 import { getPlayableCardActions } from "./cards.js";
 import { hasQueuedCombatForUnit } from "./combat.js";
 import { canBurrow, canHide, validateCloseRanks, validateToggleBurrow, validateToggleHidden } from "./statuses.js";
 import { validatePlaceForceField } from "./force_fields.js";
-import { validateUseMedpack, validateUseOpticalFlare } from "./support.js";
+import { validateUseMedpack, validateUseOpticalFlare, validateActivateGuardianShield, validateActivateStimpack } from "./support.js";
 import { validatePlaceCreep, unitCanSourceCreep } from "./creep.js";
-import { canUseOmegaWormNetwork, hasOmegaTransferOptions } from "./omega_worms.js";
+import { canUseOmegaWormNetwork, hasOmegaTransferOptions, hasOmegaRecallOption } from "./omega_worms.js";
 
 export function getLegalActionsForPlayer(state, playerId) {
   const units = getEligibleUnitsForCurrentPhase(state, playerId);
@@ -36,11 +36,16 @@ export function getLegalActionsForUnit(state, playerId, unitId) {
     descriptors.push({ type: "HOLD_UNIT", unitId, enabled: validateHold(state, playerId, unitId).ok });
     descriptors.push({ type: "MOVE_UNIT", unitId, enabled: !unit.status.engaged, uiHints: { requiresBoardClick: true } });
     descriptors.push({ type: "DISENGAGE_UNIT", unitId, enabled: unit.status.engaged, uiHints: { requiresBoardClick: true } });
+    if (unit.abilities?.includes("blink")) descriptors.push({ type: "BLINK_UNIT", unitId, enabled: validateBlink(state, playerId, unitId, { x: unit.models[unit.leadingModelId].x, y: unit.models[unit.leadingModelId].y }).ok, uiHints: { requiresBoardClick: true } });
+    if (unit.abilities?.includes("psionic_transfer")) descriptors.push({ type: "PSIONIC_TRANSFER_UNIT", unitId, enabled: validatePsionicTransfer(state, playerId, unitId, { x: unit.models[unit.leadingModelId].x, y: unit.models[unit.leadingModelId].y }).ok, uiHints: { requiresBoardClick: true } });
     if (unit.abilities?.includes("solid_field_projectors")) descriptors.push({ type: "PLACE_FORCE_FIELD", unitId, enabled: validatePlaceForceField(state, playerId, unitId, { x: unit.models[unit.leadingModelId].x, y: unit.models[unit.leadingModelId].y }).ok, uiHints: { requiresBoardClick: true } });
     if (unitCanSourceCreep(unit)) descriptors.push({ type: "PLACE_CREEP", unitId, enabled: validatePlaceCreep(state, playerId, unitId, { x: unit.models[unit.leadingModelId].x, y: unit.models[unit.leadingModelId].y }).ok, uiHints: { requiresBoardClick: true } });
     if (canUseOmegaWormNetwork(unit)) descriptors.push({ type: "OMEGA_TRANSFER", unitId, enabled: hasOmegaTransferOptions(state, playerId, unitId), uiHints: { requiresBoardClick: true } });
+    if (canUseOmegaWormNetwork(unit)) descriptors.push({ type: "OMEGA_RECALL", unitId, enabled: hasOmegaRecallOption(state, playerId, unitId) });
     if (unit.abilities?.includes("stabilize_wounds")) descriptors.push({ type: "USE_MEDPACK", unitId, enabled: true, uiHints: { requiresBoardClick: true } });
     if (unit.abilities?.includes("stabilize_wounds")) descriptors.push({ type: "USE_OPTICAL_FLARE", unitId, enabled: true, uiHints: { requiresBoardClick: true } });
+    if (unit.abilities?.includes("guardian_shield")) descriptors.push({ type: "ACTIVATE_GUARDIAN_SHIELD", unitId, enabled: validateActivateGuardianShield(state, playerId, unitId).ok });
+    if (unit.abilities?.includes("stimpack_drill")) descriptors.push({ type: "ACTIVATE_STIMPACK", unitId, enabled: validateActivateStimpack(state, playerId, unitId).ok });
     if (canBurrow(unit)) descriptors.push({ type: "TOGGLE_BURROW", unitId, enabled: validateToggleBurrow(state, playerId, unitId).ok });
     if (canHide(unit)) descriptors.push({ type: "TOGGLE_HIDDEN", unitId, enabled: validateToggleHidden(state, playerId, unitId).ok });
     return descriptors;
@@ -86,6 +91,7 @@ export function getLegalDeployDestinations(state, playerId, unitId, leadingModel
   const unit = state.units[unitId];
   const points = [];
   const useBoardEntry = canUseBoardEntryDeploy(state, playerId, unit);
+  const cardDeploymentZones = useBoardEntry ? getCardDeploymentZones(state, playerId, unit) : [];
   const omegaEntrySources = useBoardEntry ? [] : getFriendlyOmegaWormEntrySources(state, playerId, unit);
   const entrySide = state.deployment.entryEdges[playerId].side;
   const entryX = entrySide === "west" ? 0 : state.board.widthInches;
@@ -93,7 +99,13 @@ export function getLegalDeployDestinations(state, playerId, unitId, leadingModel
     for (let y = 0.5; y < state.board.heightInches; y += 1) {
       const edgeEntryPoint = entrySide === "west" || entrySide === "east" ? { x: entryX, y } : { x, y: entrySide === "north" ? 0 : state.board.heightInches };
       const entryOptions = useBoardEntry
-        ? [{ entryPoint: { x, y }, path: [{ x, y }, { x, y }] }]
+        ? [
+            ...(cardDeploymentZones.length ? cardDeploymentZones.map(zone => ({
+              entryPoint: { x, y },
+              path: [{ x, y }, { x, y }]
+            })) : []),
+            { entryPoint: { x, y }, path: [{ x, y }, { x, y }] }
+          ]
         : [
             { entryPoint: edgeEntryPoint, path: [edgeEntryPoint, { x, y }] },
             ...omegaEntrySources.map(source => ({
@@ -153,6 +165,28 @@ export function getLegalRunDestinations(state, playerId, unitId, leadingModelId)
     for (let y = 0.5; y < state.board.heightInches; y += 1) {
       const path = [{ x: leader.x, y: leader.y }, { x, y }];
       const validation = validateRun(state, playerId, unitId, leadingModelId, path);
+      if (validation.ok) points.push({ x, y });
+    }
+  }
+  return points;
+}
+
+export function getLegalBlinkDestinations(state, playerId, unitId) {
+  const points = [];
+  for (let x = 0.5; x < state.board.widthInches; x += 1) {
+    for (let y = 0.5; y < state.board.heightInches; y += 1) {
+      const validation = validateBlink(state, playerId, unitId, { x, y });
+      if (validation.ok) points.push({ x, y });
+    }
+  }
+  return points;
+}
+
+export function getLegalPsionicTransferDestinations(state, playerId, unitId) {
+  const points = [];
+  for (let x = 0.5; x < state.board.widthInches; x += 1) {
+    for (let y = 0.5; y < state.board.heightInches; y += 1) {
+      const validation = validatePsionicTransfer(state, playerId, unitId, { x, y });
       if (validation.ok) points.push({ x, y });
     }
   }

@@ -9,6 +9,52 @@ import { getBlockingForceFieldCrossings, removeForceFieldsCrossedByUnit } from "
 import { getCreepMovementBonus, creepNegatesDifficultTerrain, unitBenefitsFromCreep, removeDisplacedCreepTumors } from "./creep.js";
 import { canWarpDeployUnit, pointInsideFriendlyPowerField, hasFriendlyPowerField } from "./warp_fields.js";
 
+function getLeaderPoint(unit) {
+  const leader = unit?.models?.[unit?.leadingModelId];
+  if (!leader || !leader.alive || leader.x == null || leader.y == null) return null;
+  return { x: leader.x, y: leader.y };
+}
+
+function getEffectZoneCenter(state, effect) {
+  if (effect?.target?.scope === "unit") return getLeaderPoint(state.units?.[effect.target.unitId]);
+  return effect?.zone?.center ?? null;
+}
+
+function isTerranReserveUnit(unit) {
+  return /(marine|marauder|medic|goliath|raynor|point_defense_drone)/i.test(String(unit?.templateId ?? ""));
+}
+
+function isZergReserveUnit(unit) {
+  return /(zerg|roach|hydralisk|queen|kerrigan|raptor|omega_worm|roachling)/i.test(String(unit?.templateId ?? ""));
+}
+
+function canDeployFromCardZone(unit, zone) {
+  if (!unit || unit.status?.location !== "reserves" || unit.tags?.includes("Structure")) return false;
+  if (zone.kind === "proxy_field") return isTerranReserveUnit(unit) && unit.tags?.includes("Infantry");
+  if (zone.kind === "hatchery_field") return isZergReserveUnit(unit);
+  return false;
+}
+
+export function getCardDeploymentZones(state, playerId, unit = null) {
+  return (state.effects ?? [])
+    .filter(effect => effect?.source?.owner === playerId && ["proxy_field", "hatchery_field"].includes(effect?.zone?.kind))
+    .map(effect => {
+      const center = getEffectZoneCenter(state, effect);
+      if (!center) return null;
+      return {
+        id: `${effect.zone.kind}_${effect.id}`,
+        owner: playerId,
+        kind: effect.zone.kind,
+        radius: effect.zone.radius ?? 6,
+        center,
+        effectId: effect.id,
+        sourceUnitId: effect.target?.unitId ?? null,
+        sourceKind: effect.name ?? effect.zone.kind
+      };
+    })
+    .filter(zone => zone && (!unit || canDeployFromCardZone(unit, zone)));
+}
+
 function validateShared(state, playerId, unitId) {
   const unit = state.units[unitId];
   if (!unit) return { ok: false, code: "UNKNOWN_UNIT", message: "Unit not found." };
@@ -70,7 +116,9 @@ function getOmegaWormEntrySourceAtPoint(state, playerId, unit, point) {
 }
 
 export function canUseBoardEntryDeploy(state, playerId, unit) {
-  return hasReserveDropAbility(unit) || (canWarpDeployUnit(unit) && hasFriendlyPowerField(state, playerId));
+  return hasReserveDropAbility(unit)
+    || (canWarpDeployUnit(unit) && hasFriendlyPowerField(state, playerId))
+    || getCardDeploymentZones(state, playerId, unit).length > 0;
 }
 
 function pointTooCloseToEnemy(state, playerId, point, minDistance = 6) {
@@ -93,24 +141,28 @@ export function validateDeploy(state, playerId, unitId, leadingModelId, entryPoi
   if (!supplyValidation.ok) return { ok: false, code: "SUPPLY_BLOCKED", message: supplyValidation.reason };
   const reserveDrop = hasReserveDropAbility(unit);
   const warpDeploy = !reserveDrop && canWarpDeployUnit(unit) && pointInsideFriendlyPowerField(state, playerId, entryPoint);
+  const cardDeployZone = !reserveDrop && !warpDeploy
+    ? getCardDeploymentZones(state, playerId, unit).find(zone => distance(zone.center, entryPoint) <= zone.radius + 1e-6) ?? null
+    : null;
   const omegaWormEntry = !reserveDrop && !warpDeploy ? getOmegaWormEntrySourceAtPoint(state, playerId, unit, entryPoint) : null;
-  if (!reserveDrop && !warpDeploy && !omegaWormEntry && !pointOnEntryEdge(state.deployment, playerId, entryPoint)) return { ok: false, code: "BAD_ENTRY_EDGE", message: "Entry point must be on your entry edge, inside a friendly Power Field, or on a friendly Omega Worm base." };
-  if ((reserveDrop || warpDeploy) && !pointInBoard(entryPoint, state.board, unit.base.radiusInches)) return { ok: false, code: "BAD_ENTRY_POINT", message: `${reserveDrop ? "Deep strike" : "Warp-in"} entry point must be on the battlefield.` };
+  if (!reserveDrop && !warpDeploy && !cardDeployZone && !omegaWormEntry && !pointOnEntryEdge(state.deployment, playerId, entryPoint)) return { ok: false, code: "BAD_ENTRY_EDGE", message: "Entry point must be on your entry edge, inside a friendly deployment field, inside a friendly Power Field, or on a friendly Omega Worm base." };
+  if ((reserveDrop || warpDeploy || cardDeployZone) && !pointInBoard(entryPoint, state.board, unit.base.radiusInches)) return { ok: false, code: "BAD_ENTRY_POINT", message: `${reserveDrop ? "Deep strike" : warpDeploy ? "Warp-in" : "Field deploy"} entry point must be on the battlefield.` };
   if (reserveDrop && pointTooCloseToEnemy(state, playerId, entryPoint)) return { ok: false, code: "DEEP_STRIKE_DENIED", message: "Deep strike entry must be at least 6\" from enemy models." };
   if (warpDeploy && pointTooCloseToEnemy(state, playerId, entryPoint)) return { ok: false, code: "WARP_FIELD_DENIED", message: "Warp-in point must be at least 6\" from enemy models." };
+  if (cardDeployZone && pointTooCloseToEnemy(state, playerId, entryPoint)) return { ok: false, code: "FIELD_DEPLOY_DENIED", message: `${cardDeployZone.sourceKind} deployment must be at least 6" from enemy models.` };
   if (!path || path.length < 2) return { ok: false, code: "NO_PATH", message: "Deploy requires a path." };
   const start = path[0];
   if (Math.abs(start.x - entryPoint.x) > 0.01 || Math.abs(start.y - entryPoint.y) > 0.01) return { ok: false, code: "PATH_ENTRY_MISMATCH", message: "Path must start at the chosen entry point." };
-  const travelCost = (reserveDrop || warpDeploy)
+  const travelCost = (reserveDrop || warpDeploy || cardDeployZone)
     ? 0
     : creepNegatesDifficultTerrain(state, unit, path)
     ? (state.rules?.gridMode ? gridDistance(path[0], path[path.length - 1]) : distance(path[0], path[path.length - 1]))
     : state.rules?.gridMode ? gridDistance(path[0], path[path.length - 1]) : pathTravelCost(path, state.board.terrain);
-  const allowedSpeed = (reserveDrop || warpDeploy) ? Infinity : unit.speed + getCreepMovementBonus(state, unit, path);
+  const allowedSpeed = (reserveDrop || warpDeploy || cardDeployZone) ? Infinity : unit.speed + getCreepMovementBonus(state, unit, path);
   if (travelCost - allowedSpeed > 1e-6) return { ok: false, code: "TOO_FAR", message: `${unit.name} can only deploy ${allowedSpeed}" (difficult terrain costs extra movement unless creep negates it).` };
   const side = state.deployment.entryEdges[playerId].side;
   const adjustedStart = { ...entryPoint };
-  if (!reserveDrop && !warpDeploy) {
+  if (!reserveDrop && !warpDeploy && !cardDeployZone) {
     if (omegaWormEntry) {
       adjustedStart.x = entryPoint.x;
       adjustedStart.y = entryPoint.y;
@@ -130,9 +182,10 @@ export function validateDeploy(state, playerId, unitId, leadingModelId, entryPoi
   if (overlapsAnyModel(state, unit, end)) return { ok: false, code: "BASE_OVERLAP", message: "Leading model would overlap an existing base." };
   if (reserveDrop && pointTooCloseToEnemy(state, playerId, end)) return { ok: false, code: "DEEP_STRIKE_DENIED", message: "Deep strike destination must be at least 6\" from enemy models." };
   if (warpDeploy && pointTooCloseToEnemy(state, playerId, end)) return { ok: false, code: "WARP_FIELD_DENIED", message: "Warp-in destination must be at least 6\" from enemy models." };
+  if (cardDeployZone && pointTooCloseToEnemy(state, playerId, end)) return { ok: false, code: "FIELD_DEPLOY_DENIED", message: `${cardDeployZone.sourceKind} destination must be at least 6" from enemy models.` };
   if (pointInsideEnemyZoneOfInfluence(state, playerId, end, unit.base.radiusInches)) return { ok: false, code: "ZONE_OF_INFLUENCE", message: "Deploy cannot end inside the opponent's zone of influence." };
   const placements = modelPlacements ?? autoArrangeModels(state, unitId, end);
-  return { ok: true, derived: { end, placements, reserveDrop, warpDeploy, omegaWormEntry } };
+  return { ok: true, derived: { end, placements, reserveDrop, warpDeploy, cardDeployZone, omegaWormEntry } };
 }
 
 export function resolveDeploy(state, playerId, unitId, leadingModelId, entryPoint, path, modelPlacements = null) {
@@ -152,7 +205,7 @@ export function resolveDeploy(state, playerId, unitId, leadingModelId, entryPoin
   refreshEngagement(state);
   refreshAllSupply(state);
   const displacedCreep = removeDisplacedCreepTumors(state, unit, "deploys");
-  appendLog(state, "action", `${unit.name} deploys from reserves${validation.derived.reserveDrop ? " via deep strike" : validation.derived.warpDeploy ? " through a Power Field" : validation.derived.omegaWormEntry ? " through an Omega Worm" : ""}.${coherency.outOfCoherency ? " Unit is out of coherency." : ""}`);
+  appendLog(state, "action", `${unit.name} deploys from reserves${validation.derived.reserveDrop ? " via deep strike" : validation.derived.warpDeploy ? " through a Power Field" : validation.derived.cardDeployZone ? ` through ${validation.derived.cardDeployZone.sourceKind}` : validation.derived.omegaWormEntry ? " through an Omega Worm" : ""}.${coherency.outOfCoherency ? " Unit is out of coherency." : ""}`);
   endActivationAndPassTurn(state);
   return {
     ok: true,

@@ -1,10 +1,10 @@
 import { getObjectiveControlSnapshot } from "../engine/objectives.js";
 import { pathLength, pathTravelCost, gridDistance, distance } from "../engine/geometry.js";
-import { canTargetWithRangedWeapon, getLeaderPoint, getLongRangeValue, hasLineOfSight } from "../engine/visibility.js";
-import { getEffectiveRangedRange } from "../engine/support.js";
+import { canTargetWithRangedWeapon, getLeaderPoint, getLongRangeValue, getDetectionZones, hasLineOfSight } from "../engine/visibility.js";
+import { getEffectiveRangedRange, getGuardianShieldZones } from "../engine/support.js";
 import { validateMove, validateDisengage } from "../engine/movement.js";
 import { validateRun } from "../engine/assault.js";
-import { validateDeploy } from "../engine/deployment.js";
+import { validateDeploy, getCardDeploymentZones } from "../engine/deployment.js";
 import { validatePlaceForceField } from "../engine/force_fields.js";
 import { getCreepZones, validatePlaceCreep } from "../engine/creep.js";
 import { validateOmegaTransfer } from "../engine/omega_worms.js";
@@ -27,6 +27,8 @@ const TIMELINE_RULE_COPY = {
   "Anti-Evade": "Makes evade rolls harder.",
   "Concentrated Fire": "Caps casualties and discards overflow damage.",
   "Life Support": "Reduces damage after it gets through.",
+  "Guardian Shield": "Shrinks nearby ranged attack pools by 1 die.",
+  "Point Defense Laser": "Sacrifices the drone to remove up to 2 attack dice.",
   "Zealous Round": "Trades an unused activation for damage reduction.",
   "Fighting Rank": "Only front-line models actually contribute attacks.",
   "Supporting Rank": "Linked rear models can assist the front line."
@@ -74,7 +76,15 @@ function addZones(svg, state) {
 
 function addTerrain(svg, terrain) {
   for (const p of terrain) {
-    const klass = p.kind === "force_field" ? "terrain-force-field" : p.impassable ? "terrain-block" : "terrain-cover";
+    const klass = p.kind === "force_field"
+      ? "terrain-force-field"
+      : p.kind === "grass"
+        ? "terrain-grass"
+        : p.kind === "elevated_cover"
+          ? "terrain-elevated"
+          : p.impassable
+            ? "terrain-block"
+            : "terrain-cover";
     svg.appendChild(el("rect", {
       x: p.rect.minX, y: p.rect.minY,
       width: p.rect.maxX - p.rect.minX, height: p.rect.maxY - p.rect.minY,
@@ -89,9 +99,9 @@ function addCreep(svg, state) {
       cx: zone.center.x,
       cy: zone.center.y,
       r: zone.radius,
-      class: zone.kind === "creep_source" ? "creep-source-zone" : "creep-zone"
+      class: zone.kind === "creep_source" ? "creep-source-zone" : zone.kind === "creep_field" ? "creep-field-zone" : "creep-zone"
     }));
-    if (zone.kind !== "creep_source") {
+    if (zone.kind !== "creep_source" && zone.kind !== "creep_field") {
       svg.appendChild(el("circle", {
         cx: zone.center.x,
         cy: zone.center.y,
@@ -109,6 +119,43 @@ function addPowerFields(svg, state) {
       cy: zone.center.y,
       r: zone.radius,
       class: `power-field-zone ${zone.owner === "playerA" ? "playerA" : "playerB"}`
+    }));
+  }
+}
+
+function addCardDeploymentZones(svg, state) {
+  const zones = [
+    ...getCardDeploymentZones(state, "playerA"),
+    ...getCardDeploymentZones(state, "playerB")
+  ];
+  for (const zone of zones) {
+    svg.appendChild(el("circle", {
+      cx: zone.center.x,
+      cy: zone.center.y,
+      r: zone.radius,
+      class: `deployment-field-zone ${zone.owner === "playerA" ? "playerA" : "playerB"} ${zone.kind}`
+    }));
+  }
+}
+
+function addDetectionZones(svg, state) {
+  for (const zone of getDetectionZones(state)) {
+    svg.appendChild(el("circle", {
+      cx: zone.center.x,
+      cy: zone.center.y,
+      r: zone.radius,
+      class: `detection-zone ${zone.owner === "playerA" ? "playerA" : "playerB"}`
+    }));
+  }
+}
+
+function addGuardianShieldZones(svg, state) {
+  for (const zone of getGuardianShieldZones(state)) {
+    svg.appendChild(el("circle", {
+      cx: zone.center.x,
+      cy: zone.center.y,
+      r: zone.radius,
+      class: `guardian-shield-zone ${zone.owner === "playerA" ? "playerA" : "playerB"}`
     }));
   }
 }
@@ -1000,6 +1047,9 @@ export function renderBoard(state, uiState, handlers) {
   addGrid(svg, state.board.widthInches, state.board.heightInches);
   addCreep(svg, state);
   addPowerFields(svg, state);
+  addCardDeploymentZones(svg, state);
+  addDetectionZones(svg, state);
+  addGuardianShieldZones(svg, state);
   addTerrain(svg, state.board.terrain);
   addObjectives(svg, state.deployment.missionMarkers, snap, uiState, handlers);
   addLegalOverlay(svg, state, uiState);
