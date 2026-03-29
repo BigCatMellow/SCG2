@@ -10,7 +10,7 @@ export function renderAll(state, uiState, handlers) {
   renderActionButtons(actionButtons);
   renderTacticalCards(state, cardButtons);
   renderCombatQueue(state, uiState, handlers);
-  renderLog(state);
+  renderLog(state, uiState, handlers);
   renderBoard(state, uiState, handlers);
   renderPhaseChecklist(state, typeof handlers.getPhaseChecklist === "function" ? handlers.getPhaseChecklist() : null);
 

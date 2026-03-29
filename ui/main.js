@@ -309,6 +309,7 @@ function rerender() {
     onObjectiveClick: handleObjectiveClick,
     onCombatQueueHover: handleCombatQueueHover,
     onCombatQueueClick: handleCombatQueueClick,
+    onLogEntryFocus: handleLogEntryFocus,
     onToggleActionBarCompact: handleActionBarToggle,
     buildActionButtons,
     buildCardButtons,
@@ -2618,6 +2619,56 @@ function handleCombatQueueClick(queueIndex) {
   rerender();
 }
 
+function handleLogEntryFocus(focus) {
+  if (!focus) return;
+  const state = store.getState();
+  const now = Date.now();
+  pruneBoardHighlights();
+  uiState.selectedCombatQueueIndex = null;
+  uiState.hoveredCombatQueueIndex = null;
+  uiState.selectedUnitId = focus.attackerId ?? uiState.selectedUnitId;
+  uiState.hoveredUnitId = focus.targetId ?? null;
+  uiState.selectedObjectiveId = focus.objectiveIds?.[0] ?? null;
+  uiState.hoveredObjectiveId = focus.objectiveIds?.[0] ?? null;
+
+  const attacker = focus.attackerId ? state.units[focus.attackerId] : null;
+  const target = focus.targetId ? state.units[focus.targetId] : null;
+  if (attacker) {
+    pushBoardHighlight({
+      kind: "unit",
+      unitId: attacker.id,
+      tone: "action",
+      label: "Timeline",
+      point: getBoardHighlightPointForUnit(attacker),
+      startsAt: now,
+      expiresAt: now + 3600
+    });
+  }
+  if (target) {
+    pushBoardHighlight({
+      kind: "unit",
+      unitId: target.id,
+      tone: "attention",
+      label: "Target",
+      point: getBoardHighlightPointForUnit(target),
+      startsAt: now + 120,
+      expiresAt: now + 3600
+    });
+  }
+  for (const objectiveId of focus.objectiveIds ?? []) {
+    pushBoardHighlight({
+      kind: "objective",
+      objectiveId,
+      tone: "pressure",
+      label: "Timeline Focus",
+      startsAt: now + 220,
+      expiresAt: now + 3600
+    });
+  }
+  scheduleBoardHighlightPrune();
+  rerender();
+}
+
 function handleActionBarToggle() {
   uiState.compactActionBar = !uiState.compactActionBar;
   rerender();
@@ -2795,6 +2846,9 @@ function updateBoardHighlights(state, events) {
       startsAt: now + 140,
       expiresAt: now + Math.max(5000, sequenceOffset + 3600),
       title: `${attacker?.name ?? "Attack"} → ${target?.name ?? "Target"}`,
+      attackerId: payload.attackerId ?? null,
+      targetId: payload.targetId ?? null,
+      objectiveIds: Object.keys(currentSnapshot).filter(objectiveId => objectiveNarratives.some(copy => copy.startsWith(objectiveId.toUpperCase()))),
       metrics,
       reason: `${attacker?.name ?? "The attacker"} finished its ${payload.mode === "melee" ? "melee attack" : payload.mode === "overwatch" ? "Overwatch attack" : "ranged attack"}, and ${resultSummary}`,
       teaching: objectiveNarratives.length

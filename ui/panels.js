@@ -736,6 +736,87 @@ function getLogTeachingCopy(entry) {
   };
 }
 
+function getLatestCombatEntryIndex(entries) {
+  for (let index = entries.length - 1; index >= 0; index -= 1) {
+    if (entries[index]?.type === "combat") return index;
+  }
+  return -1;
+}
+
+function buildTimelineCauseEffect(entry, recentEntries, index, uiState) {
+  const aftermath = uiState?.aftermathNarrative;
+  if (!aftermath) return null;
+
+  const latestCombatIndex = getLatestCombatEntryIndex(recentEntries);
+  if (entry.type === "combat" && index === latestCombatIndex) {
+    return {
+      label: "Cause And Effect",
+      cause: aftermath.reason,
+      effect: aftermath.teaching,
+      metrics: aftermath.metrics ?? []
+    };
+  }
+
+  if (entry.type === "scoring" && latestCombatIndex >= 0 && index >= latestCombatIndex) {
+    return {
+      label: "Board Swing",
+      cause: "The scoring update followed a recent combat exchange, so casualties or survival likely changed who could still contest space.",
+      effect: aftermath.teaching,
+      metrics: aftermath.metrics ?? []
+    };
+  }
+
+  return null;
+}
+
+function getTimelineFocusPayload(entry, recentEntries, index, uiState) {
+  const aftermath = uiState?.aftermathNarrative;
+  if (!aftermath) return null;
+  const latestCombatIndex = getLatestCombatEntryIndex(recentEntries);
+
+  if (entry.type === "combat" && index === latestCombatIndex) {
+    return {
+      attackerId: aftermath.attackerId ?? null,
+      targetId: aftermath.targetId ?? null,
+      objectiveIds: aftermath.objectiveIds ?? []
+    };
+  }
+
+  if (entry.type === "scoring" && latestCombatIndex >= 0 && index >= latestCombatIndex && (aftermath.objectiveIds?.length ?? 0)) {
+    return {
+      attackerId: aftermath.attackerId ?? null,
+      targetId: aftermath.targetId ?? null,
+      objectiveIds: aftermath.objectiveIds ?? []
+    };
+  }
+
+  return null;
+}
+
+function renderTimelineCauseEffect(causeEffect) {
+  if (!causeEffect) return "";
+  return `
+    <div class="log-cause-effect">
+      <div class="log-cause-effect-title">${causeEffect.label}</div>
+      <div class="log-cause-effect-row">
+        <span class="log-cause-effect-label">What caused it:</span>
+        <span>${causeEffect.cause}</span>
+      </div>
+      <div class="log-cause-effect-row">
+        <span class="log-cause-effect-label">What changed next:</span>
+        <span>${causeEffect.effect}</span>
+      </div>
+      ${(causeEffect.metrics?.length ?? 0)
+        ? `
+          <div class="log-cause-effect-metrics">
+            ${causeEffect.metrics.map(metric => `<span class="log-cause-effect-chip">${metric}</span>`).join("")}
+          </div>
+        `
+        : ""}
+    </div>
+  `;
+}
+
 /* ══════════════════════════════════════════════════════════════
    UNIT LISTS
    ══════════════════════════════════════════════════════════════ */
@@ -1074,20 +1155,27 @@ export function renderPhaseChecklist(state, checklist) {
    COMBAT LOG — with structured entries
    ══════════════════════════════════════════════════════════════ */
 
-export function renderLog(state) {
+export function renderLog(state, uiState = {}, handlers = {}) {
   const panel = document.getElementById("logPanel");
   panel.innerHTML = "";
   const recentEntries = state.log.slice(-16);
-  recentEntries.forEach(entry => {
+  recentEntries.forEach((entry, index) => {
     const div = document.createElement("div");
     const isCombat = entry.type === "combat";
     const teaching = getLogTeachingCopy(entry);
-    div.className = `log-entry ${isCombat ? "log-combat" : ""}`;
+    const causeEffect = buildTimelineCauseEffect(entry, recentEntries, index, uiState);
+    const focusPayload = getTimelineFocusPayload(entry, recentEntries, index, uiState);
+    div.className = `log-entry ${isCombat ? "log-combat" : ""} ${focusPayload ? "log-entry-focusable" : ""}`;
     div.innerHTML = `
       <div class="meta">R${entry.round} · ${titleCase(entry.phase)} · ${teaching.title}</div>
       <div class="log-body">${entry.text}</div>
       <div class="log-teaching"><span class="log-teaching-label">Why it matters:</span> ${teaching.why}</div>
+      ${renderTimelineCauseEffect(causeEffect)}
     `;
+    if (focusPayload) {
+      div.addEventListener("click", () => handlers.onLogEntryFocus?.(focusPayload));
+      div.title = "Click to highlight this interaction on the board.";
+    }
     panel.appendChild(div);
   });
 }
