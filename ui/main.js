@@ -709,6 +709,118 @@ function getWeaponName(state, payload) {
   return weaponPool?.find(weapon => weapon.id === payload.weaponId)?.name ?? payload.weaponId ?? "attack profile";
 }
 
+function getWeaponProfile(state, payload) {
+  const attacker = state.units[payload.attackerId];
+  if (!attacker) return null;
+  const weaponPool = payload.mode === "melee" ? attacker.meleeWeapons : attacker.rangedWeapons;
+  return weaponPool?.find(weapon => weapon.id === payload.weaponId) ?? null;
+}
+
+function getAliveModelCount(unit) {
+  if (!unit?.modelIds?.length) return 0;
+  return unit.modelIds.filter(id => unit.models?.[id]?.alive).length;
+}
+
+function formatStoryRange(payload, weapon) {
+  if (!weapon) return payload.mode === "melee" ? "Melee" : "—";
+  if (payload.mode === "melee") return "Melee";
+  const baseRange = weapon.rangeInches != null ? `${weapon.rangeInches}"` : null;
+  const longRange = weapon.longRangeInches ?? weapon.longRange ?? null;
+  if (baseRange && longRange) return `${baseRange} + ${longRange}" LR`;
+  return baseRange ?? "—";
+}
+
+function renderStoryFactLine(items) {
+  const facts = (items ?? []).filter(item => item?.value != null && item.value !== "");
+  if (!facts.length) return "";
+  return `
+    <div class="story-fact-line">
+      ${facts.map(item => `
+        <span class="story-fact">
+          <span class="story-fact-label">${escapeHtml(item.label)}</span>
+          <span class="story-fact-value">${escapeHtml(item.value)}</span>
+        </span>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderStoryUnitSummary(label, unit, lines, chips = [], accent = "") {
+  if (!unit) return "";
+  return `
+    <div class="story-unit-summary ${accent}">
+      <div class="story-unit-summary-header">
+        <div class="story-unit-summary-label">${escapeHtml(label)}</div>
+        <div class="story-unit-summary-name">${escapeHtml(unit.name)}</div>
+      </div>
+      ${lines.map(renderStoryFactLine).join("")}
+      ${chips.length ? `<div class="story-note-row">${chips.map(chip => `<span class="story-chip">${escapeHtml(chip)}</span>`).join("")}</div>` : ""}
+    </div>
+  `;
+}
+
+function renderStoryResolutionLine(steps) {
+  const filteredSteps = (steps ?? []).filter(Boolean);
+  if (!filteredSteps.length) return "";
+  return `
+    <div class="story-resolution-line" aria-label="Combat resolution">
+      ${filteredSteps.map((step, index) => `
+        ${index ? '<span class="story-resolution-arrow" aria-hidden="true">&rarr;</span>' : ""}
+        <div class="story-resolution-step ${step.accent ?? ""}">
+          <span class="story-resolution-label">${escapeHtml(step.label)}</span>
+          <span class="story-resolution-value">${escapeHtml(step.value)}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderStoryCompactSection(title, items, accent = "") {
+  if (!items?.length) return "";
+  return `
+    <div class="story-compact-section ${accent}">
+      <div class="story-section-title">${escapeHtml(title)}</div>
+      <div class="story-compact-list">
+        ${items.map(item => `<div class="story-compact-item">${escapeHtml(item)}</div>`).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function getCombatOutcomeSummary(payload, attacker, target) {
+  if (payload.failedReason) {
+    return String(payload.failedReason);
+  }
+
+  const prevented = [];
+  if (payload.saved) prevented.push(`${payload.saved} save${payload.saved === 1 ? "" : "s"}`);
+  if (payload.evade?.saved) prevented.push(`${payload.evade.saved} evade`);
+  if (payload.dodge?.prevented) prevented.push(`${payload.dodge.prevented} dodge`);
+
+  let primary = "";
+  if (payload.casualties > 0) {
+    primary = `${target} lost ${payload.casualties} model(s) after ${payload.totalDamage} damage got through.`;
+  } else if (payload.totalDamage > 0) {
+    primary = `${target} took ${payload.totalDamage} damage, but it was not enough to remove a model.`;
+  } else if (prevented.length) {
+    primary = `${target} turned the attack away with ${prevented.join(", ")}, so no damage got through.`;
+  } else {
+    primary = `${attacker} committed the attack, but it did not convert into damage.`;
+  }
+
+  if (payload.mode === "melee") {
+    return payload.totalDamage > 0
+      ? `${primary} Check the engagement line before the next combat activation.`
+      : `${primary} With no melee damage dealt, both sides can stay tied up for later combat activations.`;
+  }
+
+  if (payload.casualties > 0) {
+    return `${primary} That loss can immediately change return fire and objective pressure.`;
+  }
+
+  return primary;
+}
+
 function renderStorySection(title, items, accent = "") {
   if (!items?.length) return "";
   return `
@@ -844,139 +956,149 @@ function buildPhaseTeachingHtml(config) {
 }
 
 function buildCombatPayloadBlock(payload, state) {
-  const attacker = getUnitName(state, payload.attackerId);
-  const target = getUnitName(state, payload.targetId);
-  const weapon = getWeaponName(state, payload);
+  const attackerUnit = state.units[payload.attackerId] ?? null;
+  const targetUnit = state.units[payload.targetId] ?? null;
+  const attacker = attackerUnit?.name ?? getUnitName(state, payload.attackerId);
+  const target = targetUnit?.name ?? getUnitName(state, payload.targetId);
+  const weaponProfile = getWeaponProfile(state, payload);
+  const weapon = weaponProfile?.name ?? getWeaponName(state, payload);
   const actionLabel = payload.mode === "overwatch"
     ? "Overwatch"
     : payload.mode === "melee"
       ? "Charge Attack"
       : "Ranged Attack";
-  const casualtiesAccent = payload.casualties > 0 ? "impact" : "";
+  const attackerAlive = getAliveModelCount(attackerUnit);
+  const attackerTotal = attackerUnit?.modelIds?.length ?? attackerAlive;
+  const targetAlive = getAliveModelCount(targetUnit);
+  const targetTotal = targetUnit?.modelIds?.length ?? targetAlive;
+  const attacksPerModel = weaponProfile
+    ? (payload.mode === "melee"
+      ? weaponProfile.attacksPerModel ?? weaponProfile.shotsPerModel ?? 1
+      : weaponProfile.shotsPerModel ?? weaponProfile.attacksPerModel ?? 1)
+    : null;
+  const attackerLines = [
+    [
+      { label: "Weapon", value: weapon },
+      { label: "Models", value: attackerTotal ? `${attackerAlive}/${attackerTotal}` : null },
+      { label: "Pool", value: payload.attempts }
+    ],
+    [
+      { label: "Hit", value: weaponProfile?.hitTarget != null ? `${weaponProfile.hitTarget}+` : null },
+      { label: "Wound", value: weaponProfile?.woundTarget != null ? `${weaponProfile.woundTarget}+` : null },
+      { label: "Damage", value: payload.damagePerHit ?? weaponProfile?.damage ?? null },
+      { label: "Range", value: formatStoryRange(payload, weaponProfile) }
+    ]
+  ];
+  if (payload.mode === "melee") {
+    attackerLines.push([
+      { label: "Fight", value: payload.fightingRank != null ? payload.fightingRank : null },
+      { label: "Support", value: payload.supportingRank != null ? payload.supportingRank : null },
+      { label: "Assigned", value: payload.assignedModels != null ? payload.assignedModels : null }
+    ]);
+  } else if (attacksPerModel != null && attackerAlive) {
+    attackerLines[0][2] = { label: "Pool", value: `${attackerAlive}x${attacksPerModel} -> ${payload.attempts}` };
+  }
+
+  const defenderDefense = targetUnit?.defense ?? {};
+  const defenderLines = [
+    [
+      { label: "Models", value: targetTotal ? `${targetAlive}/${targetTotal}` : null },
+      { label: "Tough", value: defenderDefense.toughness ?? null },
+      { label: "Armor", value: defenderDefense.armorSave != null ? `${defenderDefense.armorSave}+` : null },
+      { label: "Evade", value: defenderDefense.evadeTarget != null ? `${defenderDefense.evadeTarget}+` : "—" }
+    ]
+  ];
+  const defenderExtras = [];
+  if (defenderDefense.invulnerableSave != null) defenderExtras.push({ label: "Invuln", value: `${defenderDefense.invulnerableSave}+` });
+  if (defenderDefense.dodge != null) defenderExtras.push({ label: "Dodge", value: defenderDefense.dodge });
+  if (defenderExtras.length) defenderLines.push(defenderExtras);
+
+  const defenderChips = [
+    targetUnit?.status?.engaged ? "Engaged" : "",
+    targetUnit?.status?.hidden ? "Hidden" : "",
+    targetUnit?.status?.burrowed ? "Burrowed" : "",
+    targetUnit?.abilities?.includes?.("flying") || targetUnit?.tags?.includes?.("Flying") ? "Flying" : "",
+    payload.highGround ? "High Ground" : "",
+    payload.objectiveDefenseBonus ? `Objective Armor +${payload.objectiveDefenseBonus}` : "",
+    payload.ancillaryCarapace ? "Ancillary Carapace" : ""
+  ].filter(Boolean);
+
+  const attackerChips = [
+    payload.primaryTargetFocus ? "Primary Target" : "",
+    payload.visible === false ? "Indirect Fire" : "",
+    payload.longRangePenalty ? "Long Range Penalty" : ""
+  ].filter(Boolean);
+
   const chips = [
     actionLabel,
-    payload.visible === false ? "Indirect Fire" : "",
-    payload.longRangePenalty ? "Long Range Penalty" : "",
     payload.antiEvade ? `Anti-Evade ${payload.antiEvade}` : "",
+    payload.precision ? `Precision +${payload.precision}` : "",
     payload.automaticHits ? `Hits ${payload.automaticHits.count}` : "",
+    payload.surge?.applied ? `Surge ${payload.surge.applied}` : "",
+    payload.criticalHit?.applied ? `Crit ${payload.criticalHit.applied}` : "",
+    payload.burstFire?.bonusAttacks ? `Burst +${payload.burstFire.bonusAttacks}` : "",
+    payload.lockedIn ? `Locked In +${payload.lockedIn}` : "",
+    payload.guardianShield?.reducedBy ? `Guardian Shield -${payload.guardianShield.reducedBy}` : "",
+    payload.pointDefenseLaser?.reducedBy ? `PDL -${payload.pointDefenseLaser.reducedBy}` : "",
+    payload.evade?.saved ? `Evade ${payload.evade.saved}` : "",
+    payload.dodge?.prevented ? `Dodge ${payload.dodge.prevented}` : "",
+    payload.lifeSupport?.reducedBy ? `Life Support -${payload.lifeSupport.reducedBy}` : "",
+    payload.transfusion?.reducedBy ? `Transfusion -${payload.transfusion.reducedBy}` : "",
+    payload.zealousRound?.reducedBy ? `Zealous Round -${payload.zealousRound.reducedBy}` : "",
+    payload.concentratedFire?.cap ? `Concentrated ${payload.concentratedFire.cap}` : "",
     payload.damagePerHit && payload.damagePerHit > 1 ? `Damage ${payload.damagePerHit}` : "",
-    payload.primaryTargetFocus ? "Primary Target" : ""
+    payload.impact?.hits ? `Impact ${payload.impact.hits}` : ""
   ].filter(Boolean);
 
-  const statGrid = `
-    <div class="story-stat-grid">
-      ${renderStoryStat("Attacks", payload.attempts)}
-      ${renderStoryStat("Hits", payload.hits)}
-      ${payload.precision ? renderStoryStat("Precision", payload.precision, "success") : ""}
-      ${payload.automaticHits ? renderStoryStat("Auto Hits", payload.automaticHits.count, "impact") : ""}
-      ${renderStoryStat("Wounds", payload.wounds)}
-      ${payload.criticalHit?.applied ? renderStoryStat("Crit", payload.criticalHit.applied, "impact") : ""}
-      ${payload.surge?.applied ? renderStoryStat("Surge", payload.surge.applied, "impact") : ""}
-      ${payload.dodge?.prevented ? renderStoryStat("Dodge", payload.dodge.prevented, "success") : ""}
-      ${renderStoryStat("Saves", payload.saved)}
-      ${payload.evade?.saved ? renderStoryStat("Evade", payload.evade.saved, "success") : ""}
-      ${renderStoryStat("Damage", payload.totalDamage, payload.totalDamage > 0 ? "impact" : "")}
-      ${renderStoryStat("Casualties", payload.casualties, casualtiesAccent)}
-      ${payload.fightingRank != null ? renderStoryStat("Fight Rank", payload.fightingRank, "success") : ""}
-      ${payload.supportingRank != null ? renderStoryStat("Support", payload.supportingRank, "success") : ""}
-      ${payload.assignedModels != null ? renderStoryStat("Assigned", payload.assignedModels, "success") : ""}
-    </div>
-  `;
-
-  const notes = [];
-  if (payload.impact) {
-    notes.push(payload.impact.preventedByHidden
-      ? `Impact was negated because ${target} stayed hidden.`
-      : `Impact rolled ${payload.impact.attempts} dice, landed ${payload.impact.hits} hits, and caused ${payload.impact.casualties} casualties before the main attack.`);
-  }
-  if (payload.surge?.applied) {
-    notes.push(`Surge rolled ${payload.surge.roll} on ${payload.surge.dice} and turned ${payload.surge.applied} wound(s) into bypassed armour against ${payload.surge.matchedTags.join("/")}.`);
-  }
-  if (payload.automaticHits?.count) {
-    notes.push(`Hits added ${payload.automaticHits.count} automatic armour-pool hit(s) at ${payload.automaticHits.damage} damage each, and they did not roll to wound or generate Surge.`);
-  }
-  if (payload.criticalHit?.applied) {
-    notes.push(`Critical Hit pushed ${payload.criticalHit.applied} wound(s) straight past armour.`);
-  }
-  if (payload.dodge?.prevented) {
-    notes.push(`${target} used Dodge to cancel ${payload.dodge.prevented} bypassed hit(s).`);
-  }
-  if (payload.evade?.saved) {
-    notes.push(`${target} avoided ${payload.evade.saved} hit(s) on ${payload.evade.target}+ evade.`);
-  }
-  if (payload.ancillaryCarapace) {
-    notes.push(`${target} improved its armour roll with Ancillary Carapace.`);
-  }
-  if (payload.objectiveDefenseBonus) {
-    notes.push(`${target} gained +${payload.objectiveDefenseBonus} armour from objective positioning.`);
-  }
-  if (payload.burstFire?.bonusAttacks) {
-    notes.push(`${attacker} gained +${payload.burstFire.bonusAttacks} attacks from Burst Fire at close range.`);
-  }
-  if (payload.lockedIn) {
-    notes.push(`${attacker} gained +${payload.lockedIn} attacks because ${target} was stationary.`);
-  }
-  if (payload.lifeSupport?.reducedBy) {
-    notes.push(`Life Support reduced the damage that got through by ${payload.lifeSupport.reducedBy}.`);
-  }
-  if (payload.transfusion?.reducedBy) {
-    notes.push(`Transfusion from ${payload.transfusion.sourceName ?? "a nearby Queen"} reduced the damage that got through by ${payload.transfusion.reducedBy}.`);
-  }
-  if (payload.stimpack?.precisionBonus) {
-    notes.push(`${attacker} was stimpacked, adding ${payload.stimpack.precisionBonus} temporary Precision to this attack.`);
-  }
-  if (payload.guardianShield?.reducedBy) {
-    notes.push(`Guardian Shield from ${payload.guardianShield.sourceName ?? "a nearby Sentry"} removed ${payload.guardianShield.reducedBy} die from the attack pool before hits were rolled.`);
-  }
-  if (payload.pointDefenseLaser?.reducedBy) {
-    notes.push(`Point Defense Laser from ${payload.pointDefenseLaser.sourceName ?? "a nearby drone"} removed ${payload.pointDefenseLaser.reducedBy} dice, then that drone was removed from the battlefield.`);
-  }
-  if (payload.zealousRound?.reducedBy) {
-    notes.push(`Zealous Round reduced the damage that got through by ${payload.zealousRound.reducedBy} and activated ${target}.`);
-  }
-  if (payload.concentratedFire?.cap) {
-    notes.push(
-      payload.concentratedFire.discardedDamage > 0
+  const ruleEffects = [
+    payload.impact
+      ? (payload.impact.preventedByHidden
+        ? "Impact was shut off because the defender stayed hidden."
+        : `Impact added ${payload.impact.hits} hit(s) before the main attack.`)
+      : null,
+    payload.precision ? `Precision converted ${payload.precision} miss(es) into armour-pool hits.` : null,
+    payload.stimpack?.precisionBonus ? `Stimpack supplied +${payload.stimpack.precisionBonus} temporary Precision.` : null,
+    payload.automaticHits?.count ? `Hits added ${payload.automaticHits.count} automatic hit(s) at ${payload.automaticHits.damage} damage each.` : null,
+    payload.surge?.applied ? `Surge pushed ${payload.surge.applied} wound(s) past armour.` : null,
+    payload.criticalHit?.applied ? `Critical Hit pushed ${payload.criticalHit.applied} wound(s) past armour.` : null,
+    payload.guardianShield?.reducedBy ? `Guardian Shield removed ${payload.guardianShield.reducedBy} die before hit rolls.` : null,
+    payload.pointDefenseLaser?.reducedBy ? `Point Defense Laser removed ${payload.pointDefenseLaser.reducedBy} dice, then spent the drone.` : null,
+    payload.dodge?.prevented ? `Dodge cancelled ${payload.dodge.prevented} bypassed hit(s).` : null,
+    payload.evade?.saved ? `Evade avoided ${payload.evade.saved} hit(s) after armour results were known.` : null,
+    payload.lifeSupport?.reducedBy ? `Life Support reduced final damage by ${payload.lifeSupport.reducedBy}.` : null,
+    payload.transfusion?.reducedBy ? `Transfusion reduced final damage by ${payload.transfusion.reducedBy}.` : null,
+    payload.zealousRound?.reducedBy ? `Zealous Round reduced final damage by ${payload.zealousRound.reducedBy}.` : null,
+    payload.concentratedFire?.cap
+      ? (payload.concentratedFire.discardedDamage > 0
         ? `Concentrated Fire capped casualties at ${payload.concentratedFire.cap} and discarded ${payload.concentratedFire.discardedDamage} excess damage.`
-        : `Concentrated Fire capped casualties at ${payload.concentratedFire.cap}.`
-    );
-  }
-
-  const ruleNotes = [
-    `Attack order here is: hit rolls, wound rolls, armour-pool effects, saves, then damage.`,
-    payload.precision ? `Precision moved ${payload.precision} failed hit dice straight into the armour pool, so those dice counted as hits without rolling to wound.` : null,
-    payload.stimpack?.precisionBonus ? `Stimpack adds temporary Precision to the unit's ranged and melee weapons for the rest of the round.` : null,
-    payload.automaticHits?.count ? `Hits adds automatic armour-pool hits. Those dice skip the hit and wound steps and do not generate Surge.` : null,
-    payload.surge?.applied ? `Surge happens after wounds are created. Matching wounds are pushed past armour before normal saves are rolled.` : null,
-    payload.criticalHit?.applied ? `Critical Hit bypasses armour by moving wounds straight toward damage before save rolls.` : null,
-    payload.dodge?.prevented ? `Dodge cancels a limited number of bypass-armour hits before damage is applied.` : null,
-    payload.evade?.saved ? `Evade happens after armour results are known, letting the defender avoid hits that would otherwise deal damage.` : null,
-    payload.visible === false ? `Indirect Fire let this attack ignore line of sight for targeting.` : null,
-    payload.longRangePenalty ? `Long Range extended the shot beyond base range, but the attack paid a hit penalty to do it.` : null,
-    payload.burstFire?.bonusAttacks ? `Burst Fire increases attack volume when the target is inside the weapon's close-range band.` : null,
-    payload.lockedIn ? `Locked In adds attacks because the target counted as stationary when this shot was resolved.` : null,
-    payload.guardianShield?.reducedBy ? `Guardian Shield protects nearby friendly units by removing 1 die from incoming ranged attack pools.` : null,
-    payload.pointDefenseLaser?.reducedBy ? `Point Defense Laser is a sacrificial defense that removes up to 2 dice from a ranged attack, then removes the drone from play.` : null,
-    payload.antiEvade ? `Anti-Evade makes the defender's evade roll harder.` : null,
-    payload.fightingRank != null ? `Only models in fighting rank, plus models supporting them from base contact, were allowed to contribute to this melee batch.` : null
+        : `Concentrated Fire capped casualties at ${payload.concentratedFire.cap}.`)
+      : null,
+    payload.fightingRank != null ? `Only ${payload.fightingRank} fighting and ${payload.supportingRank ?? 0} supporting models contributed to this melee pool.` : null
   ].filter(Boolean);
 
-  const nextStepNotes = [
-    payload.casualties > 0 ? `${target} lost ${payload.casualties} model(s), so its supply and board presence may have changed immediately.` : `${target} kept all of its models alive through this exchange.`,
-    payload.mode === "melee"
-      ? (payload.totalDamage > 0 ? `This was a melee resolution, so the result can change who stays engaged and who can strike back next.` : `No damage got through in melee, so the units may stay tied up for later combat activations.`)
-      : `This attack was queued from Assault and resolved in Combat, so the next important step is the next combat activation or reaction already in queue.`
-  ].filter(Boolean);
+  const resolutionLine = renderStoryResolutionLine([
+    { label: "Attacks", value: payload.attempts },
+    { label: "Hits", value: payload.hits, accent: payload.hits > 0 ? "success" : "" },
+    { label: "Wounds", value: payload.wounds, accent: payload.wounds > 0 ? "success" : "" },
+    { label: "Saves", value: payload.saved, accent: payload.saved > 0 ? "success" : "" },
+    { label: "Damage", value: payload.totalDamage, accent: payload.totalDamage > 0 ? "impact" : "" },
+    { label: "Casualties", value: payload.casualties, accent: payload.casualties > 0 ? "impact" : "" }
+  ]);
+
+  const outcomeSummary = getCombatOutcomeSummary(payload, attacker, target);
 
   return `
     <div class="story-lead"><strong>${escapeHtml(attacker)}</strong> resolved a ${escapeHtml(actionLabel.toLowerCase())} into <strong>${escapeHtml(target)}</strong> with <strong>${escapeHtml(weapon)}</strong>.</div>
-    ${statGrid}
-    <div class="story-note-row">
+    <div class="story-combat-context">
+      ${renderStoryUnitSummary("Attacker", attackerUnit, attackerLines, attackerChips, "attacker")}
+      ${renderStoryUnitSummary("Defender", targetUnit, defenderLines, defenderChips, "defender")}
+    </div>
+    ${resolutionLine}
+    <div class="story-note-row story-relevant-factors">
       ${chips.map(chip => `<span class="story-chip">${escapeHtml(chip)}</span>`).join("")}
     </div>
-    ${renderStorySection("What Happened", notes)}
-    ${renderStorySection("Why It Worked", ruleNotes, "teaching")}
-    ${renderStorySection("What This Means", nextStepNotes, "next")}
+    <div class="story-outcome ${payload.casualties > 0 || payload.totalDamage > 0 ? "impact" : "success"}">${escapeHtml(outcomeSummary)}</div>
+    ${renderStoryCompactSection("Key Rule Effects", ruleEffects, "teaching")}
   `;
 }
 
