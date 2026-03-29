@@ -117,6 +117,34 @@ function getEnemyThreatScore(state, playerId, unit, assessment) {
   return score;
 }
 
+function getForwardProgress(state, playerId, point) {
+  if (!point) return 0;
+  const side = state.deployment?.entryEdges?.[playerId]?.side;
+  if (side === "west") return point.x;
+  if (side === "east") return state.board.widthInches - point.x;
+  if (side === "north") return point.y;
+  if (side === "south") return state.board.heightInches - point.y;
+  return 0;
+}
+
+function isNearHomeEdge(state, playerId, point, extra = 2) {
+  if (!point) return false;
+  const depth = (state.deployment?.zoneOfInfluenceDepth ?? 6) + extra;
+  const side = state.deployment?.entryEdges?.[playerId]?.side;
+  if (side === "west") return point.x <= depth;
+  if (side === "east") return point.x >= state.board.widthInches - depth;
+  if (side === "north") return point.y <= depth;
+  if (side === "south") return point.y >= state.board.heightInches - depth;
+  return false;
+}
+
+function countEnemiesNearPoint(state, playerId, point, radius) {
+  return getEnemyUnits(state, playerId).filter(unit => {
+    const unitPoint = leaderPoint(unit);
+    return unitPoint && distance(point, unitPoint) <= radius;
+  }).length;
+}
+
 function scoreHoldPosition(state, playerId, unit, assessment) {
   const point = leaderPoint(unit);
   if (!point) return -Infinity;
@@ -130,6 +158,9 @@ function scoreHoldPosition(state, playerId, unit, assessment) {
     if (role === "ranged" || role === "support") score += 6;
   }
   if (unit.status.stationary) score += 1.5;
+  if (!assessment.behavior.prefersDefense && isNearHomeEdge(state, playerId, point) && countEnemiesNearPoint(state, playerId, point, 8) === 0) {
+    score -= 14;
+  }
   return score;
 }
 
@@ -347,8 +378,17 @@ function scoreDestination(state, playerId, unit, point, assessment) {
   const currentPoint = leaderPoint(unit);
   if (currentPoint) {
     const movementDelta = distance(currentPoint, point);
+    const forwardDelta = getForwardProgress(state, playerId, point) - getForwardProgress(state, playerId, currentPoint);
     if (assessment.behavior.prefersDefense && movementDelta <= 2) score += 2.5;
     if (assessment.behavior.prefersPressure && movementDelta >= 3) score += 2;
+    if (!assessment.behavior.prefersDefense) {
+      score += Math.max(0, forwardDelta) * (assessment.behavior.prefersPressure ? 1.6 : 0.9);
+    }
+  }
+
+  if (!assessment.behavior.prefersDefense) {
+    score += getForwardProgress(state, playerId, point) * 0.2;
+    if (isNearHomeEdge(state, playerId, point) && state.round <= 2) score -= 8;
   }
 
   // Slight penalty for being at the edges (less tactical value)
@@ -829,7 +869,7 @@ function chooseGuardianShieldAction(state, playerId, unitId, assessment) {
       threatened += 1;
     }
   }
-  const score = nearbyFriendlies.length * 8 + threatened * 12 + (assessment.behavior.prefersDefense ? 6 : 0);
+  const score = nearbyFriendlies.length * 10 + threatened * 18 + (threatened > 0 ? 10 : 0) + (assessment.behavior.prefersDefense ? 6 : 0);
   if (score <= 0) return null;
   return {
     action: {
@@ -1065,7 +1105,9 @@ function chooseMovementAction(state, playerId, assessment) {
       const onOwnedObjective = assessment.objectiveDetails.some(
         obj => obj.controller === playerId && distance(point, obj) <= getObjectiveControlRange(state)
       );
-      if (onOwnedObjective || assessment.behavior.prefersDefense) {
+      const localEnemyPressure = countEnemiesNearPoint(state, playerId, point, 8);
+      if ((onOwnedObjective && (assessment.behavior.prefersDefense || localEnemyPressure > 0)) ||
+          (assessment.behavior.prefersDefense && localEnemyPressure > 0)) {
         candidates.push({
           item: { type: "HOLD_UNIT", payload: { playerId, unitId } },
           score: scoreHoldPosition(state, playerId, unit, assessment)
