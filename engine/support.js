@@ -200,3 +200,38 @@ export function resolveLifeSupport(state, target, totalDamage) {
   );
   return { reducedBy, contributions };
 }
+
+export function resolveTransfusion(state, target, totalDamage) {
+  if (totalDamage <= 0 || !target || !isBiological(target) || target.status.location !== "battlefield") return null;
+
+  const targetModels = getAliveModels(target);
+  if (!targetModels.length) return null;
+
+  const nearbyQueens = Object.values(state.units).filter(unit =>
+    unit.owner === target.owner &&
+    unit.id !== target.id &&
+    unit.status.location === "battlefield" &&
+    unit.abilities?.includes("transfusion")
+  ).map(unit => {
+    const supportModels = getAliveModels(unit);
+    const inRange = supportModels.some(sourceModel =>
+      targetModels.some(targetModel => getDistance(sourceModel, targetModel) <= MEDPACK_RANGE + 1e-6)
+    );
+    return inRange ? unit : null;
+  }).filter(Boolean);
+
+  const source = nearbyQueens[0];
+  if (!source) return null;
+
+  const reducedBy = Math.min(2, totalDamage);
+  appendLog(
+    state,
+    "combat",
+    `${source.name} uses Transfusion on ${target.name}, reducing incoming damage by ${reducedBy}.`
+  );
+  return {
+    reducedBy,
+    sourceUnitId: source.id,
+    sourceName: source.name
+  };
+}

@@ -40,6 +40,18 @@ export function beginForceFieldInteraction(uiState) {
   uiState.previewUnit = null;
 }
 
+export function beginCreepInteraction(uiState) {
+  uiState.mode = "place_creep";
+  uiState.previewPath = null;
+  uiState.previewUnit = null;
+}
+
+export function beginOmegaTransferInteraction(uiState) {
+  uiState.mode = "omega_transfer";
+  uiState.previewPath = null;
+  uiState.previewUnit = null;
+}
+
 export function beginMedpackInteraction(uiState) {
   uiState.mode = "use_medpack";
   uiState.previewPath = null;

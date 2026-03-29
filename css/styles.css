@@ -701,6 +701,15 @@ kbd { display: inline-block; padding: 0 3px; border-radius: 3px; background: rgb
 .terrain-block { fill: rgba(95,72,56,.7); stroke: #8c6c5c; stroke-width: .08; }
 .terrain-cover { fill: rgba(64,90,66,.45); stroke: #5d8961; stroke-width: .08; }
 .terrain-force-field { fill: rgba(115, 196, 255, .18); stroke: rgba(115, 196, 255, .92); stroke-width: .08; stroke-dasharray: .18 .12; }
+.creep-zone { fill: rgba(165,78,220,.14); stroke: rgba(213,136,255,.52); stroke-width: .08; }
+.creep-tumor-token { fill: rgba(232,180,255,.9); stroke: rgba(255,235,255,.95); stroke-width: .08; }
+.creep-source-zone { fill: rgba(135,63,192,.16); stroke: rgba(201,129,255,.64); stroke-width: .08; stroke-dasharray: .16 .1; }
+.creep-preview { fill: rgba(165,78,220,.12); stroke-width: .1; }
+.creep-preview.valid { stroke: rgba(141,224,169,.92); fill: rgba(141,224,169,.14); }
+.creep-preview.invalid { stroke: rgba(255,155,155,.92); fill: rgba(255,155,155,.12); }
+.power-field-zone { fill: rgba(126, 196, 255, .08); stroke-width: .08; stroke-dasharray: .2 .12; }
+.power-field-zone.playerA { stroke: rgba(150, 214, 255, .72); fill: rgba(95, 169, 255, .09); }
+.power-field-zone.playerB { stroke: rgba(255, 173, 210, .72); fill: rgba(255, 121, 173, .08); }
 .objective-marker { fill: #1d2130; stroke: var(--gold); stroke-width: .12; }
 .objective-ring { fill: none; stroke-width: .08; }
 .objective-ring.neutral { stroke: rgba(212,175,55,.3); }

@@ -53,7 +53,8 @@ export function createInitialGameState({
     board: {
       widthInches: deployment.boardWidthInches,
       heightInches: deployment.boardHeightInches,
-      terrain: createTerrain()
+      terrain: createTerrain(),
+      creepZones: []
     },
     rules: {
       gridMode: Boolean(rules?.gridMode)

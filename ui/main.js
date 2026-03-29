@@ -1,7 +1,7 @@
 import { createInitialGameState } from "../engine/state.js";
 import { beginGame } from "../engine/phases.js";
 import { dispatch as engineDispatch } from "../engine/reducer.js";
-import { bindInputHandlers, beginMoveInteraction, beginDeployInteraction, beginDisengageInteraction, beginRunInteraction, beginForceFieldInteraction, beginMedpackInteraction, beginOpticalFlareInteraction, beginDeclareRangedInteraction, beginDeclareChargeInteraction, cancelCurrentInteraction } from "./input.js";
+import { bindInputHandlers, beginMoveInteraction, beginDeployInteraction, beginDisengageInteraction, beginRunInteraction, beginForceFieldInteraction, beginCreepInteraction, beginOmegaTransferInteraction, beginMedpackInteraction, beginOpticalFlareInteraction, beginDeclareRangedInteraction, beginDeclareChargeInteraction, cancelCurrentInteraction } from "./input.js";
 import { renderAll } from "./renderer.js";
 import { autoArrangeModels } from "../engine/coherency.js";
 import { performBotTurn } from "../ai/bot.js";
@@ -16,6 +16,9 @@ import { getCombatActivationPreview, getMeleeTargetSelection } from "../engine/c
 import { importArmyBuilderRoster, isArmyBuilderPayload, buildSetupFromImportedRosters } from "../engine/army_builder_import.js";
 import { canTargetWithRangedWeapon, getLeaderPoint, getLongRangeValue } from "../engine/visibility.js";
 import { getObjectiveControlSnapshot } from "../engine/objectives.js";
+import { unitCanSourceCreep } from "../engine/creep.js";
+import { canUseOmegaWormNetwork } from "../engine/omega_worms.js";
+import { canUseBoardEntryDeploy } from "../engine/deployment.js";
 
 const DEFAULT_SETUP = {
   missionId: "take_and_hold",
@@ -47,6 +50,7 @@ const RULE_GLOSSARY = {
   "Close Ranks": "Close Ranks is the step where a burrowed unit surfaces and tightens formation so it can actually fight in melee above ground.",
   "Concentrated Fire": "Concentrated Fire limits how many casualties the attack can cause, and any excess damage beyond that cap is discarded.",
   "Critical Hit": "Critical Hit pushes wounds straight past armour before save rolls are made.",
+  "Detection": "Detection reveals hidden or burrowed enemies within range, stripping away stealth-based targeting protection and some stealth defenses.",
   "Dodge": "Dodge cancels a limited number of hits that already bypassed armour before those hits become damage.",
   "Evade": "Evade is a late defensive roll that can avoid hits after armour results are known.",
   "Fighting Rank": "Fighting Rank is the set of models actually close enough to the enemy to contribute attacks in melee.",
@@ -64,6 +68,7 @@ const RULE_GLOSSARY = {
   "Precision": "Precision moves some failed hit dice directly into the armour pool, so they still count as hits without rolling to wound.",
   "Supporting Rank": "Supporting Rank models are not in direct contact with the enemy, but they can still help if they are in base contact with a fighting-rank model.",
   "Surge": "Surge converts matching wounds into hits that bypass armour after wounds are created.",
+  "Transfusion": "Transfusion is a Queen reaction that reduces incoming damage to a nearby friendly biological unit before it is allocated.",
   "Zealous Round": "Zealous Round trades the unit's unused activation in the current phase for immediate damage reduction."
 };
 
@@ -244,7 +249,7 @@ function getModeText() {
 
   if (uiState.mode === "deploy" && unit) {
     const avail = state.players.playerA.supplyPool - getPlayerSupply(state);
-    return `Deploy ${unit.name} (${unit.currentSupplyValue} SP) — click a green square. Available supply: ${avail}.${progress}`;
+    return `Deploy ${unit.name} (${unit.currentSupplyValue} SP) — click a green square. Deep strike and Protoss warp-ins can enter directly on the board, low-supply Zerg can also arrive through a friendly Omega Worm, and other reserves use the entry edge. Available supply: ${avail}.${progress}`;
   }
   if (uiState.mode === "move" && unit) {
     return `Move ${unit.name} — click a green square within ${unit.speed}" speed. Leader moves first, squad follows in coherency.${progress}`;
@@ -257,6 +262,12 @@ function getModeText() {
   }
   if (uiState.mode === "force_field" && unit) {
     return `Solid-Field Projectors — place a Force Field token within 8". Size 2 or lower units cannot cross it, while Size 3+ units break it.${progress}`;
+  }
+  if (uiState.mode === "place_creep" && unit) {
+    return `Creep Spread — place a Creep Tumor within 6". It creates a 6" creep aura, and enemies that finish a move, run, deploy, or disengage within 1" of the token displace it.${progress}`;
+  }
+  if (uiState.mode === "omega_transfer" && unit) {
+    return `Omega Network — choose an emergence point within 3" of a different friendly Omega Worm. The unit must start near one worm and emerge clear of enemies and terrain.${progress}`;
   }
   if (uiState.mode === "use_medpack" && unit) {
     return `Medpack — click another friendly biological unit within 4". Healing scales with nearby Medic models.${progress}`;
@@ -277,7 +288,7 @@ function getModeText() {
   // Phase-specific guidance when no mode is active
   if (state.phase === "movement") {
     if (checklist.remaining.length > 0) {
-      return `Movement Phase: Deploy reserves or Move/Hold battlefield units. Some units can also use movement abilities like Force Field placement.${progress}`;
+      return `Movement Phase: Deploy reserves or Move/Hold battlefield units. Some units can also use movement abilities like Force Field placement, spreading creep, or warping in through a friendly Power Field.${progress}`;
     }
     return `All units moved. Pass to start the Assault Phase.${progress}`;
   }
@@ -881,6 +892,9 @@ function buildCombatPayloadBlock(payload, state) {
   if (payload.lifeSupport?.reducedBy) {
     notes.push(`Life Support reduced the damage that got through by ${payload.lifeSupport.reducedBy}.`);
   }
+  if (payload.transfusion?.reducedBy) {
+    notes.push(`Transfusion from ${payload.transfusion.sourceName ?? "a nearby Queen"} reduced the damage that got through by ${payload.transfusion.reducedBy}.`);
+  }
   if (payload.zealousRound?.reducedBy) {
     notes.push(`Zealous Round reduced the damage that got through by ${payload.zealousRound.reducedBy} and activated ${target}.`);
   }
@@ -944,6 +958,7 @@ function getCombatPayloadGlossaryTerms(payload) {
     payload.antiEvade ? "Anti-Evade" : null,
     payload.concentratedFire?.cap ? "Concentrated Fire" : null,
     payload.lifeSupport?.reducedBy ? "Life Support" : null,
+    payload.transfusion?.reducedBy ? "Transfusion" : null,
     payload.zealousRound?.reducedBy ? "Zealous Round" : null,
     payload.fightingRank != null ? "Fighting Rank" : null,
     payload.supportingRank != null ? "Supporting Rank" : null
@@ -951,9 +966,9 @@ function getCombatPayloadGlossaryTerms(payload) {
 }
 
 function buildStoryBlock(text) {
-  const combatMatch = text.match(/^(.*?) (attacks|fires overwatch at|charges) (.*?) with (.*?): (\d+) attacks, (\d+) hits(?: \(including (\d+) Precision\))?, (\d+) wounds(?:, Critical Hit (\d+) bypassed armour)?(?:, Surge (.*?) rolled (\d+) vs (.*?) -> (\d+) bypassed armour)?(?:, Dodge prevented (\d+) bypassed hits)?, (\d+) saves(?: \((cover)\))?(?:, (\d+) evade saves on (\d+)\+)?(?:, indirect fire without line of sight)?(?:, long range penalty applied)?(?:, Burst Fire \+(\d+))?(?:, Locked In \+(\d+))?(?:, Anti-Evade (\d+))?(?:, Pierce damage (\d+))?(?:, Zealous Round reduced damage by (\d+))?(?:, Concentrated Fire cap (\d+)(?: \(discarded (\d+) damage\))?)?(?:, Fighting Rank (\d+), Supporting Rank (\d+), Assigned Models (\d+)(?:, Primary Target Focus)?)?, (\d+) casualties\.$/);
+  const combatMatch = text.match(/^(.*?) (attacks|fires overwatch at|charges) (.*?) with (.*?): (\d+) attacks, (\d+) hits(?: \(including (\d+) Precision\))?, (\d+) wounds(?:, Critical Hit (\d+) bypassed armour)?(?:, Surge (.*?) rolled (\d+) vs (.*?) -> (\d+) bypassed armour)?(?:, Dodge prevented (\d+) bypassed hits)?, (\d+) saves(?: \((cover)\))?(?:, (\d+) evade saves on (\d+)\+)?(?:, indirect fire without line of sight)?(?:, long range penalty applied)?(?:, Burst Fire \+(\d+))?(?:, Locked In \+(\d+))?(?:, Anti-Evade (\d+))?(?:, Pierce damage (\d+))?(?:, Transfusion reduced damage by (\d+))?(?:, Zealous Round reduced damage by (\d+))?(?:, Concentrated Fire cap (\d+)(?: \(discarded (\d+) damage\))?)?(?:, Fighting Rank (\d+), Supporting Rank (\d+), Assigned Models (\d+)(?:, Primary Target Focus)?)?, (\d+) casualties\.$/);
   if (combatMatch) {
-      const [, attacker, verb, target, weapon, attacks, hits, precisionApplied, wounds, criticalApplied, surgeDie, surgeRoll, surgeTags, surgeApplied, dodgePrevented, saves, cover, evadeSaved, evadeTarget, burstFireBonus, lockedInBonus, antiEvade, pierceDamage, zealousRoundReduced, concentratedFireCap, concentratedFireDiscarded, fightingRank, supportingRank, assignedModels, casualties] = combatMatch;
+      const [, attacker, verb, target, weapon, attacks, hits, precisionApplied, wounds, criticalApplied, surgeDie, surgeRoll, surgeTags, surgeApplied, dodgePrevented, saves, cover, evadeSaved, evadeTarget, burstFireBonus, lockedInBonus, antiEvade, pierceDamage, transfusionReduced, zealousRoundReduced, concentratedFireCap, concentratedFireDiscarded, fightingRank, supportingRank, assignedModels, casualties] = combatMatch;
       const longRangeApplied = text.includes("long range penalty applied");
       const indirectFireApplied = text.includes("indirect fire without line of sight");
       const primaryTargetFocus = text.includes("Primary Target Focus");
@@ -969,6 +984,7 @@ function buildStoryBlock(text) {
           ${surgeApplied ? renderStoryStat("Surge", surgeApplied, Number(surgeApplied) > 0 ? "impact" : "") : ""}
           ${burstFireBonus ? renderStoryStat("Burst", burstFireBonus, "success") : ""}
           ${lockedInBonus ? renderStoryStat("Locked In", lockedInBonus, "success") : ""}
+          ${transfusionReduced ? renderStoryStat("Transfusion", transfusionReduced, "success") : ""}
           ${zealousRoundReduced ? renderStoryStat("Zealous", zealousRoundReduced, "success") : ""}
           ${fightingRank ? renderStoryStat("Fight Rank", fightingRank, "success") : ""}
           ${supportingRank ? renderStoryStat("Support", supportingRank, "success") : ""}
@@ -988,6 +1004,7 @@ function buildStoryBlock(text) {
           ${longRangeApplied ? '<span class="story-chip">Long Range Penalty</span>' : ""}
           ${burstFireBonus ? `<span class="story-chip">Burst Fire +${escapeHtml(burstFireBonus)}</span>` : ""}
           ${lockedInBonus ? `<span class="story-chip">Locked In +${escapeHtml(lockedInBonus)}</span>` : ""}
+          ${transfusionReduced ? `<span class="story-chip">Transfusion -${escapeHtml(transfusionReduced)} damage</span>` : ""}
           ${zealousRoundReduced ? `<span class="story-chip">Zealous Round -${escapeHtml(zealousRoundReduced)} damage</span>` : ""}
           ${fightingRank ? `<span class="story-chip">Fighting Rank ${escapeHtml(fightingRank)}</span>` : ""}
           ${supportingRank ? `<span class="story-chip">Supporting Rank ${escapeHtml(supportingRank)}</span>` : ""}
@@ -1168,6 +1185,20 @@ function buildStoryBlock(text) {
         <span class="story-chip">${escapeHtml(sources)}</span>
       </div>
       ${renderStorySection("Why It Worked", [`Life Support reduces damage after the attack gets through, which can keep models alive even after hits and failed saves are already known.`], "teaching")}
+    `;
+  }
+
+  const transfusionMatch = text.match(/^(.*?) uses Transfusion on (.*?), reducing incoming damage by (\d+)\.$/);
+  if (transfusionMatch) {
+    const [, source, target, reducedBy] = transfusionMatch;
+    return `
+      <div class="story-lead"><strong>${escapeHtml(source)}</strong> reacts to protect <strong>${escapeHtml(target)}</strong>.</div>
+      <div class="story-outcome success">Transfusion reduces the incoming damage by ${escapeHtml(reducedBy)} before it is allocated.</div>
+      <div class="story-note-row">
+        <span class="story-chip">Within 4"</span>
+        <span class="story-chip">Friendly Biological Target</span>
+      </div>
+      ${renderStorySection("Why It Worked", ["Transfusion is a Queen reaction that protects another nearby friendly biological unit when it suffers damage."], "teaching")}
     `;
   }
 
@@ -2037,6 +2068,22 @@ function buildActionButtons() {
       }));
     }
 
+    if (unitCanSourceCreep(unit)) {
+      buttons.unshift(actionButton("Creep", "secondary", () => {
+        beginCreepInteraction(uiState);
+        uiState.legalDestinations = [];
+        rerender();
+      }));
+    }
+
+    if (canUseOmegaWormNetwork(unit)) {
+      buttons.unshift(actionButton("Omega Network", "secondary", () => {
+        beginOmegaTransferInteraction(uiState);
+        uiState.legalDestinations = [];
+        rerender();
+      }, unit.status.engaged, "Unit must be unengaged to use the Omega Worm network."));
+    }
+
     if (unit.abilities?.includes("stabilize_wounds")) {
       buttons.unshift(actionButton("Medpack", "secondary", () => {
         beginMedpackInteraction(uiState);
@@ -2179,8 +2226,14 @@ function computeDeployEntryPoint(state, point) {
   return { x: point.x, y: state.board.heightInches };
 }
 
-function canDeepStrike(unit) {
-  return unit.abilities?.includes("deep_strike");
+function canDeployDirectlyFromBoard(state, unit) {
+  return canUseBoardEntryDeploy(state, "playerA", unit);
+}
+
+function getLegalDeployOption(point) {
+  return (uiState.legalDestinations ?? []).find(destination =>
+    Math.abs(destination.x - point.x) <= 0.01 && Math.abs(destination.y - point.y) <= 0.01
+  ) ?? null;
 }
 
 function maybeSnapPoint(state, point) {
@@ -2202,8 +2255,10 @@ function handleBoardClick(point) {
   if (!unit || state.activePlayer !== "playerA") return;
 
   if (uiState.mode === "deploy") {
-    const entryPoint = canDeepStrike(unit) ? snappedPoint : computeDeployEntryPoint(state, snappedPoint);
-    const path = canDeepStrike(unit) ? [entryPoint, entryPoint] : [entryPoint, snappedPoint];
+    const deployOption = getLegalDeployOption(snappedPoint);
+    const boardEntryDeploy = canDeployDirectlyFromBoard(state, unit);
+    const entryPoint = deployOption?.entryPoint ?? (boardEntryDeploy ? snappedPoint : computeDeployEntryPoint(state, snappedPoint));
+    const path = boardEntryDeploy ? [entryPoint, entryPoint] : [entryPoint, snappedPoint];
     const result = store.dispatch({
       type: "DEPLOY_UNIT",
       payload: {
@@ -2262,6 +2317,41 @@ function handleBoardClick(point) {
         playerId: "playerA",
         unitId: unit.id,
         point: snappedPoint
+      }
+    });
+    if (!result.ok) return showError(result.message);
+    cancelCurrentInteraction(uiState);
+    uiState.legalDestinations = [];
+    autoSelectNextUnit();
+    rerender();
+    return;
+  }
+
+  if (uiState.mode === "place_creep") {
+    const result = store.dispatch({
+      type: "PLACE_CREEP",
+      payload: {
+        playerId: "playerA",
+        unitId: unit.id,
+        point: snappedPoint
+      }
+    });
+    if (!result.ok) return showError(result.message);
+    cancelCurrentInteraction(uiState);
+    uiState.legalDestinations = [];
+    autoSelectNextUnit();
+    rerender();
+    return;
+  }
+
+  if (uiState.mode === "omega_transfer") {
+    const result = store.dispatch({
+      type: "OMEGA_TRANSFER",
+      payload: {
+        playerId: "playerA",
+        unitId: unit.id,
+        point: snappedPoint,
+        modelPlacements: autoArrangeModels(state, unit.id, snappedPoint)
       }
     });
     if (!result.ok) return showError(result.message);
@@ -2584,8 +2674,10 @@ function updatePreviewFromPoint(point) {
   const unit = getSelectedUnit(state);
   if (!unit) return;
   if (uiState.mode === "deploy") {
-    const entryPoint = canDeepStrike(unit) ? snappedPoint : computeDeployEntryPoint(state, snappedPoint);
-    uiState.previewPath = { path: canDeepStrike(unit) ? [entryPoint, entryPoint] : [entryPoint, snappedPoint], state };
+    const deployOption = getLegalDeployOption(snappedPoint);
+    const boardEntryDeploy = canDeployDirectlyFromBoard(state, unit);
+    const entryPoint = deployOption?.entryPoint ?? (boardEntryDeploy ? snappedPoint : computeDeployEntryPoint(state, snappedPoint));
+    uiState.previewPath = { path: boardEntryDeploy ? [entryPoint, entryPoint] : [entryPoint, snappedPoint], state };
     uiState.previewUnit = { unitId: unit.id, leader: snappedPoint, placements: autoArrangeModels(state, unit.id, snappedPoint) };
   }
   if (uiState.mode === "move" || uiState.mode === "disengage" || uiState.mode === "run") {
@@ -2596,6 +2688,14 @@ function updatePreviewFromPoint(point) {
   if (uiState.mode === "force_field") {
     uiState.previewPath = null;
     uiState.previewUnit = { kind: "force_field", leader: snappedPoint };
+  }
+  if (uiState.mode === "place_creep") {
+    uiState.previewPath = null;
+    uiState.previewUnit = { kind: "creep", leader: snappedPoint };
+  }
+  if (uiState.mode === "omega_transfer") {
+    uiState.previewPath = null;
+    uiState.previewUnit = { unitId: unit.id, leader: snappedPoint, placements: autoArrangeModels(state, unit.id, snappedPoint) };
   }
 }
 
@@ -2767,6 +2867,18 @@ function updateBoardHighlights(state, events) {
   };
 
   for (const event of events ?? []) {
+    if (event.type === "creep_displaced") {
+      const unit = state.units[event.payload?.unitId] ?? null;
+      const point = getBoardHighlightPointForUnit(unit);
+      queueAftermathHighlight({
+        kind: "unit",
+        unitId: event.payload?.unitId ?? null,
+        tone: "attention",
+        label: "Tumor Cleared",
+        point,
+        expiresAt: now + 2600
+      }, { stepMs: 120 });
+    }
     if (event.type === "combat_attack_resolved") {
       combatEvents.push(event);
       const payload = event.payload ?? {};

@@ -6,6 +6,7 @@ import { refreshAllSupply } from "./supply.js";
 import { getModifiedValue } from "./effects.js";
 import { applyBurrowedActivationEffects, removeStealthStatuses } from "./statuses.js";
 import { getBlockingForceFieldCrossings, removeForceFieldsCrossedByUnit } from "./force_fields.js";
+import { creepNegatesDifficultTerrain, getCreepMovementBonus, removeDisplacedCreepTumors } from "./creep.js";
 
 const ENGAGEMENT_RANGE = 1;
 
@@ -127,6 +128,9 @@ function getMovementCost(state, unit, path) {
   if (isFlyingUnit(unit)) {
     return state.rules?.gridMode ? gridDistance(path[0], path[path.length - 1]) : pathLength(path);
   }
+  if (creepNegatesDifficultTerrain(state, unit, path)) {
+    return state.rules?.gridMode ? gridDistance(path[0], path[path.length - 1]) : pathLength(path);
+  }
   if (state.rules?.gridMode) return gridDistance(path[0], path[path.length - 1]);
   return pathTravelCost(path, state.board.terrain);
 }
@@ -167,7 +171,7 @@ export function validateMove(state, playerId, unitId, leadingModelId, path, mode
     unitId: unit.id,
     key: "unit.speed",
     baseValue: unit.speed
-  }).value + getMovementBonus(unit);
+  }).value + getMovementBonus(unit) + getCreepMovementBonus(state, unit, path);
   const travelCost = getMovementCost(state, unit, path);
   if (travelCost - modifiedSpeed > 1e-6) return { ok: false, code: "TOO_FAR", message: `${unit.name} can only move ${modifiedSpeed}" (difficult terrain costs extra movement).` };
   const ignore = new Set(unit.modelIds);
@@ -198,11 +202,19 @@ export function resolveMove(state, playerId, unitId, leadingModelId, path, model
   removeForceFieldsCrossedByUnit(state, unit, path);
   updateUnitEngagementStatus(state);
   refreshAllSupply(state);
+  const displacedCreep = removeDisplacedCreepTumors(state, unit, "moves");
   const removedText = coherency.removedModelIds.length ? ` ${coherency.removedModelIds.length} model(s) removed during placement.` : "";
   const coherencyText = coherency.outOfCoherency ? " Out of coherency." : "";
   appendLog(state, "action", `${unit.name} moves ${pathLength(path).toFixed(1)}".${brokeStealth ? " Hidden/Burrowed removed." : ""}${removedText}${coherencyText}`);
   endActivationAndPassTurn(state);
-  return { ok: true, state, events: [{ type: "unit_moved", payload: { unitId } }] };
+  return {
+    ok: true,
+    state,
+    events: [
+      { type: "unit_moved", payload: { unitId } },
+      ...displacedCreep.map(zone => ({ type: "creep_displaced", payload: { unitId, creepId: zone.id } }))
+    ]
+  };
 }
 
 export function validateDisengage(state, playerId, unitId, leadingModelId, path, modelPlacements = null) {
@@ -220,7 +232,7 @@ export function validateDisengage(state, playerId, unitId, leadingModelId, path,
     unitId: unit.id,
     key: "unit.speed",
     baseValue: unit.speed
-  }).value + getMovementBonus(unit);
+  }).value + getMovementBonus(unit) + getCreepMovementBonus(state, unit, path);
   const travelCost = getMovementCost(state, unit, path);
   if (travelCost - modifiedSpeed > 1e-6) return { ok: false, code: "TOO_FAR", message: `${unit.name} can only move ${modifiedSpeed}" (difficult terrain costs extra movement).` };
   const ignore = new Set(unit.modelIds);
@@ -280,9 +292,17 @@ export function resolveDisengage(state, playerId, unitId, leadingModelId, path, 
   removeForceFieldsCrossedByUnit(state, unit, path);
   updateUnitEngagementStatus(state);
   refreshAllSupply(state);
+  const displacedCreep = removeDisplacedCreepTumors(state, unit, "disengages");
   appendLog(state, "action", `${unit.name} disengages.${brokeStealth ? " Hidden/Burrowed removed." : ""}${validation.derived.tacticalMass ? " Tactical Mass ignores the next-Assault penalty." : " Cannot Ranged Attack or Charge next Assault."}${coherency.outOfCoherency ? " Out of coherency." : ""}`);
   endActivationAndPassTurn(state);
-  return { ok: true, state, events: [{ type: "unit_disengaged", payload: { unitId } }] };
+  return {
+    ok: true,
+    state,
+    events: [
+      { type: "unit_disengaged", payload: { unitId } },
+      ...displacedCreep.map(zone => ({ type: "creep_displaced", payload: { unitId, creepId: zone.id } }))
+    ]
+  };
 }
 
 export function refreshEngagement(state) {

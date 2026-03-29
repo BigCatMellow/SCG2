@@ -1,6 +1,7 @@
 import { distance, pointInsideRect, sampleSegment } from "./geometry.js";
 
 const HIDDEN_REVEAL_RANGE = 4;
+const DETECTION_RANGE = 6;
 const SUPPORT_REACTION_RANGE = 4;
 
 function isFlyingUnit(unit) {
@@ -49,6 +50,23 @@ export function areUnitsWithinRevealRange(attacker, target, revealRange = HIDDEN
   return distance(attackerPoint, targetPoint) <= revealRange + 1e-6;
 }
 
+export function canUnitDetectTarget(detector, target, detectionRange = DETECTION_RANGE) {
+  if (!detector?.abilities?.includes("detection")) return false;
+  const detectorPoint = getLeaderPoint(detector);
+  const targetPoint = getLeaderPoint(target);
+  if (!detectorPoint || !targetPoint) return false;
+  return distance(detectorPoint, targetPoint) <= detectionRange + 1e-6;
+}
+
+export function isUnitDetected(state, viewerPlayerId, target) {
+  if (!target?.status?.hidden && !target?.status?.burrowed) return false;
+  return Object.values(state.units).some(unit =>
+    unit.owner === viewerPlayerId
+    && unit.status?.location === "battlefield"
+    && canUnitDetectTarget(unit, target)
+  );
+}
+
 export function hasLineOfSight(state, attacker, target) {
   const attackerPoint = getLeaderPoint(attacker);
   const targetPoint = getLeaderPoint(target);
@@ -65,6 +83,7 @@ export function hasLineOfSight(state, attacker, target) {
 
 export function isTargetHiddenFromUnit(state, attacker, target) {
   if (!target?.status?.hidden) return false;
+  if (isUnitDetected(state, attacker?.owner, target)) return false;
   return !areUnitsWithinRevealRange(attacker, target);
 }
 
@@ -91,7 +110,7 @@ export function canTargetWithRangedWeapon(state, attacker, target, weapon) {
 
 export function targetGetsEvadeOpportunity(state, attacker, target, weapon, isMelee, visible) {
   if (target?.defense?.evadeTarget == null) return false;
-  if (target?.status?.hidden || target?.status?.burrowed) return true;
+  if ((target?.status?.hidden || target?.status?.burrowed) && !isUnitDetected(state, attacker?.owner, target)) return true;
   if (!isMelee && target?.abilities?.includes("lurking") && target?.status?.stationary && !target?.status?.lurkingUsedThisRound) return true;
   if (isMelee && target?.abilities?.includes("combat_shield")) return true;
   if (!isMelee && Object.values(state.units).some(unit => {

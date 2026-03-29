@@ -9,6 +9,8 @@ import { cloneState } from "./state.js";
 import { resolveCloseRanks, resolveToggleBurrow, resolveToggleHidden } from "./statuses.js";
 import { resolvePlaceForceField } from "./force_fields.js";
 import { resolveUseMedpack, resolveUseOpticalFlare } from "./support.js";
+import { resolvePlaceCreep } from "./creep.js";
+import { resolveOmegaTransfer } from "./omega_worms.js";
 
 export function dispatch(state, action) {
   const working = cloneState(state);
@@ -27,6 +29,10 @@ export function dispatch(state, action) {
       return resolveRun(working, action.payload.playerId, action.payload.unitId, action.payload.leadingModelId, action.payload.path, action.payload.modelPlacements);
     case "PLACE_FORCE_FIELD":
       return resolvePlaceForceField(working, action.payload.playerId, action.payload.unitId, action.payload.point);
+    case "PLACE_CREEP":
+      return resolvePlaceCreep(working, action.payload.playerId, action.payload.unitId, action.payload.point);
+    case "OMEGA_TRANSFER":
+      return resolveOmegaTransfer(working, action.payload.playerId, action.payload.unitId, action.payload.point, action.payload.modelPlacements);
     case "USE_MEDPACK":
       return resolveUseMedpack(working, action.payload.playerId, action.payload.unitId, action.payload.targetId);
     case "USE_OPTICAL_FLARE":

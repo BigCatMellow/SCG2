@@ -33,7 +33,7 @@ This file tracks how closely the codebase matches the tabletop keyword glossary.
 
 | Keyword | Status | Notes |
 | --- | --- | --- |
-| `HIDDEN` | partial | Hidden now has real state flow through burrow/hide-style status handling, blocks ranged targeting beyond 4", can trigger evade, and negates Impact. Broader non-burrow Hidden sources are still incomplete. |
+| `HIDDEN` | partial | Hidden now has real state flow through burrow/hide-style status handling, blocks ranged targeting beyond 4", can trigger evade, negates Impact, and can now be countered by nearby detection sources. Broader non-burrow Hidden sources and richer reveal state handling are still incomplete. |
 | `BURROWED` | partial | Burrow-capable units can now gain/lose Burrowed as a real activation, keep Hidden while underground, lose contesting, heal on activation where supported, break the status when revealing actions are taken, and automatically use Close Ranks when they resolve melee from a burrowed state. Still missing fuller faction ability coverage and wider Close Ranks action flow beyond that combat step. |
 | `FLYING` | partial | Flying units now ignore ground-only engagement, can move across blocker terrain without difficult-ground penalties, do not contest objectives, and treat blockers as not obstructing line of sight in the current 2D board model. It still needs dedicated roster coverage, altitude/elevation treatment, and fuller air-vs-air / air-vs-ground edge-case rules. |
 | `BULKY` | partial | Bulky now blocks ranged attack declarations while the attacker is engaged. It still needs broader roster data coverage and any future combat-step legality hooks beyond declaration time. |

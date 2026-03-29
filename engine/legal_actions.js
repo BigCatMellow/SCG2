@@ -1,12 +1,14 @@
 import { getEligibleUnitsForCurrentPhase } from "./activation.js";
 import { validateHold, validateMove, validateDisengage } from "./movement.js";
-import { validateDeploy } from "./deployment.js";
+import { validateDeploy, canUseBoardEntryDeploy, getFriendlyOmegaWormEntrySources } from "./deployment.js";
 import { validateRun, validateDeclareRangedAttack, validateDeclareCharge } from "./assault.js";
 import { getPlayableCardActions } from "./cards.js";
 import { hasQueuedCombatForUnit } from "./combat.js";
 import { canBurrow, canHide, validateCloseRanks, validateToggleBurrow, validateToggleHidden } from "./statuses.js";
 import { validatePlaceForceField } from "./force_fields.js";
 import { validateUseMedpack, validateUseOpticalFlare } from "./support.js";
+import { validatePlaceCreep, unitCanSourceCreep } from "./creep.js";
+import { canUseOmegaWormNetwork, hasOmegaTransferOptions } from "./omega_worms.js";
 
 export function getLegalActionsForPlayer(state, playerId) {
   const units = getEligibleUnitsForCurrentPhase(state, playerId);
@@ -35,6 +37,8 @@ export function getLegalActionsForUnit(state, playerId, unitId) {
     descriptors.push({ type: "MOVE_UNIT", unitId, enabled: !unit.status.engaged, uiHints: { requiresBoardClick: true } });
     descriptors.push({ type: "DISENGAGE_UNIT", unitId, enabled: unit.status.engaged, uiHints: { requiresBoardClick: true } });
     if (unit.abilities?.includes("solid_field_projectors")) descriptors.push({ type: "PLACE_FORCE_FIELD", unitId, enabled: validatePlaceForceField(state, playerId, unitId, { x: unit.models[unit.leadingModelId].x, y: unit.models[unit.leadingModelId].y }).ok, uiHints: { requiresBoardClick: true } });
+    if (unitCanSourceCreep(unit)) descriptors.push({ type: "PLACE_CREEP", unitId, enabled: validatePlaceCreep(state, playerId, unitId, { x: unit.models[unit.leadingModelId].x, y: unit.models[unit.leadingModelId].y }).ok, uiHints: { requiresBoardClick: true } });
+    if (canUseOmegaWormNetwork(unit)) descriptors.push({ type: "OMEGA_TRANSFER", unitId, enabled: hasOmegaTransferOptions(state, playerId, unitId), uiHints: { requiresBoardClick: true } });
     if (unit.abilities?.includes("stabilize_wounds")) descriptors.push({ type: "USE_MEDPACK", unitId, enabled: true, uiHints: { requiresBoardClick: true } });
     if (unit.abilities?.includes("stabilize_wounds")) descriptors.push({ type: "USE_OPTICAL_FLARE", unitId, enabled: true, uiHints: { requiresBoardClick: true } });
     if (canBurrow(unit)) descriptors.push({ type: "TOGGLE_BURROW", unitId, enabled: validateToggleBurrow(state, playerId, unitId).ok });
@@ -79,15 +83,49 @@ export function getLegalMoveDestinations(state, playerId, unitId, leadingModelId
 }
 
 export function getLegalDeployDestinations(state, playerId, unitId, leadingModelId) {
+  const unit = state.units[unitId];
   const points = [];
+  const useBoardEntry = canUseBoardEntryDeploy(state, playerId, unit);
+  const omegaEntrySources = useBoardEntry ? [] : getFriendlyOmegaWormEntrySources(state, playerId, unit);
   const entrySide = state.deployment.entryEdges[playerId].side;
   const entryX = entrySide === "west" ? 0 : state.board.widthInches;
   for (let x = 0.5; x < state.board.widthInches; x += 1) {
     for (let y = 0.5; y < state.board.heightInches; y += 1) {
-      const entryPoint = entrySide === "west" || entrySide === "east" ? { x: entryX, y } : { x, y: entrySide === "north" ? 0 : state.board.heightInches };
-      const path = [entryPoint, { x, y }];
-      const validation = validateDeploy(state, playerId, unitId, leadingModelId, entryPoint, path);
-      if (validation.ok) points.push({ x, y, entryPoint });
+      const edgeEntryPoint = entrySide === "west" || entrySide === "east" ? { x: entryX, y } : { x, y: entrySide === "north" ? 0 : state.board.heightInches };
+      const entryOptions = useBoardEntry
+        ? [{ entryPoint: { x, y }, path: [{ x, y }, { x, y }] }]
+        : [
+            { entryPoint: edgeEntryPoint, path: [edgeEntryPoint, { x, y }] },
+            ...omegaEntrySources.map(source => ({
+              entryPoint: (() => {
+                const deltaX = x - source.center.x;
+                const deltaY = y - source.center.y;
+                const length = Math.hypot(deltaX, deltaY) || 1;
+                const scale = (source.radius + (unit.base?.radiusInches ?? 0)) / length;
+                return {
+                  x: source.center.x + deltaX * scale,
+                  y: source.center.y + deltaY * scale
+                };
+              })(),
+              path: [(() => {
+                const deltaX = x - source.center.x;
+                const deltaY = y - source.center.y;
+                const length = Math.hypot(deltaX, deltaY) || 1;
+                const scale = (source.radius + (unit.base?.radiusInches ?? 0)) / length;
+                return {
+                  x: source.center.x + deltaX * scale,
+                  y: source.center.y + deltaY * scale
+                };
+              })(), { x, y }]
+            }))
+          ];
+      for (const option of entryOptions) {
+        const validation = validateDeploy(state, playerId, unitId, leadingModelId, option.entryPoint, option.path);
+        if (validation.ok) {
+          points.push({ x, y, entryPoint: option.entryPoint });
+          break;
+        }
+      }
     }
   }
   return points;

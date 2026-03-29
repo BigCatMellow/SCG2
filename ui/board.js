@@ -6,6 +6,9 @@ import { validateMove, validateDisengage } from "../engine/movement.js";
 import { validateRun } from "../engine/assault.js";
 import { validateDeploy } from "../engine/deployment.js";
 import { validatePlaceForceField } from "../engine/force_fields.js";
+import { getCreepZones, validatePlaceCreep } from "../engine/creep.js";
+import { validateOmegaTransfer } from "../engine/omega_worms.js";
+import { getPowerFieldZones } from "../engine/warp_fields.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const TIMELINE_RULE_COPY = {
@@ -76,6 +79,36 @@ function addTerrain(svg, terrain) {
       x: p.rect.minX, y: p.rect.minY,
       width: p.rect.maxX - p.rect.minX, height: p.rect.maxY - p.rect.minY,
       class: klass
+    }));
+  }
+}
+
+function addCreep(svg, state) {
+  for (const zone of getCreepZones(state)) {
+    svg.appendChild(el("circle", {
+      cx: zone.center.x,
+      cy: zone.center.y,
+      r: zone.radius,
+      class: zone.kind === "creep_source" ? "creep-source-zone" : "creep-zone"
+    }));
+    if (zone.kind !== "creep_source") {
+      svg.appendChild(el("circle", {
+        cx: zone.center.x,
+        cy: zone.center.y,
+        r: zone.tokenRadius ?? 0.5,
+        class: "creep-tumor-token"
+      }));
+    }
+  }
+}
+
+function addPowerFields(svg, state) {
+  for (const zone of getPowerFieldZones(state)) {
+    svg.appendChild(el("circle", {
+      cx: zone.center.x,
+      cy: zone.center.y,
+      r: zone.radius,
+      class: `power-field-zone ${zone.owner === "playerA" ? "playerA" : "playerB"}`
     }));
   }
 }
@@ -342,6 +375,15 @@ function addPreviewUnit(svg, state, uiState) {
     }));
     return;
   }
+  if (uiState.previewUnit.kind === "creep") {
+    svg.appendChild(el("circle", {
+      cx: leader.x,
+      cy: leader.y,
+      r: 3.5,
+      class: `creep-preview ${previewState?.ok === false ? "invalid" : "valid"}`
+    }));
+    return;
+  }
   const unit = state.units[uiState.previewUnit.unitId];
   if (!unit) return;
   const sq = { x: Math.round(leader.x) - 0.5, y: Math.round(leader.y) - 0.5 };
@@ -375,6 +417,12 @@ function addRangeRings(svg, state, uiState) {
   }
   if (uiState.mode === "force_field") {
     svg.appendChild(el("circle", { cx: m.x, cy: m.y, r: 8, class: "range-ring support" }));
+  }
+  if (uiState.mode === "place_creep") {
+    svg.appendChild(el("circle", { cx: m.x, cy: m.y, r: 6, class: "range-ring support" }));
+  }
+  if (uiState.mode === "omega_transfer") {
+    svg.appendChild(el("circle", { cx: m.x, cy: m.y, r: 3, class: "range-ring support" }));
   }
   if (uiState.mode === "declare_ranged" && unit.rangedWeapons?.length) {
     const r = Math.max(...unit.rangedWeapons.map(w => w.rangeInches ?? 0));
@@ -555,6 +603,50 @@ function getPreviewOverlayState(state, uiState) {
     };
   }
 
+  if (uiState.mode === "place_creep") {
+    const point = uiState.previewUnit?.leader;
+    if (!point) return null;
+    const validator = validatePlaceCreep(state, "playerA", unit.id, point);
+    const leader = unit.models[unit.leadingModelId];
+    return {
+      ok: validator.ok,
+      kicker: "Creep Check",
+      title: `${unit.name} → Creep Tumor`,
+      metrics: [
+        leader?.x != null && leader?.y != null ? `${distance(leader, point).toFixed(1)}" from source` : null,
+        validator.ok ? "Legal placement" : "Blocked placement"
+      ].filter(Boolean),
+      reason: validator.ok
+        ? "Legal creep placement. The tumor is within 6\" and its aura fits on the battlefield."
+        : validator.message,
+      teaching: validator.ok
+        ? "Creep Tumors create a 6\" creep aura. Enemy units that finish a move, deploy, run, or disengage within 1\" of the token displace and remove it."
+        : null
+    };
+  }
+
+  if (uiState.mode === "omega_transfer") {
+    const point = uiState.previewUnit?.leader;
+    if (!point) return null;
+    const validator = validateOmegaTransfer(state, "playerA", unit.id, point, uiState.previewUnit.placements ?? null);
+    const leader = unit.models[unit.leadingModelId];
+    return {
+      ok: validator.ok,
+      kicker: "Omega Network Check",
+      title: `${unit.name} → Omega Worm Exit`,
+      metrics: [
+        leader?.x != null && leader?.y != null ? `${distance(leader, point).toFixed(1)}" to exit point` : null,
+        validator.ok ? "Legal emergence" : "Blocked emergence"
+      ].filter(Boolean),
+      reason: validator.ok
+        ? "Legal network transfer. The unit starts near one Omega Worm and emerges within 3\" of a different friendly Omega Worm."
+        : validator.message,
+      teaching: validator.ok
+        ? "Omega Worms let Zerg units reposition across the board without walking the full distance, but they still must emerge clear of terrain and enemy engagement."
+        : null
+    };
+  }
+
   if (uiState.mode === "deploy") {
     const path = uiState.previewPath?.path;
     const point = uiState.previewUnit?.leader;
@@ -713,7 +805,7 @@ function renderBattlefieldHint(state, uiState, handlers) {
     hint.innerHTML = "";
     return;
   }
-  if (["move", "disengage", "run", "deploy", "force_field"].includes(uiState.mode)) {
+  if (["move", "disengage", "run", "deploy", "force_field", "place_creep", "omega_transfer"].includes(uiState.mode)) {
     const previewState = getPreviewOverlayState(state, uiState);
     if (!previewState) {
       hint.className = "battlefield-hint active neutral";
@@ -906,6 +998,8 @@ export function renderBoard(state, uiState, handlers) {
   const snap = getObjectiveControlSnapshot(state);
   addZones(svg, state);
   addGrid(svg, state.board.widthInches, state.board.heightInches);
+  addCreep(svg, state);
+  addPowerFields(svg, state);
   addTerrain(svg, state.board.terrain);
   addObjectives(svg, state.deployment.missionMarkers, snap, uiState, handlers);
   addLegalOverlay(svg, state, uiState);

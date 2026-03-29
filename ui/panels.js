@@ -10,6 +10,7 @@ const RULE_NOTE_COPY = {
   combat_shield: "Improves melee survivability by enabling evade-style defense in close combat.",
   concentrated_fire: "Caps casualties and discards excess damage beyond the cap.",
   critical_hit: "Pushes wounds past armour before save rolls are made.",
+  detection: "Reveals hidden or burrowed enemies within range, denying some stealth protection.",
   dodge: "Cancels a limited number of hits that already bypassed armour.",
   evade: "Late defensive roll that can avoid hits after armour results are known.",
   flying: "Ignores many ground movement and line-of-sight restrictions, but does not control objectives.",

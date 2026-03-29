@@ -413,6 +413,33 @@ test('life support reduces damage from nearby medics with stabilizer medpacks', 
   assert.ok(state.lastCombatReport[0].lifeSupport.reducedBy >= 1);
 });
 
+test('transfusion reduces incoming damage for nearby friendly biological units', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [{ id: 'blue_marines_1', templateId: 'marine_squad' }],
+    armyB: [
+      { id: 'red_roach_1', templateId: 'roach_t3' },
+      { id: 'red_queen_1', templateId: 'queen' }
+    ],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  placeUnitAt(state, 'blue_marines_1', 10, 10);
+  placeUnitAt(state, 'red_roach_1', 12, 10);
+  placeUnitAt(state, 'red_queen_1', 13, 10);
+  state.units.blue_marines_1.rangedWeapons[0].shotsPerModel = 4;
+  state.units.blue_marines_1.rangedWeapons[0].hitTarget = 2;
+  state.units.blue_marines_1.rangedWeapons[0].strength = 7;
+
+  state.combatQueue.push({ type: 'ranged_attack', attackerId: 'blue_marines_1', targetId: 'red_roach_1' });
+  const result = resolveCombatPhase(state, { rng: createSeededRng(42) });
+
+  assert.equal(result.ok, true);
+  assert.equal(state.lastCombatReport[0].transfusion?.sourceUnitId, 'red_queen_1');
+  assert.equal(state.lastCombatReport[0].transfusion?.reducedBy, 2);
+  assert.ok(state.log.some(entry => entry.text.includes('uses Transfusion')));
+});
+
 test('ancillary carapace applies on the first armour roll of the phase', () => {
   const state = createInitialGameState({
     missionId: 'take_and_hold',
@@ -612,6 +639,35 @@ test('hidden target can use evade to cancel unsaved ranged hits', () => {
 
   assert.equal(state.lastCombatReport[0].evade?.saved, 5);
   assert.equal(state.lastCombatReport[0].casualties, 1);
+});
+
+test('detection removes hidden evade protection for nearby targets', () => {
+  const state = createInitialGameState({
+    missionId: 'take_and_hold',
+    deploymentId: 'crossfire',
+    armyA: [
+      { id: 'blue_marines_1', templateId: 'marine_t2' },
+      { id: 'blue_omega_worm_1', templateId: 'omega_worm' }
+    ],
+    armyB: [{ id: 'red_zerglings_1', templateId: 'zergling_squad' }],
+    firstPlayerMarkerHolder: 'playerA'
+  });
+  placeUnitAt(state, 'blue_marines_1', 10, 10);
+  placeUnitAt(state, 'blue_omega_worm_1', 15, 10);
+  placeUnitAt(state, 'red_zerglings_1', 16, 10);
+  state.units.red_zerglings_1.status.hidden = true;
+
+  const rolls = [
+    0.9, 0.9, 0.9, 0.9, 0.9, 0.9,
+    0.9, 0.9, 0.9, 0.9, 0.9, 0.9,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+  ];
+  let index = 0;
+  state.combatQueue.push({ type: 'ranged_attack', attackerId: 'blue_marines_1', targetId: 'red_zerglings_1' });
+  resolveCombatPhase(state, { rng: () => rolls[index++] ?? 0 });
+
+  assert.equal(state.lastCombatReport[0].evade?.saved ?? 0, 0);
+  assert.equal(state.lastCombatReport[0].casualties > 0, true);
 });
 
 test('anti-evade worsens the target evade roll', () => {
