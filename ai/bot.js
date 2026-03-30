@@ -3,1294 +3,577 @@ import {
   getLegalDeployDestinations,
   getLegalMoveDestinations,
   getLegalDisengageDestinations,
-  getLegalRunDestinations,
-  getLegalBlinkDestinations,
-  getLegalPsionicTransferDestinations
+  getLegalRunDestinations
 } from "../engine/legal_actions.js";
 import { autoArrangeModels } from "../engine/coherency.js";
 import { distance } from "../engine/geometry.js";
 import { getObjectiveControlSnapshot, getObjectiveControlRange } from "../engine/objectives.js";
 import { getTacticalCard } from "../data/tactical_cards.js";
-import { validateUseMedpack, validateUseOpticalFlare } from "../engine/support.js";
-import { validatePlaceCreep } from "../engine/creep.js";
-import { validatePlaceForceField } from "../engine/force_fields.js";
-import { validateOmegaTransfer } from "../engine/omega_worms.js";
+import { dispatch as engineDispatch } from "../engine/reducer.js";
+import { cloneState } from "../engine/state.js";
 
 /* ══════════════════════════════════════════════════════════════
-   HELPERS
+   CORE HELPERS
    ══════════════════════════════════════════════════════════════ */
 
-function opponent(playerId) {
-  return playerId === "playerA" ? "playerB" : "playerA";
+const opp = pid => pid === "playerA" ? "playerB" : "playerA";
+const lp = u => { const m = u.models[u.leadingModelId]; return m?.alive && m.x != null ? { x: m.x, y: m.y } : null; };
+const alive = u => u.modelIds.filter(id => u.models[id].alive).length;
+const wounds = u => u.modelIds.reduce((s, id) => { const m = u.models[id]; return s + (m.alive ? (m.woundsRemaining ?? 1) : 0); }, 0);
+const onField = u => u.status.location === "battlefield";
+const mxRange = u => Math.max(0, ...(u.rangedWeapons ?? []).map(w => w.rangeInches ?? 0));
+const hasR = u => u.rangedWeapons?.length > 0;
+const hasM = u => u.meleeWeapons?.length > 0;
+const hasROnly = u => hasR(u) && !hasM(u);
+
+function availSupply(state, pid) {
+  const pool = state.players[pid].supplyPool;
+  const used = state.players[pid].battlefieldUnitIds.reduce((t, id) => t + state.units[id].currentSupplyValue, 0);
+  return pool === Infinity ? Infinity : pool - used;
 }
 
-function leaderPoint(unit) {
-  const m = unit.models[unit.leadingModelId];
-  return m && m.alive && m.x != null ? { x: m.x, y: m.y } : null;
-}
-
-function aliveModelCount(unit) {
-  return unit.modelIds.filter(id => unit.models[id].alive).length;
-}
-
-function totalWoundsRemaining(unit) {
-  return unit.modelIds.reduce((sum, id) => {
-    const m = unit.models[id];
-    return sum + (m.alive ? (m.woundsRemaining ?? 1) : 0);
-  }, 0);
-}
-
-function isOnBattlefield(unit) {
-  return unit.status.location === "battlefield";
-}
-
-function stableHash(value) {
-  const text = String(value ?? "");
-  let hash = 2166136261;
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
+function engagedEnemySupply(state, unit) {
+  let total = 0;
+  const up = lp(unit);
+  if (!up) return 0;
+  for (const o of Object.values(state.units)) {
+    if (o.owner === unit.owner || !onField(o)) continue;
+    const op = lp(o);
+    if (op && distance(up, op) <= 1.5) total += o.currentSupplyValue;
   }
-  return hash >>> 0;
+  return total;
 }
 
-function deterministicNoise(seedParts) {
-  const seed = seedParts.join("|");
-  const hash = stableHash(seed);
-  return (hash % 1000) / 1000;
-}
+function cleanDisengage(state, unit) { return unit.currentSupplyValue > engagedEnemySupply(state, unit); }
 
-function compareById(a, b) {
-  const aId = a?.id ?? "";
-  const bId = b?.id ?? "";
-  return aId.localeCompare(bId);
-}
-
-function hasAbility(unit, ability) {
-  return !!unit?.abilities?.includes?.(ability);
-}
-
-function unitRole(unit) {
-  const hasRanged = !!unit.rangedWeapons?.length;
-  const hasMelee = !!unit.meleeWeapons?.length;
-  if (hasAbility(unit, "guardian_shield") || hasAbility(unit, "life_support") || hasAbility(unit, "stabilize_wounds") ||
-      hasAbility(unit, "transfusion") || hasAbility(unit, "detection") || hasAbility(unit, "power_field_source")) {
-    return "support";
-  }
-  if (hasRanged && !hasMelee) return "ranged";
-  if (hasMelee && !hasRanged) return "melee";
-  if (hasMelee && hasRanged) return "hybrid";
-  return "general";
-}
-
-function getEnemyUnits(state, playerId) {
-  return Object.values(state.units).filter(unit => unit.owner === opponent(playerId) && isOnBattlefield(unit));
-}
-
-function getFriendlyUnits(state, playerId) {
-  return Object.values(state.units).filter(unit => unit.owner === playerId && isOnBattlefield(unit));
-}
-
-function woundsMissing(unit) {
-  const maxWounds = unit.modelIds.length * (unit.woundsPerModel ?? 1);
-  return Math.max(0, maxWounds - totalWoundsRemaining(unit));
-}
-
-function getMaxRangedReach(unit) {
-  return Math.max(0, ...(unit.rangedWeapons ?? []).map(weapon => weapon.rangeInches ?? 0));
-}
-
-function getEnemyThreatScore(state, playerId, unit, assessment) {
-  const point = leaderPoint(unit);
-  if (!point) return 0;
-  const rangedReach = getMaxRangedReach(unit);
-  let score = unit.currentSupplyValue * 2;
-  if (rangedReach > 0) score += rangedReach * 0.5 + aliveModelCount(unit) * 2;
-  if (unit.meleeWeapons?.length) score += 3;
-  for (const obj of assessment.objectiveDetails) {
-    const dist = distance(point, obj);
-    if (dist <= getObjectiveControlRange(state)) {
-      if (obj.controller === opponent(playerId)) score += 8;
-      else if (obj.contested) score += 5;
-    }
-  }
-  return score;
-}
-
-function getForwardProgress(state, playerId, point) {
-  if (!point) return 0;
-  const side = state.deployment?.entryEdges?.[playerId]?.side;
-  if (side === "west") return point.x;
-  if (side === "east") return state.board.widthInches - point.x;
-  if (side === "north") return point.y;
-  if (side === "south") return state.board.heightInches - point.y;
-  return 0;
-}
-
-function isNearHomeEdge(state, playerId, point, extra = 2) {
-  if (!point) return false;
-  const depth = (state.deployment?.zoneOfInfluenceDepth ?? 6) + extra;
-  const side = state.deployment?.entryEdges?.[playerId]?.side;
-  if (side === "west") return point.x <= depth;
-  if (side === "east") return point.x >= state.board.widthInches - depth;
-  if (side === "north") return point.y <= depth;
-  if (side === "south") return point.y >= state.board.heightInches - depth;
-  return false;
-}
-
-function countEnemiesNearPoint(state, playerId, point, radius) {
-  return getEnemyUnits(state, playerId).filter(unit => {
-    const unitPoint = leaderPoint(unit);
-    return unitPoint && distance(point, unitPoint) <= radius;
-  }).length;
-}
-
-function scoreHoldPosition(state, playerId, unit, assessment) {
-  const point = leaderPoint(unit);
-  if (!point) return -Infinity;
-  let score = scoreDestination(state, playerId, unit, point, assessment);
-  const role = unitRole(unit);
-  const onOwnedObjective = assessment.objectiveDetails.some(
-    obj => obj.controller === playerId && distance(point, obj) <= getObjectiveControlRange(state)
-  );
-  if (onOwnedObjective) {
-    score += assessment.behavior.prefersDefense ? 10 : 4;
-    if (role === "ranged" || role === "support") score += 6;
-  }
-  if (unit.status.stationary) score += 1.5;
-  if (!assessment.behavior.prefersDefense && isNearHomeEdge(state, playerId, point) && countEnemiesNearPoint(state, playerId, point, 8) === 0) {
-    score -= 14;
-  }
-  return score;
-}
-
-function chooseBestValidatedPoint(state, playerId, unitId, unit, assessment, validator, seedTag, band = 2.5, bonus = 0) {
-  const candidates = [];
-  for (let x = 0.5; x < state.board.widthInches; x += 1) {
-    for (let y = 0.5; y < state.board.heightInches; y += 1) {
-      const point = { x, y };
-      const validation = validator(point);
-      if (!validation.ok) continue;
-      candidates.push({
-        item: point,
-        score: scoreDestination(state, playerId, unit, point, assessment) + bonus
-      });
-    }
-  }
-  const choice = chooseScoredOption(candidates, band, [state.round, state.phase, playerId, unitId, seedTag]);
-  return choice?.item ?? null;
-}
-
-function chooseScoredOption(options, band, seedParts) {
-  if (!options.length) return null;
-  const sorted = [...options].sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    return compareById(a.item, b.item);
-  });
-  const bestScore = sorted[0].score;
-  const candidates = sorted.filter(option => option.score >= bestScore - band);
-  const pickIndex = Math.min(
-    candidates.length - 1,
-    Math.floor(deterministicNoise(seedParts) * candidates.length)
-  );
-  return candidates[pickIndex];
-}
-
-function deriveBehaviorProfile(state, playerId, assessment) {
-  const pressureGap = assessment.theirObjectives - assessment.myObjectives;
-  const lateGame = assessment.roundsLeft <= 1;
-  const battlefieldGap = assessment.supplyAdvantage;
-
-  let profile = "balanced_pressure";
-  if (assessment.strategy === "defensive" && (lateGame || pressureGap <= 0)) {
-    profile = "preserve_lead";
-  } else if (assessment.strategy === "desperate_aggro" || pressureGap >= 1) {
-    profile = "objective_pressure";
-  } else if (battlefieldGap >= 3 || assessment.contested > 0) {
-    profile = "pick_off_wounded";
-  }
-
-  return {
-    profile,
-    prefersDefense: profile === "preserve_lead",
-    prefersPressure: profile === "objective_pressure",
-    prefersKills: profile === "pick_off_wounded"
-  };
-}
+let ffTargets = {};
+function resetFF() { ffTargets = {}; }
 
 /* ══════════════════════════════════════════════════════════════
-   STRATEGIC ASSESSMENT
+   BOARD EVALUATOR — Scores a board state from a player's POV
+   Used by both advisors and the lookahead planner.
    ══════════════════════════════════════════════════════════════ */
 
-function assessGameState(state, playerId) {
-  const me = state.players[playerId];
-  const them = state.players[opponent(playerId)];
-  const vpDiff = me.vp - them.vp;
-  const roundsLeft = (state.mission.pacing?.roundLimit ?? state.mission.roundLimit ?? 5) - state.round;
-  const snapshot = getObjectiveControlSnapshot(state);
+function evaluateBoard(state, pid) {
+  const me = state.players[pid], them = state.players[opp(pid)];
+  const snap = getObjectiveControlSnapshot(state);
+  const cr = getObjectiveControlRange(state);
+  let score = 0;
 
-  // Count objectives controlled by each side
-  let myObjectives = 0;
-  let theirObjectives = 0;
-  let contested = 0;
-  let uncontrolled = 0;
-  const objectiveDetails = [];
+  // VP lead
+  score += (me.vp - them.vp) * 15;
 
+  // Objective control
   for (const obj of state.deployment.missionMarkers) {
-    const ctrl = snapshot[obj.id];
-    if (ctrl.controller === playerId) myObjectives++;
-    else if (ctrl.controller === opponent(playerId)) theirObjectives++;
-    else if (ctrl.contested) contested++;
-    else uncontrolled++;
-    objectiveDetails.push({ ...ctrl, x: obj.x, y: obj.y, id: obj.id });
+    const c = snap[obj.id];
+    if (c.controller === pid) score += 20;          // we hold it (sticky!)
+    else if (c.controller === opp(pid)) score -= 15; // they hold it
+    else if (c.contested) score += 3;                // contested is slightly better than enemy-held
+    // else uncontrolled: 0
   }
 
-  // Battlefield strength
+  // Battlefield supply strength
   const mySupply = me.battlefieldUnitIds.reduce((s, id) => s + state.units[id].currentSupplyValue, 0);
   const theirSupply = them.battlefieldUnitIds.reduce((s, id) => s + state.units[id].currentSupplyValue, 0);
+  score += (mySupply - theirSupply) * 3;
 
-  // Strategy
-  let strategy;
-  if (vpDiff < -2 || (vpDiff < 0 && roundsLeft <= 1)) {
-    strategy = "desperate_aggro"; // behind on VP, need to flip objectives NOW
-  } else if (vpDiff < 0) {
-    strategy = "aggressive"; // slightly behind, push hard
-  } else if (vpDiff > 2 || (vpDiff > 0 && roundsLeft <= 1)) {
-    strategy = "defensive"; // ahead, protect what we have
-  } else {
-    strategy = "balanced"; // even, play smart
-  }
-
-  return {
-    vpDiff, roundsLeft, strategy,
-    myObjectives, theirObjectives, contested, uncontrolled,
-    objectiveDetails, snapshot,
-    mySupply, theirSupply,
-    supplyAdvantage: mySupply - theirSupply,
-    behavior: deriveBehaviorProfile(state, playerId, {
-      vpDiff,
-      roundsLeft,
-      strategy,
-      myObjectives,
-      theirObjectives,
-      contested,
-      uncontrolled,
-      objectiveDetails,
-      snapshot,
-      mySupply,
-      theirSupply,
-      supplyAdvantage: mySupply - theirSupply
-    }),
-    strategicObjectives: objectiveDetails
-      .filter(obj => obj.controller !== playerId)
-      .sort((a, b) => a.id.localeCompare(b.id))
-  };
-}
-
-/* ══════════════════════════════════════════════════════════════
-   OBJECTIVE SCORING - Where should a unit want to be?
-   ══════════════════════════════════════════════════════════════ */
-
-function scoreDestination(state, playerId, unit, point, assessment) {
-  const controlRange = getObjectiveControlRange(state);
-  let score = 0;
-  const role = unitRole(unit);
-  const favoredObjective = assessment.strategicObjectives.length
-    ? assessment.strategicObjectives[
-      stableHash(`${unit.id}|${state.round}|${state.phase}`) % assessment.strategicObjectives.length
-    ]
-    : null;
-
-  // Objective proximity — the core driver
-  for (const obj of assessment.objectiveDetails) {
-    const dist = distance(point, obj);
-    if (dist <= controlRange) {
-      // On the objective
-      if (obj.controller === playerId) {
-        // Already ours — moderate value (defend)
-        score += assessment.strategy === "defensive" ? 18 : 8;
-        if (assessment.behavior.prefersDefense) score += 8;
-      } else if (obj.controller === opponent(playerId)) {
-        // Flip it — high value
-        score += assessment.strategy === "desperate_aggro" ? 30 : 20;
-        if (assessment.behavior.prefersPressure) score += 8;
-      } else if (obj.contested) {
-        // Break the tie
-        score += 22;
-        if (assessment.behavior.prefersPressure) score += 4;
-      } else {
-        // Unclaimed — grab it
-        score += 25;
-        if (assessment.behavior.prefersPressure) score += 5;
-      }
-    } else if (dist <= controlRange + 4) {
-      // Near an objective — partial credit
-      const nearScore = Math.max(0, (controlRange + 4 - dist) * 3);
-      score += nearScore;
-    }
-
-    if (favoredObjective?.id === obj.id && dist <= controlRange + 6) {
-      score += Math.max(0, 6 - Math.max(0, dist - controlRange));
+  // Unit positioning relative to objectives
+  for (const uid of me.battlefieldUnitIds) {
+    const u = state.units[uid];
+    const pt = lp(u);
+    if (!pt) continue;
+    for (const obj of state.deployment.missionMarkers) {
+      const d = distance(pt, obj);
+      if (d <= cr) score += 6;
+      else if (d <= cr + 4) score += Math.max(0, (cr + 4 - d));
     }
   }
 
-  // Enemy proximity scoring
-  const enemies = Object.values(state.units).filter(u => u.owner === opponent(playerId) && isOnBattlefield(u));
-  for (const enemy of enemies) {
-    const ep = leaderPoint(enemy);
-    if (!ep) continue;
-    const dist = distance(point, ep);
-
-    // Ranged units want to stay at weapon range, not in melee
-    if (role === "ranged") {
-      const maxRange = Math.max(...unit.rangedWeapons.map(w => w.rangeInches ?? 0));
-      if (maxRange > 0) {
-        // Sweet spot: 60-90% of max range
-        const idealDist = maxRange * 0.75;
-        const rangePenalty = Math.abs(dist - idealDist) * 0.5;
-        score -= rangePenalty;
-        if (dist <= 1.5) score -= 10; // danger close penalty for ranged units
-      }
-    } else if (role === "melee" || role === "hybrid") {
-      // Melee units want to close distance (but this is handled by charge/move toward)
-      if (assessment.strategy !== "defensive") {
-        score += Math.max(0, 6 - dist) * 0.5;
-      }
+  // Penalize enemy units on objectives
+  for (const uid of them.battlefieldUnitIds) {
+    const u = state.units[uid];
+    const pt = lp(u);
+    if (!pt) continue;
+    for (const obj of state.deployment.missionMarkers) {
+      if (distance(pt, obj) <= cr) score -= 5;
     }
   }
 
-  const friendlies = Object.values(state.units).filter(
-    other => other.owner === playerId && other.id !== unit.id && isOnBattlefield(other)
-  );
-  for (const friendly of friendlies) {
-    const fp = leaderPoint(friendly);
-    if (!fp) continue;
-    const dist = distance(point, fp);
-    if (role === "support") {
-      score += Math.max(0, 5 - Math.abs(dist - 3.5)) * 1.2;
-    } else if (role === "ranged") {
-      score += Math.max(0, 4 - Math.abs(dist - 4.5)) * 0.4;
-    } else if (role === "melee") {
-      score += Math.max(0, 4 - Math.abs(dist - 2.5)) * 0.6;
-    }
-  }
+  // Total wounds remaining (army health)
+  const myWounds = me.battlefieldUnitIds.reduce((s, id) => s + wounds(state.units[id]), 0);
+  const theirWounds = them.battlefieldUnitIds.reduce((s, id) => s + wounds(state.units[id]), 0);
+  score += (myWounds - theirWounds) * 1.5;
 
-  const currentPoint = leaderPoint(unit);
-  if (currentPoint) {
-    const movementDelta = distance(currentPoint, point);
-    const forwardDelta = getForwardProgress(state, playerId, point) - getForwardProgress(state, playerId, currentPoint);
-    if (assessment.behavior.prefersDefense && movementDelta <= 2) score += 2.5;
-    if (assessment.behavior.prefersPressure && movementDelta >= 3) score += 2;
-    if (!assessment.behavior.prefersDefense) {
-      score += Math.max(0, forwardDelta) * (assessment.behavior.prefersPressure ? 1.6 : 0.9);
-    }
-  }
-
-  if (!assessment.behavior.prefersDefense) {
-    score += getForwardProgress(state, playerId, point) * 0.2;
-    if (isNearHomeEdge(state, playerId, point) && state.round <= 2) score -= 8;
-  }
-
-  // Slight penalty for being at the edges (less tactical value)
-  const edgeDist = Math.min(point.x, point.y, state.board.widthInches - point.x, state.board.heightInches - point.y);
-  if (edgeDist < 2) score -= 3;
-
-  score += deterministicNoise([state.round, state.phase, playerId, unit.id, point.x, point.y]) * 1.5;
+  // Reserves potential (supply waiting to deploy)
+  score += me.reserveUnitIds.length * 2;
 
   return score;
 }
 
-function chooseBestDestination(points, state, playerId, unit, assessment) {
-  if (!points.length) return null;
-  const choice = chooseScoredOption(
-    points.map(point => ({
-      item: point,
-      score: scoreDestination(state, playerId, unit, point, assessment)
-    })),
-    2.5,
-    [state.round, state.phase, playerId, unit.id, "destination"]
-  );
-  return choice?.item ?? null;
+/* ══════════════════════════════════════════════════════════════
+   STRATEGIST — Thinks 2+ turns ahead, evaluates macro position
+   "Where should the army be? What objectives matter? When to commit?"
+   ══════════════════════════════════════════════════════════════ */
+
+function strategistAdvice(state, pid) {
+  const me = state.players[pid], them = state.players[opp(pid)];
+  const snap = getObjectiveControlSnapshot(state);
+  const cr = getObjectiveControlRange(state);
+  const rl = state.mission.pacing?.roundLimit ?? state.mission.roundLimit ?? 5;
+  const roundsLeft = rl - state.round;
+  const vpDiff = me.vp - them.vp;
+
+  // Which objectives should we target?
+  const objPriorities = state.deployment.missionMarkers.map(obj => {
+    const c = snap[obj.id];
+    let priority = 0;
+    if (!c.controller && !c.contested) priority = 10;     // unclaimed: free sticky points
+    else if (c.contested) priority = 8;                     // break the tie
+    else if (c.controller === opp(pid)) {
+      // How much supply do they have on it?
+      priority = 5;
+    } else {
+      // We own it — only defend if threatened
+      const enemyNear = Object.values(state.units).some(e =>
+        e.owner !== pid && onField(e) && lp(e) && distance(lp(e), obj) <= cr + 8
+      );
+      priority = enemyNear ? 4 : 1;
+    }
+    // Urgency: later rounds = more urgent
+    if (roundsLeft <= 2) priority *= 1.5;
+    return { ...obj, ...c, priority };
+  }).sort((a, b) => b.priority - a.priority);
+
+  // Overall posture
+  let posture;
+  if (vpDiff < -2 || (vpDiff < 0 && roundsLeft <= 1)) posture = "desperate";
+  else if (vpDiff < 0) posture = "aggressive";
+  else if (vpDiff > 2 || (vpDiff > 0 && roundsLeft <= 1)) posture = "defensive";
+  else posture = "balanced";
+
+  // Deploy recommendation: cheap first early, expensive later
+  const deployCheapFirst = roundsLeft >= rl - 2;
+
+  // Pass timing recommendation
+  let shouldPass = false;
+  if (state.phase === "movement" && me.reserveUnitIds.length === 0) {
+    const myUnact = Object.values(state.units).filter(u => u.owner === pid && !u.status.movementActivated && (onField(u) || u.status.location === "reserves")).length;
+    if (myUnact <= 1 && posture === "defensive") shouldPass = true;
+    if (myUnact === 0) shouldPass = true;
+  }
+
+  return { objPriorities, posture, deployCheapFirst, shouldPass, roundsLeft, roundLimit: rl, vpDiff };
 }
 
 /* ══════════════════════════════════════════════════════════════
-   TARGET SELECTION — Focus fire, pick off wounded targets
+   TACTICIAN — Evaluates immediate combat efficiency
+   "What should this unit do RIGHT NOW for maximum damage/safety?"
    ══════════════════════════════════════════════════════════════ */
 
-function scoreRangedTarget(state, playerId, attacker, target, assessment) {
-  const tLeader = leaderPoint(target);
-  const aLeader = leaderPoint(attacker);
-  if (!tLeader || !aLeader) return -Infinity;
-  const weapon = attacker.rangedWeapons?.[0];
-  if (!weapon) return -Infinity;
-  const dist = distance(aLeader, tLeader);
-  if (dist > (weapon.rangeInches ?? 0) + 1e-6) return -Infinity;
+function tacticianScoreTarget(state, pid, atk, tgt) {
+  const tp = lp(tgt), ap = lp(atk);
+  if (!tp || !ap) return -Infinity;
+  const d = distance(ap, tp);
 
-  let score = 0;
+  let s = 0;
 
-  // Focus fire — wounded units are priority kills
-  const alive = aliveModelCount(target);
-  const total = target.modelIds.length;
-  if (alive < total) score += (total - alive) * 5; // wounded bonus
-  if (alive === 1) score += 8; // finish it off
-  if (assessment.behavior.prefersKills) {
-    score += (total - alive) * 3;
-    if (alive <= 2) score += 5;
-  }
+  // Kill probability: fewer wounds = easier kill = more valuable
+  const w = wounds(tgt);
+  if (w <= 1) s += 15;
+  else if (w <= 2) s += 10;
+  else if (w <= 4) s += 5;
 
-  // High-supply targets are valuable
-  score += target.currentSupplyValue * 3;
+  // Focus fire coordination
+  if (ffTargets[tgt.id]) s += 8 + ffTargets[tgt.id] * 2;
 
-  // Objective pressure — target units on objectives
-  const controlRange = getObjectiveControlRange(state);
-  for (const obj of assessment.objectiveDetails) {
-    if (distance(tLeader, obj) <= controlRange) {
-      if (obj.controller === opponent(playerId)) score += assessment.behavior.prefersPressure ? 16 : 10; // kill their obj holder
-      else if (obj.contested) score += assessment.behavior.prefersPressure ? 10 : 6;
-    }
-  }
-
-  // Proximity bonus (easier to hit closer targets conceptually)
-  score += Math.max(0, 10 - dist);
-
-  // Target low-wound-remaining units to secure kills
-  const wounds = totalWoundsRemaining(target);
-  if (wounds <= 2) score += 6;
-
-  return score;
-}
-
-function scoreChargeTarget(state, playerId, attacker, target, assessment) {
-  const tLeader = leaderPoint(target);
-  const aLeader = leaderPoint(attacker);
-  if (!tLeader || !aLeader) return -Infinity;
-  const dist = distance(aLeader, tLeader);
-  if (dist > 8 + 1e-6) return -Infinity;
-
-  let score = 0;
-
-  // Focus fire bonuses
-  const alive = aliveModelCount(target);
-  const total = target.modelIds.length;
-  if (alive < total) score += (total - alive) * 4;
-  if (alive === 1) score += 7;
-  if (assessment.behavior.prefersKills) {
-    score += (total - alive) * 2;
-    if (alive <= 2) score += 4;
-  }
-
-  // Supply value
-  score += target.currentSupplyValue * 2;
+  // Supply value of target
+  s += tgt.currentSupplyValue * 3;
 
   // Objective presence
-  const controlRange = getObjectiveControlRange(state);
-  for (const obj of assessment.objectiveDetails) {
-    if (distance(tLeader, obj) <= controlRange) {
-      if (obj.controller === opponent(playerId)) score += assessment.behavior.prefersPressure ? 18 : 12;
-      else if (obj.contested) score += assessment.behavior.prefersPressure ? 11 : 7;
+  const cr = getObjectiveControlRange(state);
+  for (const obj of state.deployment.missionMarkers) {
+    if (distance(tp, obj) <= cr) s += 8;
+  }
+
+  return s;
+}
+
+function tacticianScorePosition(state, pid, unit, point, strat) {
+  const cr = getObjectiveControlRange(state);
+  let score = 0;
+
+  // Score based on strategist's objective priorities
+  for (const obj of strat.objPriorities) {
+    const d = distance(point, obj);
+    if (d <= cr) score += obj.priority * 3;
+    else if (d <= cr + 5) score += obj.priority * Math.max(0, (cr + 5 - d) / 5);
+  }
+
+  // Ranged positioning
+  const enemies = Object.values(state.units).filter(u => u.owner === opp(pid) && onField(u));
+  for (const e of enemies) {
+    const ep = lp(e);
+    if (!ep) continue;
+    const d = distance(point, ep);
+    if (hasR(unit)) {
+      const mr = mxRange(unit);
+      if (mr > 0) {
+        const ideal = mr * 0.7;
+        score -= Math.abs(d - ideal) * 0.4;
+        if (d <= 1.5) score -= hasROnly(unit) ? 12 : 5;
+      }
+    }
+    if (hasM(unit) && !hasR(unit) && strat.posture !== "defensive") {
+      score += Math.max(0, 8 - d) * 0.6;
     }
   }
 
-  // Wounded targets
-  const wounds = totalWoundsRemaining(target);
-  if (wounds <= 2) score += 5;
-
-  // Range bonus
-  score += Math.max(0, 8 - dist);
-
-  // Don't charge with a fragile ranged unit
-  if (attacker.rangedWeapons?.length && !attacker.meleeWeapons?.length) {
-    score -= 15;
-  }
-
-  // If we'd be charging a much stronger unit with our leader, be cautious
-  if (target.currentSupplyValue >= attacker.currentSupplyValue * 2 && aliveModelCount(attacker) <= 2) {
-    score -= 8;
-  }
+  // Edge penalty
+  const ed = Math.min(point.x, point.y, state.board.widthInches - point.x, state.board.heightInches - point.y);
+  if (ed < 3) score -= (3 - ed) * 3;
 
   return score;
 }
 
-function chooseBestRangedTarget(state, playerId, attacker, assessment) {
-  const enemies = Object.values(state.units).filter(u => u.owner === opponent(playerId) && isOnBattlefield(u));
-  const choice = chooseScoredOption(
-    enemies.map(target => ({
-      item: target,
-      score: scoreRangedTarget(state, playerId, attacker, target, assessment)
-    })).filter(option => Number.isFinite(option.score)),
-    3,
-    [state.round, state.phase, playerId, attacker.id, "ranged-target"]
-  );
-  return choice?.item ?? null;
-}
-
-function chooseBestChargeTarget(state, playerId, attacker, assessment) {
-  const enemies = Object.values(state.units).filter(u => u.owner === opponent(playerId) && isOnBattlefield(u));
-  const choice = chooseScoredOption(
-    enemies.map(target => ({
-      item: target,
-      score: scoreChargeTarget(state, playerId, attacker, target, assessment)
-    })).filter(option => Number.isFinite(option.score)),
-    2.5,
-    [state.round, state.phase, playerId, attacker.id, "charge-target"]
-  );
-  return choice && choice.score > 0 ? choice.item : null; // Only charge if score is positive
-}
-
 /* ══════════════════════════════════════════════════════════════
-   CARD PLAY — Use tactical cards on the best targets
+   PLANNER — Simulates moves forward to evaluate consequences
+   "If I move here, what happens next turn?"
    ══════════════════════════════════════════════════════════════ */
 
-function chooseBestCardPlay(state, playerId, assessment) {
-  const actions = getLegalActionsForPlayer(state, playerId);
-  const cardActions = actions.filter(a => a.type === "PLAY_CARD" && a.enabled);
-  if (!cardActions.length) return null;
+function simulateAction(state, action) {
+  try {
+    const result = engineDispatch(state, action);
+    return result.ok ? result.state : null;
+  } catch (_) {
+    return null;
+  }
+}
 
-  const scoredCards = [];
+function planAhead(state, pid, candidateActions, strat, maxCandidates) {
+  // Score each candidate by simulating it and evaluating the resulting board
+  const limit = Math.min(candidateActions.length, maxCandidates);
+  const scored = [];
 
-  for (const action of cardActions) {
-    const card = getTacticalCard(action.cardId);
-    let score = 5; // base value of playing a card
+  for (let i = 0; i < limit; i++) {
+    const action = candidateActions[i];
+    const futureState = simulateAction(state, action);
+    if (!futureState) continue;
 
-    // Movement speed cards — play on unit farthest from objectives
-    if (card.effect?.modifiers?.some(m => m.key === "unit.speed")) {
-      if (!action.targetUnitId) continue;
-      const unit = state.units[action.targetUnitId];
-      if (!unit || !isOnBattlefield(unit)) continue;
-      const pt = leaderPoint(unit);
-      if (!pt) continue;
+    // Evaluate the board after our action
+    const immediateScore = evaluateBoard(futureState, pid);
 
-      // Best on units that need to move far
-      const nearestObjDist = Math.min(...assessment.objectiveDetails.map(o => distance(pt, o)));
-      score += Math.min(15, nearestObjDist);
-
-      // Extra value on high-supply units
-      score += unit.currentSupplyValue * 1.5;
-
-      // Speed boost value
-      const speedBoost = card.effect.modifiers.find(m => m.key === "unit.speed")?.value ?? 0;
-      score += speedBoost * 3;
+    // Simulate one opponent response (their best greedy move)
+    let afterOpponentScore = immediateScore;
+    if (futureState.activePlayer === opp(pid)) {
+      const oppActions = getLegalActionsForPlayer(futureState, opp(pid));
+      // Try a few opponent moves and assume they pick the best one for them
+      const oppCandidates = oppActions.filter(a => a.enabled).slice(0, 5);
+      let worstForUs = immediateScore;
+      for (const oppAct of oppCandidates) {
+        const oppAction = buildSimpleAction(futureState, opp(pid), oppAct);
+        if (!oppAction) continue;
+        const afterOpp = simulateAction(futureState, oppAction);
+        if (!afterOpp) continue;
+        const oppScore = evaluateBoard(afterOpp, pid);
+        if (oppScore < worstForUs) worstForUs = oppScore;
+      }
+      afterOpponentScore = worstForUs;
     }
 
-    // Attack bonus cards — play on units with queued combat or about to attack
-    if (card.effect?.modifiers?.some(m => m.key === "weapon.hitTarget" || m.key === "weapon.attacksPerModel")) {
-      if (!action.targetUnitId) continue;
-      const unit = state.units[action.targetUnitId];
-      if (!unit || !isOnBattlefield(unit)) continue;
-
-      // Prefer units with more models alive (more attacks)
-      score += aliveModelCount(unit) * 2;
-      score += unit.currentSupplyValue * 2;
-
-      // Extra if unit has queued combat
-      const hasQueued = state.combatQueue.some(e => e.attackerId === action.targetUnitId);
-      if (hasQueued) score += 10;
-    }
-
-    score += deterministicNoise([state.round, state.phase, playerId, action.cardId, action.targetUnitId ?? ""]) * 1.2;
-    scoredCards.push({ item: action, score });
+    // Blend immediate eval with post-opponent eval
+    const finalScore = immediateScore * 0.4 + afterOpponentScore * 0.6;
+    scored.push({ action, score: finalScore });
   }
 
-  const bestCard = chooseScoredOption(scoredCards, 2, [state.round, state.phase, playerId, "card-play"])?.item;
-  if (!bestCard) return null;
-  return {
-    type: "PLAY_CARD",
-    payload: {
-      playerId,
-      cardInstanceId: bestCard.cardInstanceId,
-      targetUnitId: bestCard.targetUnitId ?? null
-    }
-  };
+  scored.sort((a, b) => b.score - a.score);
+  return scored;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   PHASE ACTION BUILDERS
-   ══════════════════════════════════════════════════════════════ */
+// Build a simple action from a legal action descriptor (for opponent simulation)
+function buildSimpleAction(state, pid, desc) {
+  const unit = state.units[desc.unitId];
+  if (!unit) return { type: "PASS_PHASE", payload: { playerId: pid } };
 
-function buildMovePath(unit, dest) {
-  const leader = unit.models[unit.leadingModelId];
-  return [{ x: leader.x, y: leader.y }, { x: dest.x, y: dest.y }];
-}
+  if (desc.type === "HOLD_UNIT") return { type: "HOLD_UNIT", payload: { playerId: pid, unitId: desc.unitId } };
+  if (desc.type === "PASS_PHASE") return { type: "PASS_PHASE", payload: { playerId: pid } };
 
-function tryBuildDeployAction(state, playerId, unitId, assessment) {
-  const unit = state.units[unitId];
-  const legalPoints = getLegalDeployDestinations(state, playerId, unitId, unit.leadingModelId);
-  const chosen = chooseBestDestination(legalPoints, state, playerId, unit, assessment);
-  if (!chosen) return null;
-  return {
-    type: "DEPLOY_UNIT",
-    payload: {
-      playerId, unitId,
-      leadingModelId: unit.leadingModelId,
-      entryPoint: chosen.entryPoint,
-      path: [chosen.entryPoint, { x: chosen.x, y: chosen.y }],
-      modelPlacements: autoArrangeModels(state, unitId, chosen)
-    }
-  };
-}
-
-function tryBuildMoveAction(state, playerId, unitId, assessment) {
-  const unit = state.units[unitId];
-  const legalPoints = getLegalMoveDestinations(state, playerId, unitId, unit.leadingModelId);
-  const chosen = chooseBestDestination(legalPoints, state, playerId, unit, assessment);
-  if (!chosen) return null;
-  return {
-    type: "MOVE_UNIT",
-    payload: {
-      playerId, unitId,
-      leadingModelId: unit.leadingModelId,
-      path: buildMovePath(unit, chosen),
-      modelPlacements: autoArrangeModels(state, unit.id, chosen)
-    }
-  };
-}
-
-function tryBuildDisengageAction(state, playerId, unitId, assessment) {
-  const unit = state.units[unitId];
-  const legalPoints = getLegalDisengageDestinations(state, playerId, unitId, unit.leadingModelId);
-  // When disengaging, pick the best strategic destination (not just "farthest from enemy")
-  const chosen = chooseBestDestination(legalPoints, state, playerId, unit, assessment);
-  if (!chosen) return null;
-  return {
-    type: "DISENGAGE_UNIT",
-    payload: {
-      playerId, unitId,
-      leadingModelId: unit.leadingModelId,
-      path: buildMovePath(unit, chosen),
-      modelPlacements: autoArrangeModels(state, unit.id, chosen)
-    }
-  };
-}
-
-function tryBuildRunAction(state, playerId, unitId, assessment) {
-  const unit = state.units[unitId];
-  const legalPoints = getLegalRunDestinations(state, playerId, unitId, unit.leadingModelId);
-  const chosen = chooseBestDestination(legalPoints, state, playerId, unit, assessment);
-  if (!chosen) return null;
-  return {
-    type: "RUN_UNIT",
-    payload: {
-      playerId, unitId,
-      leadingModelId: unit.leadingModelId,
-      path: buildMovePath(unit, chosen),
-      modelPlacements: autoArrangeModels(state, unit.id, chosen)
-    }
-  };
-}
-
-function tryBuildBlinkAction(state, playerId, unitId, assessment) {
-  const unit = state.units[unitId];
-  const legalPoints = getLegalBlinkDestinations(state, playerId, unitId);
-  const chosen = chooseBestDestination(legalPoints, state, playerId, unit, assessment);
-  if (!chosen) return null;
-  return {
-    action: {
-      type: "BLINK_UNIT",
-      payload: {
-        playerId,
-        unitId,
-        point: chosen,
-        modelPlacements: autoArrangeModels(state, unitId, chosen)
-      }
-    },
-    score: scoreDestination(state, playerId, unit, chosen, assessment) + 5
-  };
-}
-
-function tryBuildPsionicTransferAction(state, playerId, unitId, assessment) {
-  const unit = state.units[unitId];
-  const legalPoints = getLegalPsionicTransferDestinations(state, playerId, unitId);
-  const chosen = chooseBestDestination(legalPoints, state, playerId, unit, assessment);
-  if (!chosen) return null;
-  return {
-    action: {
-      type: "PSIONIC_TRANSFER_UNIT",
-      payload: {
-        playerId,
-        unitId,
-        point: chosen,
-        modelPlacements: autoArrangeModels(state, unitId, chosen)
-      }
-    },
-    score: scoreDestination(state, playerId, unit, chosen, assessment) + 4
-  };
-}
-
-function tryBuildPlaceCreepAction(state, playerId, unitId, assessment) {
-  const unit = state.units[unitId];
-  const chosen = chooseBestValidatedPoint(
-    state,
-    playerId,
-    unitId,
-    unit,
-    assessment,
-    point => validatePlaceCreep(state, playerId, unitId, point),
-    "place-creep",
-    2,
-    4
-  );
-  if (!chosen) return null;
-  const strategicCoverage = assessment.objectiveDetails.some(
-    obj => obj.controller !== playerId && distance(chosen, obj) <= getObjectiveControlRange(state) + 4
-  ) ? 4 : 0;
-  return {
-    action: {
-      type: "PLACE_CREEP",
-      payload: { playerId, unitId, point: chosen }
-    },
-    score: scoreDestination(state, playerId, unit, chosen, assessment) + 8 + strategicCoverage
-  };
-}
-
-function tryBuildForceFieldAction(state, playerId, unitId, assessment) {
-  const unit = state.units[unitId];
-  const chosen = chooseBestValidatedPoint(
-    state,
-    playerId,
-    unitId,
-    unit,
-    assessment,
-    point => validatePlaceForceField(state, playerId, unitId, point),
-    "force-field",
-    2,
-    3
-  );
-  if (!chosen) return null;
-  const enemyPressure = getEnemyUnits(state, playerId).filter(enemy => {
-    const point = leaderPoint(enemy);
-    return point && distance(point, chosen) <= 5;
-  }).length;
-  return {
-    action: {
-      type: "PLACE_FORCE_FIELD",
-      payload: { playerId, unitId, point: chosen }
-    },
-    score: scoreDestination(state, playerId, unit, chosen, assessment) + enemyPressure * 4 + 6
-  };
-}
-
-function tryBuildOmegaTransferAction(state, playerId, unitId, assessment) {
-  const unit = state.units[unitId];
-  const chosen = chooseBestValidatedPoint(
-    state,
-    playerId,
-    unitId,
-    unit,
-    assessment,
-    point => validateOmegaTransfer(state, playerId, unitId, point),
-    "omega-transfer",
-    2.5,
-    5
-  );
-  if (!chosen) return null;
-  return {
-    action: {
-      type: "OMEGA_TRANSFER",
-      payload: {
-        playerId,
-        unitId,
-        point: chosen,
-        modelPlacements: autoArrangeModels(state, unitId, chosen)
-      }
-    },
-    score: scoreDestination(state, playerId, unit, chosen, assessment) + 9
-  };
-}
-
-function chooseBestMedpackAction(state, playerId, unitId, assessment) {
-  const medic = state.units[unitId];
-  const friendlies = getFriendlyUnits(state, playerId).filter(unit => unit.id !== unitId);
-  const options = friendlies.map(target => {
-    const validation = validateUseMedpack(state, playerId, unitId, target.id);
-    if (!validation.ok) return null;
-    let score = woundsMissing(target) * 7 + target.currentSupplyValue * 2;
-    if (target.status.engaged) score += 4;
-    if (assessment.behavior.prefersDefense) {
-      const targetPoint = leaderPoint(target);
-      if (targetPoint && assessment.objectiveDetails.some(
-        obj => obj.controller === playerId && distance(targetPoint, obj) <= getObjectiveControlRange(state)
-      )) {
-        score += 5;
-      }
-    }
-    return {
-      item: target,
-      score
-    };
-  }).filter(Boolean);
-  const choice = chooseScoredOption(options, 2, [state.round, state.phase, playerId, unitId, "medpack"]);
-  if (!choice || choice.score <= 0) return null;
-  return {
-    action: {
-      type: "USE_MEDPACK",
-      payload: { playerId, unitId, targetId: choice.item.id }
-    },
-    score: choice.score
-  };
-}
-
-function chooseBestOpticalFlareAction(state, playerId, unitId, assessment) {
-  const enemies = getEnemyUnits(state, playerId);
-  const options = enemies.map(target => {
-    const validation = validateUseOpticalFlare(state, playerId, unitId, target.id);
-    if (!validation.ok) return null;
-    let score = getEnemyThreatScore(state, playerId, target, assessment);
-    if (getMaxRangedReach(target) > 0) score += 8;
-    if (assessment.behavior.prefersDefense) score += 3;
-    return { item: target, score };
-  }).filter(Boolean);
-  const choice = chooseScoredOption(options, 3, [state.round, state.phase, playerId, unitId, "optical-flare"]);
-  if (!choice || choice.score <= 0) return null;
-  return {
-    action: {
-      type: "USE_OPTICAL_FLARE",
-      payload: { playerId, unitId, targetId: choice.item.id }
-    },
-    score: choice.score
-  };
-}
-
-function chooseGuardianShieldAction(state, playerId, unitId, assessment) {
-  const unit = state.units[unitId];
-  const point = leaderPoint(unit);
-  if (!point) return null;
-  const nearbyFriendlies = getFriendlyUnits(state, playerId).filter(other => {
-    const otherPoint = leaderPoint(other);
-    return other.id !== unitId && otherPoint && distance(point, otherPoint) <= 4 + 1e-6;
-  });
-  let threatened = 0;
-  for (const friendly of nearbyFriendlies) {
-    const friendlyPoint = leaderPoint(friendly);
-    if (!friendlyPoint) continue;
-    if (getEnemyUnits(state, playerId).some(enemy => {
-      const enemyPoint = leaderPoint(enemy);
-      return enemyPoint && distance(enemyPoint, friendlyPoint) <= getMaxRangedReach(enemy) + 2;
-    })) {
-      threatened += 1;
-    }
+  if (desc.type === "DEPLOY_UNIT") {
+    const pts = getLegalDeployDestinations(state, pid, desc.unitId, unit.leadingModelId);
+    if (!pts.length) return null;
+    // Pick center-ish point
+    const mid = { x: state.board.widthInches / 2, y: state.board.heightInches / 2 };
+    pts.sort((a, b) => distance(a, mid) - distance(b, mid));
+    const d = pts[0];
+    return { type: "DEPLOY_UNIT", payload: { playerId: pid, unitId: desc.unitId, leadingModelId: unit.leadingModelId, entryPoint: d.entryPoint, path: [d.entryPoint, { x: d.x, y: d.y }], modelPlacements: autoArrangeModels(state, desc.unitId, d) } };
   }
-  const score = nearbyFriendlies.length * 10 + threatened * 18 + (threatened > 0 ? 10 : 0) + (assessment.behavior.prefersDefense ? 6 : 0);
-  if (score <= 0) return null;
-  return {
-    action: {
-      type: "ACTIVATE_GUARDIAN_SHIELD",
-      payload: { playerId, unitId }
-    },
-    score
-  };
-}
 
-function chooseStimpackAction(state, playerId, unitId, assessment) {
-  const unit = state.units[unitId];
-  const point = leaderPoint(unit);
-  if (!point) return null;
-  const missing = woundsMissing(unit);
-  const currentWounds = totalWoundsRemaining(unit);
-  if (missing >= currentWounds - 1) return null;
-  const nearbyEnemy = getEnemyUnits(state, playerId).some(enemy => {
-    const enemyPoint = leaderPoint(enemy);
-    return enemyPoint && distance(enemyPoint, point) <= 8;
-  });
-  const nearEnemyObjective = assessment.objectiveDetails.some(
-    obj => obj.controller !== playerId && distance(point, obj) <= getObjectiveControlRange(state) + 4
-  );
-  const score = (nearbyEnemy ? 7 : 0) + (nearEnemyObjective ? 8 : 0) + unit.currentSupplyValue * 1.5;
-  if (score <= 8) return null;
-  return {
-    action: {
-      type: "ACTIVATE_STIMPACK",
-      payload: { playerId, unitId }
-    },
-    score
-  };
-}
+  if (desc.type === "MOVE_UNIT") {
+    const pts = getLegalMoveDestinations(state, pid, desc.unitId, unit.leadingModelId);
+    if (!pts.length) return null;
+    // Move toward nearest objective
+    const objs = state.deployment.missionMarkers;
+    const up = lp(unit);
+    if (!up || !objs.length) return null;
+    const nearestObj = objs.reduce((best, o) => distance(up, o) < distance(up, best) ? o : best, objs[0]);
+    pts.sort((a, b) => distance(a, nearestObj) - distance(b, nearestObj));
+    const d = pts[0];
+    const l = unit.models[unit.leadingModelId];
+    return { type: "MOVE_UNIT", payload: { playerId: pid, unitId: desc.unitId, leadingModelId: unit.leadingModelId, path: [{ x: l.x, y: l.y }, { x: d.x, y: d.y }], modelPlacements: autoArrangeModels(state, unit.id, d) } };
+  }
 
-function chooseBurrowOrHideAction(state, playerId, unitId, assessment, actionsByType) {
-  const unit = state.units[unitId];
-  const point = leaderPoint(unit);
-  if (!point) return null;
-  if (actionsByType.has("TOGGLE_BURROW") && !unit.status.burrowed) {
-    const score = (assessment.behavior.prefersDefense ? 6 : 2) + (woundsMissing(unit) > 0 ? 5 : 0);
-    if (score > 6) {
-      return {
-        action: { type: "TOGGLE_BURROW", payload: { playerId, unitId } },
-        score
-      };
-    }
+  if (desc.type === "DECLARE_RANGED_ATTACK") {
+    return { type: "DECLARE_RANGED_ATTACK", payload: { playerId: pid, unitId: desc.unitId } };
   }
-  if (actionsByType.has("TOGGLE_HIDDEN") && !unit.status.hidden) {
-    const onOwnedObjective = assessment.objectiveDetails.some(
-      obj => obj.controller === playerId && distance(point, obj) <= getObjectiveControlRange(state)
-    );
-    const score = (assessment.behavior.prefersDefense ? 4 : 0) + (onOwnedObjective ? 6 : 0);
-    if (score > 5) {
-      return {
-        action: { type: "TOGGLE_HIDDEN", payload: { playerId, unitId } },
-        score
-      };
-    }
+  if (desc.type === "DECLARE_CHARGE") {
+    return { type: "DECLARE_CHARGE", payload: { playerId: pid, unitId: desc.unitId } };
   }
+
   return null;
 }
 
 /* ══════════════════════════════════════════════════════════════
-   UNIT PRIORITY ORDERING
+   NEGOTIATOR — Combines strategist + tactician + planner
    ══════════════════════════════════════════════════════════════ */
 
-function prioritizeUnits(state, playerId, unitIds, assessment) {
-  const scored = [...unitIds].map(unitId => {
-    const unit = state.units[unitId];
-    const pt = leaderPoint(unit);
-    let score = 0;
-
-    if (unit.status.location === "reserves") score += 25;
-    score += unit.currentSupplyValue * 6;
-
-    if (pt) {
-      const enemyObjectives = assessment.objectiveDetails.filter(o => o.controller !== playerId);
-      const minObjDist = Math.min(...enemyObjectives.map(o => distance(pt, o)).concat([999]));
-      score += Math.max(0, 12 - minObjDist);
-
-      const nearestEnemyDist = Math.min(
-        ...Object.values(state.units)
-          .filter(other => other.owner === opponent(playerId) && isOnBattlefield(other))
-          .map(other => {
-            const otherPt = leaderPoint(other);
-            return otherPt ? distance(pt, otherPt) : 999;
-          })
-          .concat([999])
-      );
-
-      const role = unitRole(unit);
-      if (role === "melee") score += Math.max(0, 8 - nearestEnemyDist) * 0.8;
-      if (role === "ranged") score += Math.max(0, nearestEnemyDist - 2) * 0.25;
-      if (role === "support") score += Math.max(0, 6 - minObjDist) * 0.5;
-    }
-
-    score += deterministicNoise([state.round, state.phase, playerId, unitId, "activation-order"]) * 2.2;
-    return { unitId, score };
-  });
-
-  return scored
-    .sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      return a.unitId.localeCompare(b.unitId);
-    })
-    .map(entry => entry.unitId);
-}
-
-/* ══════════════════════════════════════════════════════════════
-   PHASE DECISION FUNCTIONS
-   ══════════════════════════════════════════════════════════════ */
-
-function chooseMovementAction(state, playerId, assessment) {
-  // Try playing a card first (speed boosts are movement phase)
-  const cardAction = chooseBestCardPlay(state, playerId, assessment);
-  if (cardAction) return cardAction;
-
-  const actions = getLegalActionsForPlayer(state, playerId);
+function buildCandidateActions(state, pid, strat) {
   const candidates = [];
-  const actionsByUnit = new Map();
-  for (const action of actions.filter(entry => entry.enabled && entry.unitId)) {
-    if (!actionsByUnit.has(action.unitId)) actionsByUnit.set(action.unitId, new Set());
-    actionsByUnit.get(action.unitId).add(action.type);
-  }
+  const actions = getLegalActionsForPlayer(state, pid);
 
-  const deployUnitIds = actions
-    .filter(a => a.type === "DEPLOY_UNIT" && a.enabled)
-    .map(a => a.unitId);
-  const orderedDeploys = prioritizeUnits(state, playerId, deployUnitIds, assessment);
-  for (const unitId of orderedDeploys) {
-    const built = tryBuildDeployAction(state, playerId, unitId, assessment);
-    if (!built) continue;
-    const end = built.payload.path.at(-1);
-    candidates.push({
-      item: built,
-      score: scoreDestination(state, playerId, state.units[unitId], end, assessment) + state.units[unitId].currentSupplyValue * 2 + 6
-    });
-  }
+  if (state.phase === "movement") {
+    // Deploy candidates
+    const depIds = actions.filter(a => a.type === "DEPLOY_UNIT" && a.enabled).map(a => a.unitId);
+    const avail = availSupply(state, pid);
+    const orderedDep = [...depIds]
+      .filter(id => state.units[id].currentSupplyValue <= avail)
+      .sort((a, b) => strat.deployCheapFirst
+        ? state.units[a].currentSupplyValue - state.units[b].currentSupplyValue
+        : state.units[b].currentSupplyValue - state.units[a].currentSupplyValue
+      );
 
-  const battleUnits = Object.values(state.units).filter(
-    u => u.owner === playerId && isOnBattlefield(u) && !u.status.movementActivated
-  );
-  const orderedUnits = prioritizeUnits(state, playerId, battleUnits.map(u => u.id), assessment);
-
-  for (const unitId of orderedUnits) {
-    const unit = state.units[unitId];
-    const role = unitRole(unit);
-    const point = leaderPoint(unit);
-    const legalTypes = actionsByUnit.get(unitId) ?? new Set();
-
-    if (legalTypes.has("USE_MEDPACK")) {
-      const medpack = chooseBestMedpackAction(state, playerId, unitId, assessment);
-      if (medpack) candidates.push({ item: medpack.action, score: medpack.score });
-    }
-    if (legalTypes.has("USE_OPTICAL_FLARE")) {
-      const flare = chooseBestOpticalFlareAction(state, playerId, unitId, assessment);
-      if (flare) candidates.push({ item: flare.action, score: flare.score });
-    }
-    if (legalTypes.has("ACTIVATE_GUARDIAN_SHIELD")) {
-      const shield = chooseGuardianShieldAction(state, playerId, unitId, assessment);
-      if (shield) candidates.push({ item: shield.action, score: shield.score });
-    }
-    if (legalTypes.has("ACTIVATE_STIMPACK")) {
-      const stim = chooseStimpackAction(state, playerId, unitId, assessment);
-      if (stim) candidates.push({ item: stim.action, score: stim.score });
-    }
-    if (legalTypes.has("BLINK_UNIT")) {
-      const blink = tryBuildBlinkAction(state, playerId, unitId, assessment);
-      if (blink) candidates.push({ item: blink.action, score: blink.score });
-    }
-    if (legalTypes.has("PSIONIC_TRANSFER_UNIT")) {
-      const transfer = tryBuildPsionicTransferAction(state, playerId, unitId, assessment);
-      if (transfer) candidates.push({ item: transfer.action, score: transfer.score });
-    }
-    if (legalTypes.has("OMEGA_TRANSFER")) {
-      const omegaTransfer = tryBuildOmegaTransferAction(state, playerId, unitId, assessment);
-      if (omegaTransfer) candidates.push({ item: omegaTransfer.action, score: omegaTransfer.score });
-    }
-    if (legalTypes.has("OMEGA_RECALL")) {
-      const recallScore = woundsMissing(unit) * 5 + (assessment.behavior.prefersDefense ? 5 : 0) + unit.currentSupplyValue;
-      if (recallScore > 5) {
-        candidates.push({
-          item: { type: "OMEGA_RECALL", payload: { playerId, unitId } },
-          score: recallScore
-        });
+    for (const uid of orderedDep.slice(0, 3)) {
+      const u = state.units[uid];
+      const pts = getLegalDeployDestinations(state, pid, uid, u.leadingModelId);
+      // Pick top 3 destinations by tactician score
+      const scored = pts.map(p => ({ p, s: tacticianScorePosition(state, pid, u, p, strat) }))
+        .sort((a, b) => b.s - a.s).slice(0, 3);
+      for (const { p } of scored) {
+        candidates.push({ type: "DEPLOY_UNIT", payload: { playerId: pid, unitId: uid, leadingModelId: u.leadingModelId, entryPoint: p.entryPoint, path: [p.entryPoint, { x: p.x, y: p.y }], modelPlacements: autoArrangeModels(state, uid, p) } });
       }
     }
-    if (legalTypes.has("PLACE_CREEP")) {
-      const creep = tryBuildPlaceCreepAction(state, playerId, unitId, assessment);
-      if (creep) candidates.push({ item: creep.action, score: creep.score });
-    }
-    if (legalTypes.has("PLACE_FORCE_FIELD")) {
-      const field = tryBuildForceFieldAction(state, playerId, unitId, assessment);
-      if (field) candidates.push({ item: field.action, score: field.score });
-    }
-    const stealthAction = chooseBurrowOrHideAction(state, playerId, unitId, assessment, legalTypes);
-    if (stealthAction) candidates.push({ item: stealthAction.action, score: stealthAction.score });
 
-    if (unit.status.engaged) {
-      const isRanged = role === "ranged" || role === "support";
-      const shouldDisengage = isRanged || assessment.strategy === "defensive" ||
-        (aliveModelCount(unit) <= 1 && unit.currentSupplyValue >= 2);
-      if (shouldDisengage && legalTypes.has("DISENGAGE_UNIT")) {
-        const disengage = tryBuildDisengageAction(state, playerId, unitId, assessment);
-        if (disengage) {
-          const end = disengage.payload.path.at(-1);
-          candidates.push({
-            item: disengage,
-            score: scoreDestination(state, playerId, unit, end, assessment) + 7
-          });
+    // Move candidates for battlefield units
+    const battleIds = Object.values(state.units)
+      .filter(u => u.owner === pid && onField(u) && !u.status.movementActivated)
+      .map(u => u.id);
+
+    for (const uid of battleIds.slice(0, 4)) {
+      const unit = state.units[uid];
+      if (unit.status.engaged) {
+        if (cleanDisengage(state, unit)) {
+          const pts = getLegalDisengageDestinations(state, pid, uid, unit.leadingModelId);
+          const scored = pts.map(p => ({ p, s: tacticianScorePosition(state, pid, unit, p, strat) }))
+            .sort((a, b) => b.s - a.s).slice(0, 2);
+          for (const { p } of scored) {
+            candidates.push({ type: "DISENGAGE_UNIT", payload: { playerId: pid, unitId: uid, leadingModelId: unit.leadingModelId, path: bPath(unit, p), modelPlacements: autoArrangeModels(state, unit.id, p) } });
+          }
         }
+        candidates.push({ type: "HOLD_UNIT", payload: { playerId: pid, unitId: uid } });
+        continue;
       }
-      candidates.push({
-        item: { type: "HOLD_UNIT", payload: { playerId, unitId } },
-        score: scoreHoldPosition(state, playerId, unit, assessment) + (role === "melee" ? 4 : 0)
-      });
-      continue;
-    }
-
-    if (legalTypes.has("MOVE_UNIT")) {
-      const move = tryBuildMoveAction(state, playerId, unitId, assessment);
-      if (move) {
-        const end = move.payload.path.at(-1);
-        candidates.push({
-          item: move,
-          score: scoreDestination(state, playerId, unit, end, assessment) + 2
-        });
+      const pts = getLegalMoveDestinations(state, pid, uid, unit.leadingModelId);
+      const scored = pts.map(p => ({ p, s: tacticianScorePosition(state, pid, unit, p, strat) }))
+        .sort((a, b) => b.s - a.s).slice(0, 3);
+      for (const { p } of scored) {
+        candidates.push({ type: "MOVE_UNIT", payload: { playerId: pid, unitId: uid, leadingModelId: unit.leadingModelId, path: bPath(unit, p), modelPlacements: autoArrangeModels(state, unit.id, p) } });
       }
-    }
-
-    if (point) {
-      const onOwnedObjective = assessment.objectiveDetails.some(
-        obj => obj.controller === playerId && distance(point, obj) <= getObjectiveControlRange(state)
-      );
-      const localEnemyPressure = countEnemiesNearPoint(state, playerId, point, 8);
-      if ((onOwnedObjective && (assessment.behavior.prefersDefense || localEnemyPressure > 0)) ||
-          (assessment.behavior.prefersDefense && localEnemyPressure > 0)) {
-        candidates.push({
-          item: { type: "HOLD_UNIT", payload: { playerId, unitId } },
-          score: scoreHoldPosition(state, playerId, unit, assessment)
-        });
-      }
+      candidates.push({ type: "HOLD_UNIT", payload: { playerId: pid, unitId: uid } });
     }
   }
 
-  const chosen = chooseScoredOption(candidates, 4, [state.round, state.phase, playerId, "movement-candidate-pick"]);
-  if (chosen?.item) return chosen.item;
+  if (state.phase === "assault") {
+    const rIds = actions.filter(a => a.type === "DECLARE_RANGED_ATTACK" && a.enabled).map(a => a.unitId);
+    for (const uid of rIds) {
+      const atk = state.units[uid];
+      const enemies = Object.values(state.units).filter(u => u.owner === opp(pid) && onField(u));
+      const scored = enemies.map(t => ({ t, s: tacticianScoreTarget(state, pid, atk, t) + scoreRangedRange(atk, t) }))
+        .filter(x => x.s > -Infinity).sort((a, b) => b.s - a.s).slice(0, 3);
+      for (const { t } of scored) {
+        candidates.push({ type: "DECLARE_RANGED_ATTACK", payload: { playerId: pid, unitId: uid, targetId: t.id } });
+      }
+    }
 
-  return { type: "PASS_PHASE", payload: { playerId } };
+    const cIds = actions.filter(a => a.type === "DECLARE_CHARGE" && a.enabled).map(a => a.unitId);
+    for (const uid of cIds) {
+      const atk = state.units[uid];
+      const enemies = Object.values(state.units).filter(u => u.owner === opp(pid) && onField(u));
+      const scored = enemies.map(t => ({ t, s: scoreChargeViability(atk, t) }))
+        .filter(x => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 2);
+      for (const { t } of scored) {
+        candidates.push({ type: "DECLARE_CHARGE", payload: { playerId: pid, unitId: uid, targetId: t.id } });
+      }
+    }
+
+    // Run options
+    const unact = Object.values(state.units).filter(u => u.owner === pid && onField(u) && !u.status.assaultActivated);
+    for (const u of unact.slice(0, 3)) {
+      if (u.status.engaged) { candidates.push({ type: "HOLD_UNIT", payload: { playerId: pid, unitId: u.id } }); continue; }
+      const pts = getLegalRunDestinations(state, pid, u.id, u.leadingModelId);
+      const scored = pts.map(p => ({ p, s: tacticianScorePosition(state, pid, u, p, strat) }))
+        .sort((a, b) => b.s - a.s).slice(0, 2);
+      for (const { p } of scored) {
+        candidates.push({ type: "RUN_UNIT", payload: { playerId: pid, unitId: u.id, leadingModelId: u.leadingModelId, path: bPath(u, p), modelPlacements: autoArrangeModels(state, u.id, p) } });
+      }
+      candidates.push({ type: "HOLD_UNIT", payload: { playerId: pid, unitId: u.id } });
+    }
+  }
+
+  if (state.phase === "combat") {
+    const withCombat = Object.values(state.units).filter(u => {
+      if (u.owner !== pid || !onField(u) || u.status.combatActivated) return false;
+      return state.combatQueue.some(e => ["ranged_attack", "charge_attack", "overwatch_attack"].includes(e.type) && e.attackerId === u.id);
+    });
+    // Resolve lowest-wounds-target first
+    withCombat.sort((a, b) => {
+      const ae = state.combatQueue.find(e => e.attackerId === a.id);
+      const be = state.combatQueue.find(e => e.attackerId === b.id);
+      return (ae ? wounds(state.units[ae.targetId]) : 999) - (be ? wounds(state.units[be.targetId]) : 999);
+    });
+    for (const u of withCombat) {
+      candidates.push({ type: "RESOLVE_COMBAT_UNIT", payload: { playerId: pid, unitId: u.id } });
+    }
+    const unact = Object.values(state.units).filter(u => u.owner === pid && onField(u) && !u.status.combatActivated);
+    for (const u of unact) candidates.push({ type: "HOLD_UNIT", payload: { playerId: pid, unitId: u.id } });
+  }
+
+  // Always add pass as an option
+  if (!state.players[pid].hasPassedThisPhase) {
+    candidates.push({ type: "PASS_PHASE", payload: { playerId: pid } });
+  }
+
+  return candidates;
 }
 
-function chooseAssaultAction(state, playerId, assessment) {
-  // Try playing attack-buff cards first
-  const cardAction = chooseBestCardPlay(state, playerId, assessment);
-  if (cardAction) return cardAction;
-
-  const actions = getLegalActionsForPlayer(state, playerId);
-
-  // Ranged attacks — prioritize by target quality
-  const rangedUnitIds = actions
-    .filter(a => a.type === "DECLARE_RANGED_ATTACK" && a.enabled)
-    .map(a => a.unitId);
-
-  // Score each ranged unit by best available target
-  const rangedWithScores = rangedUnitIds.map(unitId => {
-    const attacker = state.units[unitId];
-    const target = chooseBestRangedTarget(state, playerId, attacker, assessment);
-    const score = target ? scoreRangedTarget(state, playerId, attacker, target, assessment) : -Infinity;
-    return { unitId, target, score };
-  }).filter(r => r.target);
-
-  if (rangedWithScores.length) {
-    const best = chooseScoredOption(
-      rangedWithScores.map(entry => ({
-        item: entry,
-        score: entry.score + deterministicNoise([state.round, playerId, entry.unitId, entry.target.id, "ranged-action"])
-      })),
-      3,
-      [state.round, state.phase, playerId, "ranged-action-pick"]
-    )?.item;
-    if (!best) return null;
-    return {
-      type: "DECLARE_RANGED_ATTACK",
-      payload: { playerId, unitId: best.unitId, targetId: best.target.id }
-    };
-  }
-
-  // Charge attacks — only if worthwhile
-  const chargeUnitIds = actions
-    .filter(a => a.type === "DECLARE_CHARGE" && a.enabled)
-    .map(a => a.unitId);
-
-  const chargeWithScores = chargeUnitIds.map(unitId => {
-    const attacker = state.units[unitId];
-    const target = chooseBestChargeTarget(state, playerId, attacker, assessment);
-    const score = target ? scoreChargeTarget(state, playerId, attacker, target, assessment) : -Infinity;
-    return { unitId, target, score };
-  }).filter(r => r.target);
-
-  if (chargeWithScores.length) {
-    const best = chooseScoredOption(
-      chargeWithScores.map(entry => ({
-        item: entry,
-        score: entry.score + deterministicNoise([state.round, playerId, entry.unitId, entry.target.id, "charge-action"])
-      })),
-      2.5,
-      [state.round, state.phase, playerId, "charge-action-pick"]
-    )?.item;
-    if (!best) return null;
-    return {
-      type: "DECLARE_CHARGE",
-      payload: { playerId, unitId: best.unitId, targetId: best.target.id }
-    };
-  }
-
-  // Run remaining units toward objectives
-  const unactivated = Object.values(state.units).filter(
-    u => u.owner === playerId && isOnBattlefield(u) && !u.status.assaultActivated
-  );
-  const orderedRun = prioritizeUnits(state, playerId, unactivated.map(u => u.id), assessment);
-
-  for (const unitId of orderedRun) {
-    const unit = state.units[unitId];
-    const role = unitRole(unit);
-    const point = leaderPoint(unit);
-    if (unit.status.engaged) {
-      return { type: "HOLD_UNIT", payload: { playerId, unitId } };
-    }
-    if (assessment.behavior.prefersDefense && point && (role === "ranged" || role === "support")) {
-      const controlRange = getObjectiveControlRange(state);
-      const coveringOwnedObjective = assessment.objectiveDetails.some(
-        obj => obj.controller === playerId && distance(point, obj) <= controlRange + 1
-      );
-      if (coveringOwnedObjective) {
-        return { type: "HOLD_UNIT", payload: { playerId, unitId } };
-      }
-    }
-    // Run toward objectives if not in a fight
-    const runAction = tryBuildRunAction(state, playerId, unitId, assessment);
-    if (runAction) return runAction;
-    return { type: "HOLD_UNIT", payload: { playerId, unitId } };
-  }
-
-  return { type: "PASS_PHASE", payload: { playerId } };
+function scoreRangedRange(atk, tgt) {
+  const ap = lp(atk), tp = lp(tgt);
+  if (!ap || !tp) return -Infinity;
+  const d = distance(ap, tp), mr = mxRange(atk);
+  if (mr <= 0 || d > mr + 1e-6) return -Infinity;
+  return Math.max(0, 12 - d) * 0.5;
 }
 
-function chooseCombatAction(state, playerId, assessment) {
-  const closeRanksUnits = Object.values(state.units).filter(unit =>
-    unit.owner === playerId && isOnBattlefield(unit) && !unit.status.combatActivated && unit.status.burrowed && unit.status.engaged
-  );
-  if (closeRanksUnits.length) {
-    const ordered = prioritizeUnits(state, playerId, closeRanksUnits.map(unit => unit.id), assessment);
-    return {
-      type: "CLOSE_RANKS",
-      payload: { playerId, unitId: ordered[0] }
-    };
+function scoreChargeViability(atk, tgt) {
+  const ap = lp(atk), tp = lp(tgt);
+  if (!ap || !tp) return -Infinity;
+  const d = distance(ap, tp);
+  if (d > 8 + 1e-6) return -Infinity;
+  let s = tgt.currentSupplyValue * 2 + Math.max(0, 8 - d);
+  if (hasROnly(atk)) s -= 20;
+  if (tgt.currentSupplyValue >= atk.currentSupplyValue * 2 && alive(atk) <= 2) s -= 10;
+  return s;
+}
+
+function bPath(u, d) { const l = u.models[u.leadingModelId]; return [{ x: l.x, y: l.y }, { x: d.x, y: d.y }]; }
+
+/* ══════════════════════════════════════════════════════════════
+   CARD PLAY
+   ══════════════════════════════════════════════════════════════ */
+
+function bestCard(state, pid, strat, aboutToActId) {
+  const actions = getLegalActionsForPlayer(state, pid).filter(x => x.type === "PLAY_CARD" && x.enabled);
+  if (!actions.length) return null;
+  let bc = null, bs = -1;
+  for (const act of actions) {
+    const card = getTacticalCard(act.cardId);
+    let sc = 3;
+    if (card.effect?.modifiers?.some(m => m.key === "unit.speed")) {
+      if (!act.targetUnitId) continue;
+      const u = state.units[act.targetUnitId];
+      if (!u || !onField(u)) continue;
+      const p = lp(u);
+      if (!p) continue;
+      const nd = Math.min(...strat.objPriorities.filter(o => o.controller !== pid).map(o => distance(p, o)).concat([999]));
+      sc += Math.min(12, nd) + u.currentSupplyValue * 1.5;
+    }
+    if (card.effect?.modifiers?.some(m => ["weapon.hitTarget", "weapon.attacksPerModel", "weapon.shotsPerModel"].includes(m.key))) {
+      if (!act.targetUnitId) continue;
+      const u = state.units[act.targetUnitId];
+      if (!u || !onField(u)) continue;
+      if (aboutToActId && act.targetUnitId === aboutToActId) sc += 20;
+      else if (aboutToActId) continue;
+      sc += alive(u) * 2 + u.currentSupplyValue * 2;
+      if (state.combatQueue.some(e => e.attackerId === act.targetUnitId)) sc += 8;
+    }
+    if (sc > bs) { bs = sc; bc = act; }
   }
-
-  // Resolve queued combat for our units
-  const unitsWithCombat = Object.values(state.units).filter(u => {
-    if (u.owner !== playerId || !isOnBattlefield(u) || u.status.combatActivated) return false;
-    return state.combatQueue.some(e =>
-      ["ranged_attack", "charge_attack", "overwatch_attack"].includes(e.type) && e.attackerId === u.id
-    );
-  });
-
-  // Resolve highest-supply attackers first
-  unitsWithCombat.sort((a, b) => {
-    const aQueued = state.combatQueue.filter(e => e.attackerId === a.id).length;
-    const bQueued = state.combatQueue.filter(e => e.attackerId === b.id).length;
-    const aEnemy = state.combatQueue.find(e => e.attackerId === a.id)?.targetId
-      ? state.units[state.combatQueue.find(e => e.attackerId === a.id).targetId]
-      : null;
-    const bEnemy = state.combatQueue.find(e => e.attackerId === b.id)?.targetId
-      ? state.units[state.combatQueue.find(e => e.attackerId === b.id).targetId]
-      : null;
-    const aKillBias = assessment.behavior.prefersKills ? ((aEnemy?.currentSupplyValue ?? 0) * 2) : 0;
-    const bKillBias = assessment.behavior.prefersKills ? ((bEnemy?.currentSupplyValue ?? 0) * 2) : 0;
-    const aScore = a.currentSupplyValue * 4 + aQueued * 3 + aKillBias +
-      deterministicNoise([state.round, state.phase, playerId, a.id, "combat-order"]) * 2;
-    const bScore = b.currentSupplyValue * 4 + bQueued * 3 + bKillBias +
-      deterministicNoise([state.round, state.phase, playerId, b.id, "combat-order"]) * 2;
-    if (bScore !== aScore) return bScore - aScore;
-    return a.id.localeCompare(b.id);
-  });
-
-  if (unitsWithCombat.length) {
-    return {
-      type: "RESOLVE_COMBAT_UNIT",
-      payload: { playerId, unitId: unitsWithCombat[0].id }
-    };
-  }
-
-  // Hold remaining unactivated units
-  const unactivated = Object.values(state.units).filter(
-    u => u.owner === playerId && isOnBattlefield(u) && !u.status.combatActivated
-  );
-  if (unactivated.length) {
-    const ordered = prioritizeUnits(state, playerId, unactivated.map(u => u.id), assessment);
-    return { type: "HOLD_UNIT", payload: { playerId, unitId: ordered[0] } };
-  }
-
-  return { type: "PASS_PHASE", payload: { playerId } };
+  if (!bc) return null;
+  return { type: "PLAY_CARD", payload: { playerId: pid, cardInstanceId: bc.cardInstanceId, targetUnitId: bc.targetUnitId ?? null } };
 }
 
 /* ══════════════════════════════════════════════════════════════
-   PUBLIC API
+   PUBLIC API — The negotiation happens here
    ══════════════════════════════════════════════════════════════ */
 
 export function chooseAction(state, playerId) {
-  const assessment = assessGameState(state, playerId);
+  // Step 1: Strategist assesses the big picture
+  const strat = strategistAdvice(state, playerId);
 
-  if (state.phase === "movement") return chooseMovementAction(state, playerId, assessment);
-  if (state.phase === "assault") return chooseAssaultAction(state, playerId, assessment);
-  if (state.phase === "combat") return chooseCombatAction(state, playerId, assessment);
+  // Step 2: Should we pass early? Strategist says:
+  if (strat.shouldPass && !state.players[playerId].hasPassedThisPhase) {
+    return { type: "PASS_PHASE", payload: { playerId } };
+  }
 
-  return { type: "PASS_PHASE", payload: { playerId } };
+  // Step 3: Try playing a card (timing-aware)
+  // For assault phase, we'll play cards inline with unit actions below
+  if (state.phase === "movement") {
+    const card = bestCard(state, playerId, strat);
+    if (card) return card;
+  }
+
+  // Step 4: Tactician generates candidate actions
+  const candidates = buildCandidateActions(state, playerId, strat);
+  if (!candidates.length) return { type: "PASS_PHASE", payload: { playerId } };
+
+  // Step 5: Planner simulates top candidates forward and picks the best
+  // Use lookahead for movement and assault (where positioning matters most)
+  // Combat phase is deterministic-ish, skip lookahead
+  if (state.phase === "combat") {
+    // Combat: just pick the tactician's first choice (already sorted by kill priority)
+    return candidates[0];
+  }
+
+  // For assault: try playing a card right before the best attack
+  if (state.phase === "assault") {
+    const attackCandidates = candidates.filter(c =>
+      c.type === "DECLARE_RANGED_ATTACK" || c.type === "DECLARE_CHARGE"
+    );
+    if (attackCandidates.length) {
+      const topAttack = attackCandidates[0];
+      const card = bestCard(state, playerId, strat, topAttack.payload.unitId);
+      if (card) return card;
+      // Record focus fire
+      if (topAttack.payload.targetId) {
+        ffTargets[topAttack.payload.targetId] = (ffTargets[topAttack.payload.targetId] || 0) + 1;
+      }
+    }
+  }
+
+  // Planner: simulate top 8 candidates with 1-ply lookahead
+  const planned = planAhead(state, playerId, candidates, strat, 8);
+
+  if (planned.length) {
+    return planned[0].action;
+  }
+
+  // Fallback: tactician's top pick without simulation
+  return candidates[0];
 }
 
 export async function performBotTurn(store, playerId) {
-  const action = chooseAction(store.getState(), playerId);
-  return store.dispatch(action);
+  if (store.getState().phase === "assault") {
+    const s = store.getState();
+    const total = Object.values(s.units).filter(u => u.owner === playerId && onField(u)).length;
+    const unact = Object.values(s.units).filter(u => u.owner === playerId && onField(u) && !u.status.assaultActivated).length;
+    if (unact === total) resetFF();
+  }
+  return store.dispatch(chooseAction(store.getState(), playerId));
 }
