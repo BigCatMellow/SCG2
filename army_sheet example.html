@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SC:TMG Army Sheet — Zerg</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a1a;
+    --muted: #5a5a5a;
+    --faint: #9a9a9a;
+    --border: #d0d0d0;
+    --border-light: #e8e8e8;
+    --header-bg: #1a1a1a;
+    --header-text: #ffffff;
+    --accent: #4a7c3f;
+    --accent-light: #e8f0e6;
+    --phase-assault: #b45309;
+    --phase-combat: #991b1b;
+    --phase-any: #4338ca;
+    --phase-movement: #0e7490;
+    --upgrade-bg: #f0f7ee;
+    --upgrade-border: #9aba8e;
+    --stat-bg: #f5f5f5;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.35;
+    color: var(--text);
+    background: var(--bg);
+    padding: 0.4in;
+  }
+
+  @media print {
+    body { padding: 0; }
+    .unit-block { break-inside: avoid; }
+    .page-break { break-after: page; }
+  }
+
+  /* ── Page Header ── */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2px solid var(--header-bg);
+    padding-bottom: 6px;
+    margin-bottom: 14px;
+  }
+  .page-header h1 {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 16pt;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+  .page-header .faction-tag {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 8pt;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Unit Block ── */
+  .unit-block {
+    border: 1.5px solid var(--border);
+    border-radius: 3px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+
+  /* Unit Header */
+  .unit-header {
+    background: var(--header-bg);
+    color: var(--header-text);
+    padding: 5px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .unit-name {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 12pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .unit-meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-family: 'Source Code Pro', monospace;
+    font-size: 8pt;
+  }
+  .unit-role {
+    background: rgba(255,255,255,0.15);
+    padding: 1px 6px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .unit-cost {
+    color: #fbbf24;
+    font-weight: 500;
+  }
+
+  /* Stat Bar */
+  .stat-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--stat-bg);
+  }
+  .stat-cell {
+    flex: 1;
+    text-align: center;
+    padding: 4px 2px;
+    border-right: 1px solid var(--border-light);
+    min-width: 0;
+  }
+  .stat-cell:last-child { border-right: none; }
+  .stat-label {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 6.5pt;
+    font-weight: 600;
+    color: var(--faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: block;
+  }
+  .stat-val {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 11pt;
+    font-weight: 500;
+    display: block;
+    line-height: 1.2;
+  }
+  /* Supply Track */
+  .supply-track {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    background: #fafafa;
+    padding: 3px 10px;
+  }
+  .supply-track-label {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 6.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--faint);
+    margin-right: 8px;
+    white-space: nowrap;
+  }
+  .supply-brackets {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+  }
+  .sup-bracket {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'Source Code Pro', monospace;
+    font-size: 7.5pt;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    line-height: 1;
+  }
+  .sup-models {
+    padding: 2px 5px;
+    background: #fff;
+    color: var(--text);
+    border-right: 1px solid var(--border);
+  }
+  .sup-val {
+    padding: 2px 5px;
+    background: var(--stat-bg);
+    color: var(--text);
+    font-weight: 600;
+    min-width: 16px;
+    text-align: center;
+  }
+  .sup-bracket.sup-zero .sup-val {
+    color: var(--faint);
+  }
+  .sup-bracket.sup-active {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+  .sup-bracket.sup-active .sup-val {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+  }
+  .supply-cost {
+    margin-left: auto;
+    font-family: 'Source Code Pro', monospace;
+    font-size: 7.5pt;
+    color: var(--muted);
+  }
+
+  /* Unit Body */
+  .unit-body { padding: 6px 10px 8px; }
+
+  /* Section Labels */
+  .section-label {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 7pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border-light);
+    padding-bottom: 2px;
+    margin: 8px 0 4px 0;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* Weapon Table */
+  .weapon-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5pt;
+    margin: 2px 0;
+  }
+  .weapon-table th {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 6.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--faint);
+    text-align: center;
+    padding: 2px 3px;
+    border-bottom: 1px solid var(--border);
+  }
+  .weapon-table th:first-child { text-align: left; }
+  .weapon-table td {
+    text-align: center;
+    padding: 3px 3px;
+    border-bottom: 1px solid var(--border-light);
+    font-family: 'Source Code Pro', monospace;
+    font-size: 8pt;
+  }
+  .weapon-table td:first-child {
+    text-align: left;
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 600;
+    font-size: 8.5pt;
+  }
+  .weapon-table tr:last-child td { border-bottom: none; }
+  .weapon-table .phase-tag {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 6pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0px 4px;
+    border-radius: 2px;
+    display: inline-block;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+  .phase-tag.assault { background: #fef3c7; color: var(--phase-assault); }
+  .phase-tag.combat { background: #fee2e2; color: var(--phase-combat); }
+  .wpn-keyword {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 7.5pt;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .surge-val { color: #b91c1c; font-weight: 500; }
+
+  /* Abilities */
+  .ability-list { margin: 2px 0; }
+  .ability-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 2px 0;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 8.5pt;
+  }
+  .ability-row:last-child { border-bottom: none; }
+  .ability-phase {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 6pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 1px 5px;
+    border-radius: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .ability-phase.any { background: #e0e7ff; color: var(--phase-any); }
+  .ability-phase.movement { background: #d5f5f6; color: var(--phase-movement); }
+  .ability-phase.assault { background: #fef3c7; color: var(--phase-assault); }
+  .ability-phase.combat { background: #fee2e2; color: var(--phase-combat); }
+  .ability-type {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 6.5pt;
+    color: var(--faint);
+    flex-shrink: 0;
+    min-width: 42px;
+    margin-top: 2px;
+  }
+  .ability-name {
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .ability-desc {
+    color: var(--muted);
+    flex: 1;
+    min-width: 0;
+  }
+  .kw { font-variant: small-caps; font-weight: 600; color: var(--text); letter-spacing: 0.02em; }
+
+  /* Upgrades */
+  .upgrade-bar {
+    background: var(--upgrade-bg);
+    border: 1px solid var(--upgrade-border);
+    border-radius: 2px;
+    padding: 4px 8px;
+    margin-top: 6px;
+  }
+  .upgrade-bar .section-label {
+    color: var(--accent);
+    border-bottom-color: var(--upgrade-border);
+    margin-top: 0;
+  }
+  .upgrade-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 2px 0;
+    font-size: 8.5pt;
+    border-bottom: 1px solid rgba(154,186,142,0.3);
+  }
+  .upgrade-row:last-child { border-bottom: none; }
+  .upg-name { font-weight: 600; white-space: nowrap; }
+  .upg-cost {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 7.5pt;
+    color: var(--accent);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .upg-type {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 6.5pt;
+    color: var(--faint);
+    flex-shrink: 0;
+  }
+  .upg-desc {
+    color: var(--muted);
+    flex: 1;
+    min-width: 0;
+  }
+  .upg-replaces {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 6.5pt;
+    color: var(--faint);
+    background: #fff;
+    padding: 0 3px;
+    border-radius: 1px;
+    white-space: nowrap;
+  }
+
+  /* Notes area */
+  .notes-area {
+    border-top: 1px dashed var(--border);
+    margin-top: 6px;
+    padding-top: 4px;
+  }
+  .notes-area .section-label { border-bottom: none; margin-bottom: 2px; }
+  .notes-lines {
+    border-bottom: 1px solid var(--border-light);
+    height: 16px;
+  }
+
+  /* Tactical Cards */
+  .tac-card {
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    flex: 1 1 calc(50% - 4px);
+    min-width: 280px;
+    max-width: calc(50% - 4px);
+    overflow: hidden;
+  }
+  .tac-header {
+    background: #3f2f1a;
+    color: #fbbf24;
+    padding: 3px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .tac-name {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 9pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .tac-cost {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 7.5pt;
+    color: #fcd34d;
+  }
+  .tac-unique {
+    background: #fbbf24;
+    color: #3f2f1a;
+    padding: 0 3px;
+    border-radius: 2px;
+    font-weight: 600;
+    font-size: 6.5pt;
+  }
+  .tac-body { padding: 4px 8px 5px; }
+  .tac-row { margin-bottom: 3px; }
+  .tac-meta {
+    font-family: 'Source Code Pro', monospace;
+    font-size: 7.5pt;
+    color: var(--muted);
+  }
+  .tac-ability {
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    padding: 2px 0;
+    font-size: 8pt;
+    border-top: 1px solid var(--border-light);
+  }
+  .tac-ab-name { font-weight: 600; }
+  .tac-ab-text {
+    color: var(--muted);
+    flex: 1;
+    min-width: 0;
+    line-height: 1.35;
+  }
+
+  /* Mission & Deployment Boxes */
+  .mission-box {
+    flex: 1;
+    border: 1.5px solid var(--border);
+    border-radius: 3px;
+    padding: 6px 10px 8px;
+    min-width: 0;
+  }
+  .mission-label {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #0e7490;
+    border-bottom: 1px solid var(--border-light);
+    padding-bottom: 3px;
+    margin-bottom: 5px;
+  }
+  .mission-field {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  .mission-field-label {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 7pt;
+    font-weight: 600;
+    color: var(--faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .mission-line {
+    flex: 1;
+    border-bottom: 1px solid var(--border);
+    height: 14px;
+    min-width: 30px;
+  }
+  .mission-line.short {
+    flex: 0 0 60px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Page Header -->
+<div class="page-header">
+  <h1>Zerg — Army Sheet</h1>
+  <span class="faction-tag">SC:TMG • KERRIGAN'S BROOD • 1000 MIN</span>
+</div>
+
+
+<!-- ════════════════════════════════════════ -->
+<!-- MISSION & DEPLOYMENT -->
+<!-- ════════════════════════════════════════ -->
+<div style="margin-top:0;">
+  <div style="display:flex; gap:8px; margin-bottom:14px;">
+
+    <!-- Mission Card -->
+    <div class="tac-card" style="flex:1;">
+      <div class="tac-header" style="background:#164e63;">
+        <span class="tac-name">Mission Card</span>
+        <span class="tac-cost" style="color:#67e8f9;">Standard · 5 Rounds</span>
+      </div>
+      <div class="tac-body">
+        <div class="tac-row">
+          <span class="tac-meta">Starting Supply: 4 · Escalation: +2/Round</span>
+        </div>
+        <div class="tac-ability" style="flex-direction:column; gap:2px;">
+          <div style="display:flex; gap:5px; align-items:flex-start;">
+            <span class="ability-phase any" style="background:#cffafe; color:#164e63;">Score</span>
+            <span class="tac-ab-text"><span class="tac-ab-name">Scoring</span> — 1 VP per controlled Activated marker. 1 VP per destroyed enemy unit.</span>
+          </div>
+        </div>
+        <div class="tac-ability" style="flex-direction:column; gap:2px;">
+          <div style="display:flex; gap:5px; align-items:flex-start;">
+            <span class="ability-phase any" style="background:#cffafe; color:#164e63;">Setup</span>
+            <span class="tac-ab-text"><span class="tac-ab-name">Parameters</span> — All markers begin Deactivated. Marker activates when first controlled.</span>
+          </div>
+        </div>
+        <div class="tac-ability" style="flex-direction:column; gap:2px;">
+          <div style="display:flex; gap:5px; align-items:flex-start;">
+            <span class="ability-phase any" style="background:#cffafe; color:#164e63;">Win</span>
+            <span class="tac-ab-text"><span class="tac-ab-name">Tiebreaker</span> — Player controlling Marker 5 wins ties.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Deployment Card -->
+    <div class="tac-card" style="flex:1;">
+      <div class="tac-header" style="background:#164e63;">
+        <span class="tac-name">Deployment Card</span>
+        <span class="tac-cost" style="color:#67e8f9;">Standard · 36" × 54"</span>
+      </div>
+      <div class="tac-body">
+        <div class="tac-row">
+          <span class="tac-meta">Entry: Opposite short edges · ZoI: 6" from edge</span>
+        </div>
+        <div class="tac-ability" style="flex-direction:column; gap:2px;">
+          <div style="display:flex; gap:5px; align-items:flex-start;">
+            <span class="ability-phase any" style="background:#cffafe; color:#164e63;">Map</span>
+            <span class="tac-ab-text"><span class="tac-ab-name">Marker Positions</span> — M1–M4 at deployment coordinates per card. M5 center.</span>
+          </div>
+        </div>
+        <div class="tac-ability" style="flex-direction:column; gap:2px;">
+          <div style="display:flex; gap:5px; align-items:flex-start;">
+            <span class="ability-phase any" style="background:#cffafe; color:#164e63;">Aff.</span>
+            <span class="tac-ab-text"><span class="tac-ab-name">Affinity</span> — M1&M3 → Red · M2&M4 → Blue · M5 → Neutral</span>
+          </div>
+        </div>
+        <div class="tac-ability">
+          <span class="tac-ab-text" style="font-size:7pt; color:var(--faint); font-style:italic;">My Colour: _____ · Draft Control: _____</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<!-- ════════════════════════════════════════ -->
+<!-- FACTION CARDS -->
+<!-- ════════════════════════════════════════ -->
+<div style="margin-top:0;">
+  <div class="page-header" style="border-bottom-color:#7c3aed;">
+    <h1 style="font-size:13pt;">Faction Card</h1>
+    <span class="faction-tag">Choose one · provides starting slots + BM resource</span>
+  </div>
+
+  <div style="display:flex; flex-wrap:wrap; gap:8px;">
+
+    <div class="tac-card" style="flex:1 1 calc(50% - 4px);">
+      <div class="tac-header" style="background:#3b1a5e;">
+        <span class="tac-name">Kerrigan's Swarm</span>
+        <span class="tac-cost" style="color:#c4b5fd;">Tags: Zerg, Kerrigan</span>
+      </div>
+      <div class="tac-body">
+        <div class="tac-row">
+          <span class="tac-meta">+1 BM · 1× Hero · 2× Elite · 3× Core</span>
+        </div>
+        <div class="tac-ability">
+          <span class="ability-phase any">Any</span>
+          <span class="ability-type">Reaction</span>
+          <span class="tac-ab-text"><span class="tac-ab-name">Brood Instinct</span> — Before a Friendly unit makes an Evade Roll. If <span class="kw">On Creep</span>, +1 Modifier to that Evade Roll.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tac-card" style="flex:1 1 calc(50% - 4px);">
+      <div class="tac-header" style="background:#3b1a5e;">
+        <span class="tac-name">Zerg Swarm</span>
+        <span class="tac-cost" style="color:#c4b5fd;">Tags: Zerg</span>
+      </div>
+      <div class="tac-body">
+        <div class="tac-row">
+          <span class="tac-meta">+1 BM · 1× Elite · 3× Core · 1× Support</span>
+        </div>
+        <div class="tac-ability">
+          <span class="ability-phase any">Any</span>
+          <span class="ability-type">Reaction</span>
+          <span class="tac-ab-text"><span class="tac-ab-name">Brood Instinct</span> — Before a Friendly unit makes an Evade Roll. If <span class="kw">On Creep</span>, +1 Modifier to that Evade Roll.</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════ -->
+<!-- UNITS -->
+<!-- ════════════════════════════════════════ -->
+
+<!-- ════════════════════════════════════════ -->
+<!-- ROACH -->
+<!-- ════════════════════════════════════════ -->
+<div class="unit-block">
+  <div class="unit-header">
+    <span class="unit-name">Roach</span>
+    <div class="unit-meta">
+      <span class="unit-role">Core</span>
+      <span class="unit-cost">170 Min</span>
+    </div>
+  </div>
+
+  <div class="stat-bar">
+    <div class="stat-cell"><span class="stat-label">SHLD</span><span class="stat-val">–</span></div>
+    <div class="stat-cell"><span class="stat-label">SPD</span><span class="stat-val">4/7</span></div>
+    <div class="stat-cell"><span class="stat-label">EVA</span><span class="stat-val">5+</span></div>
+    <div class="stat-cell"><span class="stat-label">ARM</span><span class="stat-val">3+</span></div>
+    <div class="stat-cell"><span class="stat-label">HP</span><span class="stat-val">4</span></div>
+    <div class="stat-cell"><span class="stat-label">SIZ</span><span class="stat-val">2</span></div>
+  </div>
+
+  <div class="supply-track">
+    <span class="supply-track-label">Supply</span>
+    <div class="supply-brackets">
+      <div class="sup-bracket sup-zero"><span class="sup-models">1</span><span class="sup-val">0</span></div>
+      <div class="sup-bracket sup-active"><span class="sup-models">2–3</span><span class="sup-val">1</span></div>
+    </div>
+    <span class="supply-cost">3 mdl · 170 Min</span>
+  </div>
+
+  <div class="unit-body">
+    <div class="section-label">Weapons</div>
+    <table class="weapon-table">
+      <tr>
+        <th style="width:22%">Weapon</th>
+        <th style="width:6%">RNG</th>
+        <th style="width:8%">TGT</th>
+        <th style="width:6%">RoA</th>
+        <th style="width:6%">HIT</th>
+        <th style="width:10%">Surge</th>
+        <th style="width:8%">S.Die</th>
+        <th style="width:6%">DMG</th>
+        <th>Keywords</th>
+      </tr>
+      <tr>
+        <td>Acid Saliva <span class="phase-tag assault">Assault</span></td>
+        <td>8</td>
+        <td>Gnd</td>
+        <td>3</td>
+        <td>3+</td>
+        <td>–</td>
+        <td>–</td>
+        <td>1</td>
+        <td class="wpn-keyword"></td>
+      </tr>
+      <tr>
+        <td>Claws <span class="phase-tag combat">Combat</span></td>
+        <td>E</td>
+        <td>Gnd</td>
+        <td>3</td>
+        <td>4+</td>
+        <td class="surge-val">Light</td>
+        <td class="surge-val">D3+1</td>
+        <td>1</td>
+        <td class="wpn-keyword"></td>
+      </tr>
+    </table>
+
+    <div class="section-label">Abilities</div>
+    <div class="ability-list">
+      <div class="ability-row">
+        <span class="ability-phase any">Any</span>
+        <span class="ability-type">Passive</span>
+        <span class="ability-name">Regeneration</span>
+        <span class="ability-desc">— On Activation, if <span class="kw">Burrowed</span>, resolve <span class="kw">Heal</span> (2).</span>
+      </div>
+      <div class="ability-row">
+        <span class="ability-phase any">Any</span>
+        <span class="ability-type">Passive</span>
+        <span class="ability-name">Devastating Charge</span>
+        <span class="ability-desc">— After a successful <span class="kw">Charge</span>, resolve <span class="kw">Impact</span> (2) 4+.</span>
+      </div>
+      <div class="ability-row">
+        <span class="ability-phase movement">Move</span>
+        <span class="ability-type">Act · 1BM</span>
+        <span class="ability-name">Glial Reconstitution</span>
+        <span class="ability-desc">— <span class="kw">Buff</span> Speed (1), or Speed (2) if <span class="kw">On Creep</span>. <span class="upg-cost">20 Min</span></span>
+      </div>
+    </div>
+
+    <div class="upgrade-bar">
+      <div class="section-label">Available Upgrades</div>
+      <div class="upgrade-row">
+        <span class="upg-name">Burrow Ambush</span>
+        <span class="upg-cost">20 Min</span>
+        <span class="upg-type">Passive</span>
+        <span class="upg-desc">— Enables <span class="kw">Burrow Ambush</span> deployment option.</span>
+      </div>
+      <div class="upgrade-row">
+        <span class="upg-name">Hydriodic Bile</span>
+        <span class="upg-cost">10 Min</span>
+        <span class="upg-type">Passive</span>
+        <span class="upg-desc">— Acid Saliva gains Surge: Light, S.Die: D3+1.</span>
+      </div>
+      <div class="upgrade-row">
+        <span class="upg-name">Tunneling Claws</span>
+        <span class="upg-cost">10 Min</span>
+        <span class="upg-type">Passive</span>
+        <span class="upg-desc">— While <span class="kw">Burrowed</span>, may Move/Run without losing status.</span>
+      </div>
+    </div>
+
+    <div class="notes-area">
+      <div class="section-label">Game Notes</div>
+      <div class="notes-lines"></div>
+      <div class="notes-lines"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- CORPSER (ROACH) -->
+<!-- ════════════════════════════════════════ -->
+<div class="unit-block">
+  <div class="unit-header">
+    <span class="unit-name">Corpser <span style="font-weight:400;font-size:9pt;opacity:0.6">(Roach)</span></span>
+    <div class="unit-meta">
+      <span class="unit-role">Core</span>
+      <span class="unit-cost">250 Min</span>
+    </div>
+  </div>
+
+  <div class="stat-bar">
+    <div class="stat-cell"><span class="stat-label">SHLD</span><span class="stat-val">–</span></div>
+    <div class="stat-cell"><span class="stat-label">SPD</span><span class="stat-val">4/7</span></div>
+    <div class="stat-cell"><span class="stat-label">EVA</span><span class="stat-val">5+</span></div>
+    <div class="stat-cell"><span class="stat-label">ARM</span><span class="stat-val">3+</span></div>
+    <div class="stat-cell"><span class="stat-label">HP</span><span class="stat-val">4</span></div>
+    <div class="stat-cell"><span class="stat-label">SIZ</span><span class="stat-val">2</span></div>
+  </div>
+
+  <div class="supply-track">
+    <span class="supply-track-label">Supply</span>
+    <div class="supply-brackets">
+      <div class="sup-bracket sup-zero"><span class="sup-models">1</span><span class="sup-val">0</span></div>
+      <div class="sup-bracket sup-active"><span class="sup-models">2–3</span><span class="sup-val">1</span></div>
+    </div>
+    <span class="supply-cost">3 mdl · 250 Min</span>
+  </div>
+
+  <div class="unit-body">
+    <div class="section-label">Weapons</div>
+    <table class="weapon-table">
+      <tr>
+        <th style="width:22%">Weapon</th>
+        <th style="width:6%">RNG</th>
+        <th style="width:8%">TGT</th>
+        <th style="width:6%">RoA</th>
+        <th style="width:6%">HIT</th>
+        <th style="width:10%">Surge</th>
+        <th style="width:8%">S.Die</th>
+        <th style="width:6%">DMG</th>
+        <th>Keywords</th>
+      </tr>
+      <tr>
+        <td>Acid Saliva <span class="phase-tag assault">Assault</span></td>
+        <td>8</td>
+        <td>Gnd</td>
+        <td>2</td>
+        <td>3+</td>
+        <td>–</td>
+        <td>–</td>
+        <td>1</td>
+        <td class="wpn-keyword"></td>
+      </tr>
+      <tr>
+        <td>Claws <span class="phase-tag combat">Combat</span></td>
+        <td>E</td>
+        <td>Gnd</td>
+        <td>3</td>
+        <td>4+</td>
+        <td class="surge-val">Light</td>
+        <td class="surge-val">D3+1</td>
+        <td>1</td>
+        <td class="wpn-keyword"></td>
+      </tr>
+    </table>
+
+    <div class="section-label">Abilities</div>
+    <div class="ability-list">
+      <div class="ability-row">
+        <span class="ability-phase any">Any</span>
+        <span class="ability-type">Passive</span>
+        <span class="ability-name">Regeneration</span>
+        <span class="ability-desc">— On Activation, if <span class="kw">Burrowed</span>, resolve <span class="kw">Heal</span> (2).</span>
+      </div>
+      <div class="ability-row">
+        <span class="ability-phase any">Any</span>
+        <span class="ability-type">Passive</span>
+        <span class="ability-name">Devastating Charge</span>
+        <span class="ability-desc">— After a successful <span class="kw">Charge</span>, resolve <span class="kw">Impact</span> (3) 4+.</span>
+      </div>
+      <div class="ability-row">
+        <span class="ability-phase assault">Assault</span>
+        <span class="ability-type">Passive</span>
+        <span class="ability-name">Summon</span>
+        <span class="ability-desc">— Resolve <span class="kw">Summon</span> (Roachling).</span>
+      </div>
+    </div>
+
+    <div class="upgrade-bar">
+      <div class="section-label">Available Upgrades</div>
+      <div class="upgrade-row">
+        <span class="upg-name">Burrow Ambush</span>
+        <span class="upg-cost">20 Min</span>
+        <span class="upg-type">Passive</span>
+        <span class="upg-desc">— Enables <span class="kw">Burrow Ambush</span> deployment option.</span>
+      </div>
+      <div class="upgrade-row">
+        <span class="upg-name">Glial Reconstitution</span>
+        <span class="upg-cost">20 Min</span>
+        <span class="upg-type">Act · 1BM</span>
+        <span class="upg-desc">— <span class="kw">Buff</span> Speed (1), or Speed (2) if <span class="kw">On Creep</span>.</span>
+      </div>
+      <div class="upgrade-row">
+        <span class="upg-name">Hydriodic Bile</span>
+        <span class="upg-cost">10 Min</span>
+        <span class="upg-type">Passive</span>
+        <span class="upg-desc">— Acid Saliva gains Surge: Light, S.Die: D3+1.</span>
+      </div>
+      <div class="upgrade-row">
+        <span class="upg-name">Tunneling Claws</span>
+        <span class="upg-cost">10 Min</span>
+        <span class="upg-type">Passive</span>
+        <span class="upg-desc">— While <span class="kw">Burrowed</span>, may Move/Run without losing status.</span>
+      </div>
+    </div>
+
+    <div class="notes-area">
+      <div class="section-label">Game Notes</div>
+      <div class="notes-lines"></div>
+      <div class="notes-lines"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- HYDRALISK -->
+<!-- ════════════════════════════════════════ -->
+<div class="unit-block">
+  <div class="unit-header">
+    <span class="unit-name">Hydralisk</span>
+    <div class="unit-meta">
+      <span class="unit-role">Support</span>
+      <span class="unit-cost">140 / 260 Min</span>
+    </div>
+  </div>
+
+  <div class="stat-bar">
+    <div class="stat-cell"><span class="stat-label">SHLD</span><span class="stat-val">–</span></div>
+    <div class="stat-cell"><span class="stat-label">SPD</span><span class="stat-val">4/7</span></div>
+    <div class="stat-cell"><span class="stat-label">EVA</span><span class="stat-val">5+</span></div>
+    <div class="stat-cell"><span class="stat-label">ARM</span><span class="stat-val">3+</span></div>
+    <div class="stat-cell"><span class="stat-label">HP</span><span class="stat-val">4</span></div>
+    <div class="stat-cell"><span class="stat-label">SIZ</span><span class="stat-val">2</span></div>
+  </div>
+
+  <div class="supply-track">
+    <span class="supply-track-label">Supply</span>
+    <div class="supply-brackets">
+      <div class="sup-bracket sup-zero"><span class="sup-models">1</span><span class="sup-val">0</span></div>
+      <div class="sup-bracket"><span class="sup-models">2–3</span><span class="sup-val">1</span></div>
+      <div class="sup-bracket sup-active"><span class="sup-models">4</span><span class="sup-val">2</span></div>
+    </div>
+    <span class="supply-cost">2 mdl · 140 Min / 4 mdl · 260 Min</span>
+  </div>
+
+  <div class="unit-body">
+    <div class="section-label">Weapons</div>
+    <table class="weapon-table">
+      <tr>
+        <th style="width:22%">Weapon</th>
+        <th style="width:6%">RNG</th>
+        <th style="width:8%">TGT</th>
+        <th style="width:6%">RoA</th>
+        <th style="width:6%">HIT</th>
+        <th style="width:10%">Surge</th>
+        <th style="width:8%">S.Die</th>
+        <th style="width:6%">DMG</th>
+        <th>Keywords</th>
+      </tr>
+      <tr>
+        <td>Needle Spines <span class="phase-tag assault">Assault</span></td>
+        <td>12</td>
+        <td>All</td>
+        <td>3</td>
+        <td>3+</td>
+        <td class="surge-val">Lt, Arm</td>
+        <td class="surge-val">D3+1</td>
+        <td>2</td>
+        <td class="wpn-keyword"></td>
+      </tr>
+      <tr>
+        <td>Talons <span class="phase-tag assault">Assault</span></td>
+        <td>6</td>
+        <td>Gnd</td>
+        <td>4</td>
+        <td>4+</td>
+        <td class="surge-val">Light</td>
+        <td class="surge-val">D3</td>
+        <td>2</td>
+        <td class="wpn-keyword"></td>
+      </tr>
+      <tr>
+        <td>Acid Spines <span class="phase-tag assault">Assault</span></td>
+        <td>12</td>
+        <td>Flying</td>
+        <td>4</td>
+        <td>4+</td>
+        <td class="surge-val">Lt, Arm</td>
+        <td class="surge-val">D3</td>
+        <td>2</td>
+        <td class="wpn-keyword"></td>
+      </tr>
+    </table>
+
+    <div class="section-label">Abilities</div>
+    <div class="ability-list">
+      <div class="ability-row">
+        <span class="ability-phase assault">Assault</span>
+        <span class="ability-type">React · 1BM</span>
+        <span class="ability-name">Lunge</span>
+        <span class="ability-desc">— When a Friendly unit within 10" is targeted by Ranged Attack, after resolved, this unit (if <span class="kw">Unengaged</span>) may perform a free Move action.</span>
+      </div>
+    </div>
+
+    <div class="upgrade-bar">
+      <div class="section-label">Available Upgrades</div>
+      <div class="upgrade-row">
+        <span class="upg-name">Ancillary Carapace</span>
+        <span class="upg-cost">20/40 Min</span>
+        <span class="upg-type">Passive</span>
+        <span class="upg-desc">— Gains <span class="kw">Tough</span> (1) on first Armour Roll each Activation.</span>
+      </div>
+      <div class="upgrade-row">
+        <span class="upg-name">Burrow Ambush</span>
+        <span class="upg-cost">20/40 Min</span>
+        <span class="upg-type">Passive</span>
+        <span class="upg-desc">— Enables <span class="kw">Burrow Ambush</span> deployment option.</span>
+      </div>
+      <div class="upgrade-row">
+        <span class="upg-name">Grooved Spines</span>
+        <span class="upg-cost">20/40 Min</span>
+        <span class="upg-type">Passive</span>
+        <span class="upg-desc">— Needle Spines gains <span class="kw">Long Range</span> (16").</span>
+      </div>
+      <div class="upgrade-row">
+        <span class="upg-name">Lurking</span>
+        <span class="upg-cost">10/20 Min</span>
+        <span class="upg-type">Passive</span>
+        <span class="upg-desc">— If <span class="kw">Stationary</span>, eligible for Evade Roll vs first Ranged Attack this Round.</span>
+      </div>
+    </div>
+
+    <div class="notes-area">
+      <div class="section-label">Game Notes</div>
+      <div class="notes-lines"></div>
+      <div class="notes-lines"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- ZERGLING -->
+<!-- ════════════════════════════════════════ -->
+<div class="unit-block">
+  <div class="unit-header">
+    <span class="unit-name">Zergling</span>
+    <div class="unit-meta">
+      <span class="unit-role">Core</span>
+      <span class="unit-cost">180 / 220 Min</span>
+    </div>
+  </div>
+
+  <div class="stat-bar">
+    <div class="stat-cell"><span class="stat-label">SHLD</span><span class="stat-val">–</span></div>
+    <div class="stat-cell"><span class="stat-label">SPD</span><span class="stat-val">5/9</span></div>
+    <div class="stat-cell"><span class="stat-label">EVA</span><span class="stat-val">4+</span></div>
+    <div class="stat-cell"><span class="stat-label">ARM</span><span class="stat-val">6+</span></div>
+    <div class="stat-cell"><span class="stat-label">HP</span><span class="stat-val">1</span></div>
+    <div class="stat-cell"><span class="stat-label">SIZ</span><span class="stat-val">1</span></div>
+  </div>
+
+  <div class="supply-track">
+    <span class="supply-track-label">Supply</span>
+    <div class="supply-brackets">
+      <div class="sup-bracket sup-zero"><span class="sup-models">1–6</span><span class="sup-val">0</span></div>
+      <div class="sup-bracket"><span class="sup-models">7–12</span><span class="sup-val">1</span></div>
+      <div class="sup-bracket sup-active"><span class="sup-models">13–18</span><span class="sup-val">2</span></div>
+    </div>
+    <span class="supply-cost">12 mdl · 180 Min / 18 mdl · 220 Min</span>
+  </div>
+
+  <div class="unit-body">
+    <div class="section-label">Weapons</div>
+    <table class="weapon-table">
+      <tr>
+        <th style="width:22%">Weapon</th>
+        <th style="width:6%">RNG</th>
+        <th style="width:8%">TGT</th>
+        <th style="width:6%">RoA</th>
+        <th style="width:6%">HIT</th>
+        <th style="width:10%">Surge</th>
+        <th style="width:8%">S.Die</th>
+        <th style="width:6%">DMG</th>
+        <th>Keywords</th>
+      </tr>
+      <tr>
+        <td>Claws <span class="phase-tag combat">Combat</span></td>
+        <td>E</td>
+        <td>Gnd</td>
+        <td>2</td>
+        <td>4+</td>
+        <td>–</td>
+        <td>–</td>
+        <td>1</td>
+        <td class="wpn-keyword"></td>
+      </tr>
+    </table>
+
+    <div class="section-label">Abilities</div>
+    <div class="ability-list">
+      <div class="ability-row">
+        <span class="ability-phase any">Any</span>
+        <span class="ability-type">Passive</span>
+        <span class="ability-name">Squadron</span>
+        <span class="ability-desc">— Horizontal Coherency is 4".</span>
+      </div>
+      <div class="ability-row">
+        <span class="ability-phase assault">Assault</span>
+        <span class="ability-type">Act · 1BM</span>
+        <span class="ability-name">Metabolic Boost</span>
+        <span class="ability-desc">— For <span class="kw">Charge</span> distance, roll 2D6 (use higher) instead of D6.</span>
+      </div>
+    </div>
+
+    <div class="upgrade-bar">
+      <div class="section-label">Available Upgrades</div>
+      <div class="upgrade-row">
+        <span class="upg-name">Adrenal Glands</span>
+        <span class="upg-cost">30 Min</span>
+        <span class="upg-type">Passive</span>
+        <span class="upg-desc">— Claws & Shredding Claws gain <span class="kw">Precision</span> (2).</span>
+      </div>
+      <div class="upgrade-row">
+        <span class="upg-name">Burrow Ambush</span>
+        <span class="upg-cost">20/30 Min</span>
+        <span class="upg-type">Passive</span>
+        <span class="upg-desc">— Enables <span class="kw">Burrow Ambush</span> deployment option.</span>
+      </div>
+      <div class="upgrade-row">
+        <span class="upg-name">Shredding Claws</span>
+        <span class="upg-cost">20 Min</span>
+        <span class="upg-type">Passive</span>
+        <span class="upg-desc">— <span class="upg-replaces">↑ Claws</span> RoA 2, Hit 4+, Surge: Lt/Arm, S.Die: D3, DMG 1.</span>
+      </div>
+    </div>
+
+    <div class="notes-area">
+      <div class="section-label">Game Notes</div>
+      <div class="notes-lines"></div>
+      <div class="notes-lines"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- TACTICAL CARDS -->
+<!-- ════════════════════════════════════════ -->
+<div style="margin-top:20px;">
+  <div class="page-header" style="border-bottom-color:#b45309;">
+    <h1 style="font-size:13pt;">Tactical Cards</h1>
+    <span class="faction-tag">Exhaust for BM or use ability · Refresh in Cleanup</span>
+  </div>
+
+  <div style="display:flex; flex-wrap:wrap; gap:8px;">
+
+    <!-- Spawning Pool -->
+    <div class="tac-card">
+      <div class="tac-header">
+        <span class="tac-name">Spawning Pool</span>
+        <span class="tac-cost">25 Gas</span>
+      </div>
+      <div class="tac-body">
+        <div class="tac-row">
+          <span class="tac-meta">+1 BM · 1× Core</span>
+        </div>
+        <div class="tac-ability">
+          <span class="ability-phase assault">Assault</span>
+          <span class="ability-type">Active</span>
+          <span class="tac-ab-text"><span class="tac-ab-name">Feral Rage</span> — Active unit's first melee weapon gains <span class="kw">Precision</span> (2).</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spawning Pool (Six Pool) -->
+    <div class="tac-card">
+      <div class="tac-header">
+        <span class="tac-name">Spawning Pool (Six Pool)</span>
+        <span class="tac-cost">40 Gas · <span class="tac-unique">U</span></span>
+      </div>
+      <div class="tac-body">
+        <div class="tac-row">
+          <span class="tac-meta">+2 BM · 2× Core</span>
+        </div>
+        <div class="tac-ability">
+          <span class="ability-phase movement">Move</span>
+          <span class="ability-type">Active</span>
+          <span class="tac-ab-text"><span class="tac-ab-name">Timing Push</span> — Active Zergling deploys from any non-Entry table edge.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Roach Warren -->
+    <div class="tac-card">
+      <div class="tac-header">
+        <span class="tac-name">Roach Warren</span>
+        <span class="tac-cost">25 Gas</span>
+      </div>
+      <div class="tac-body">
+        <div class="tac-row">
+          <span class="tac-meta">+1 BM · 1× Core</span>
+        </div>
+        <div class="tac-ability">
+          <span class="ability-phase assault">Assault</span>
+          <span class="ability-type">Active</span>
+          <span class="tac-ab-text"><span class="tac-ab-name">Nasty Surprise</span> — Active Ground unit loses <span class="kw">Burrowed</span> status.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Evolution Chamber -->
+    <div class="tac-card">
+      <div class="tac-header">
+        <span class="tac-name">Evolution Chamber</span>
+        <span class="tac-cost">30 Gas</span>
+      </div>
+      <div class="tac-body">
+        <div class="tac-row">
+          <span class="tac-meta">+1 BM · 1× Core</span>
+        </div>
+        <div class="tac-ability">
+          <span class="ability-phase any">Any</span>
+          <span class="ability-type">Reaction</span>
+          <span class="tac-ab-text"><span class="tac-ab-name">Carapace</span> — Before a Friendly unit makes an Armour Roll, that unit gains <span class="kw">Tough</span> (1).</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hatchery -->
+    <div class="tac-card">
+      <div class="tac-header">
+        <span class="tac-name">Hatchery</span>
+        <span class="tac-cost">30 Gas</span>
+      </div>
+      <div class="tac-body">
+        <div class="tac-row">
+          <span class="tac-meta">+1 BM · 1× Support</span>
+        </div>
+        <div class="tac-ability">
+          <span class="ability-phase movement">Move</span>
+          <span class="ability-type">Active</span>
+          <span class="tac-ab-text"><span class="tac-ab-name">Lie in Wait</span> — Active, Unengaged Ground unit gains <span class="kw">Burrowed</span> status.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hydralisk Den -->
+    <div class="tac-card">
+      <div class="tac-header">
+        <span class="tac-name">Hydralisk Den</span>
+        <span class="tac-cost">35 Gas</span>
+      </div>
+      <div class="tac-body">
+        <div class="tac-row">
+          <span class="tac-meta">+1 BM · 1× Support</span>
+        </div>
+        <div class="tac-ability">
+          <span class="tac-ab-text" style="color:var(--faint); font-style:italic;">Verify ability from card</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lair -->
+    <div class="tac-card">
+      <div class="tac-header">
+        <span class="tac-name">Lair</span>
+        <span class="tac-cost">35 Gas</span>
+      </div>
+      <div class="tac-body">
+        <div class="tac-row">
+          <span class="tac-meta">+1 BM · 1× Elite</span>
+        </div>
+        <div class="tac-ability">
+          <span class="tac-ab-text" style="color:var(--faint); font-style:italic;">Verify ability from card</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overseer -->
+    <div class="tac-card">
+      <div class="tac-header">
+        <span class="tac-name">Overseer</span>
+        <span class="tac-cost">25 Gas · <span class="tac-unique">U</span></span>
+      </div>
+      <div class="tac-body">
+        <div class="tac-row">
+          <span class="tac-meta">+1 BM</span>
+        </div>
+        <div class="tac-ability">
+          <span class="ability-phase movement">Move</span>
+          <span class="ability-type">Active</span>
+          <span class="tac-ab-text"><span class="tac-ab-name">Oversight Mode</span> — Place a Faction Indicator anywhere on the battlefield.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlord -->
+    <div class="tac-card">
+      <div class="tac-header">
+        <span class="tac-name">Overlord</span>
+        <span class="tac-cost">45 Gas · <span class="tac-unique">U</span></span>
+      </div>
+      <div class="tac-body">
+        <div class="tac-row">
+          <span class="tac-meta">+1 BM · 1× Air</span>
+        </div>
+        <div class="tac-ability">
+          <span class="tac-ab-text" style="color:var(--faint); font-style:italic;">Verify ability from card</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accelerating Creep -->
+    <div class="tac-card">
+      <div class="tac-header">
+        <span class="tac-name">Accelerating Creep</span>
+        <span class="tac-cost">0 Gas · <span class="tac-unique">U</span></span>
+      </div>
+      <div class="tac-body">
+        <div class="tac-row">
+          <span class="tac-meta">Creep Card · No BM</span>
+        </div>
+        <div class="tac-ability">
+          <span class="ability-phase assault">Assault</span>
+          <span class="ability-type">Passive</span>
+          <span class="tac-ab-text"><span class="tac-ab-name">Charge on Creep</span> — Friendly Zerg charging On Creep gains +1 to Impact Hit Rolls.</span>
+        </div>
+        <div class="tac-ability">
+          <span class="ability-phase any">Any</span>
+          <span class="ability-type">Passive</span>
+          <span class="tac-ab-text"><span class="tac-ab-name">Creep Removal</span> — Enemy ending Move/Deploy/Run/Charge/Disengage within 1" of a Creep Tumor removes it.</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

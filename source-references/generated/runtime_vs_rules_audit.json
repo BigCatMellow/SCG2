@@ -1,0 +1,68 @@
+[
+  {
+    "faction": "zerg",
+    "sourceCounts": {
+      "factionCards": 2,
+      "units": 12,
+      "tacticalCards": 11,
+      "quickReferenceUnits": 10,
+      "quickReferenceTacticalCards": 11
+    },
+    "runtimeCounts": {
+      "factionCards": 2,
+      "units": 1,
+      "weapons": 2,
+      "abilities": 7,
+      "tacticalCards": 11,
+      "upgrades": 4
+    },
+    "gaps": {
+      "missingUnitsInRuntime": 11,
+      "missingTacticalCardsInRuntime": 0
+    }
+  },
+  {
+    "faction": "protoss",
+    "sourceCounts": {
+      "factionCards": 2,
+      "units": 7,
+      "tacticalCards": 10,
+      "quickReferenceUnits": 6,
+      "quickReferenceTacticalCards": 10
+    },
+    "runtimeCounts": {
+      "factionCards": 2,
+      "units": 1,
+      "weapons": 2,
+      "abilities": 5,
+      "tacticalCards": 10,
+      "upgrades": 3
+    },
+    "gaps": {
+      "missingUnitsInRuntime": 6,
+      "missingTacticalCardsInRuntime": 0
+    }
+  },
+  {
+    "faction": "terran",
+    "sourceCounts": {
+      "factionCards": 2,
+      "units": 7,
+      "tacticalCards": 10,
+      "quickReferenceUnits": 6,
+      "quickReferenceTacticalCards": 10
+    },
+    "runtimeCounts": {
+      "factionCards": 2,
+      "units": 1,
+      "weapons": 4,
+      "abilities": 4,
+      "tacticalCards": 10,
+      "upgrades": 8
+    },
+    "gaps": {
+      "missingUnitsInRuntime": 6,
+      "missingTacticalCardsInRuntime": 0
+    }
+  }
+]

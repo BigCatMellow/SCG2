@@ -1,0 +1,1236 @@
+[
+  {
+    "faction": "Zerg",
+    "counts": {
+      "faction_cards": 2,
+      "unit_cards": 12,
+      "tactical_cards": 11
+    },
+    "items": [
+      {
+        "faction": "Zerg",
+        "id": "kerrigan_s_swarm",
+        "name": "Kerrigan's Swarm",
+        "slug": "kerrigansswarm",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 BM\n\n HERO SLOT\n 1\n\n ELITE SLOT\n 2\n\n CORE SLOT\n 3\n\n Card Abilities\n\n Any Phase\n\n Wild Mutation\n Active\n\n If the active unit is ON CREEP , the Unit gains BUFF Speed (1) and its first Weapon used gains PRECISION (1).\n\n Zerg Creep\n Passive\n\n During Army Building , select exactly one Creep Card and add it to their Army List, paying its listed cost (if any).\n\n Movement Phase\n\n Omega Network\n Active\n\n If there is no Friendly Omega Worm on the battlefield, place a Friendly Omega Worm Unit anywhere on GROUND LEVEL of the battlefield, more than 10\" away from any Enemy model. This Round, the Omega Worm is not eligible to use its Special Abilities (excluding Structure)."
+      },
+      {
+        "faction": "Zerg",
+        "id": "zerg_swarm",
+        "name": "Zerg Swarm",
+        "slug": "zergswarm",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 BM\n\n ELITE SLOT\n 1\n\n CORE SLOT\n 3\n\n SUPPORT SLOT\n 1\n\n Card Abilities\n\n Any Phase\n\n Brood Instinct\n Reaction\n\n Use before a Friendly Unit makes an Evade Roll. Apply a +1 Modifier to that roll.\n\n Zerg Creep\n Passive\n\n During Army Building , select exactly one Creep Card and add it to their Army List, paying its listed cost (if any).\n\n Movement Phase\n\n Rapid Burrowing\n Active\n\n Select one Friendly , Unengaged Ground Zerg Unit on the battlefield. That Unit gains the Burrowed Status , even if it has already been Activated this Round.\n\n UNIT CARDS (12)"
+      },
+      {
+        "faction": "Zerg",
+        "id": "corpser__roach_",
+        "name": "Corpser (Roach)",
+        "slug": "corpserroach",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase",
+          "Assault Phase",
+          "Combat Phase",
+          "Any Phase - UPGRADES",
+          "Movement Phase - UPGRADES",
+          "Assault Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 1",
+            "supply": "0"
+          },
+          {
+            "models": "2 - 3",
+            "supply": "1"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 4/7 SPD\n\n 5+ EVA\n\n 3+ ARM\n\n 4 HP\n\n 2 SIZ\n\n SQUAD:\n\n 1 - 1\n\n Models\n\n 0\n\n Supply\n\n 2 - 3\n\n Models\n\n 1\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 250/0\n\n TAGS: Armoured, Biological, Ground\n\n Abilities\n\n Any Phase\n\n Burrow\n\n Active\n(2 Biomass)\n\n If this Unit is Unengaged , it gains or loses the Burrowed Status .\n\n Movement Phase\n\n Roachling Infestation\n\n Active\n(2 Biomass)\n\n Once per Game. Resolve the SUMMON (Roachling) effect.\n\n Assault Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Acid Saliva\n FOR -\n 8\n Ground\n 2\n 3+\n -\n -\n 1\n\n Regeneration\n\n Passive\n\n When this Unit becomes Activated, if it has the Burrowed Status , resolve the HEAL (2) effect.\n\n Devastating Charge\n\n Passive\n\n Immediately after this Unit completes a successful Charge , resolve the IMPACT (3) 4+ effect.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Claws\n FOR -\n E\n Ground\n 3\n 4+\n Light\n D3+1\n 1\n\n Upgrades\n\n Any Phase - UPGRADES\n\n Tunneling Claws PTS: 10\n\n Passive\n\n While this Unit has the Burrowed Status , it may perform the Move and Run actions without losing that Status . It may also move through other Units ’ bases .\n\n Movement Phase - UPGRADES\n\n Burrow Ambush PTS: 20\n\n Passive\n\n When this Unit is nominated to deploy from the Reserves , it may resolve the PLACE (18) effect from the controlling player 's Entry Edge . No model may be set Within 10\" of any Enemy model. This Unit's Activation ends.\n\n Glial Reconstitution PTS: 20\n\n Active\n(1 Biomass)\n\n This Unit gains BUFF SPEED (1), or BUFF SPEED (2) if the Unit is ON CREEP .\n\n Assault Phase - UPGRADES\n\n Hydriodic Bile PTS: 10\n\n Passive\n\n This Unit's Acid Saliva weapon gains Surge Type: Light, and S Dice : D3+1."
+      },
+      {
+        "faction": "Zerg",
+        "id": "hydralisk",
+        "name": "Hydralisk",
+        "slug": "hydralisk",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Assault Phase",
+          "Combat Phase",
+          "Any Phase - UPGRADES",
+          "Movement Phase - UPGRADES",
+          "Assault Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 1",
+            "supply": "1"
+          },
+          {
+            "models": "2 - 2",
+            "supply": "2"
+          },
+          {
+            "models": "3 - 4",
+            "supply": "3"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 4/8 SPD\n\n 5+ EVA\n\n 5+ ARM\n\n 4 HP\n\n 2 SIZ\n\n SQUAD:\n\n 1 - 1\n\n Models\n\n 1\n\n Supply\n\n 2 - 2\n\n Models\n\n 2\n\n Supply\n\n 3 - 4\n\n Models\n\n 3\n\n Supply\n\n PTS: 140/260\n\n TAGS: Biological, Light, Ground\n\n Abilities\n\n Any Phase\n\n Squadron\n\n Passive\n\n This Unit’s Horizontal Coherency is 4\".\n\n Assault Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Needle Spines\n FOR -\n 12\n All\n 3\n 3+\n Light, Armoured\n D3+1\n 2\n\n Lunge\n\n Reaction\n(1 Biomass)\n\n When another Friendly Unit Within 10\" is the target of a Ranged Attack , after the attack is fully resolved, this Unit, if Unengaged , may perform a Move action Directly Towards the attacking Unit.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Scythe\n FOR -\n E\n Ground\n 2\n 4+\n -\n -\n 1\n\n Upgrades\n\n Any Phase - UPGRADES\n\n Ancillary Carapace PTS: 20/40\n\n Passive\n\n This Unit gains TOUGH (1) on the first Armour Roll of each Activation.\n\n Lurking PTS: 10/20\n\n Passive\n\n If this Unit has Stationary Status , it is eligible to make an Evade Roll against the first Ranged Attack targeting it this Round. If this Unit is ON CREEP , it gains +1 Modifier to this Evade Roll.\n\n Movement Phase - UPGRADES\n\n Burrow Ambush PTS: 20/40\n\n Passive\n\n When this Unit is nominated to deploy from the Reserves , it may resolve the PLACE (18) effect from the controlling player 's Entry Edge . No model may be set Within 10\" of any Enemy model. This Unit's Activation ends.\n\n Assault Phase - UPGRADES\n\n Grooved Spines PTS: 20/40\n\n Passive\n\n This Unit's Needle Spines ranged weapon gains LONG RANGE (16\")."
+      },
+      {
+        "faction": "Zerg",
+        "id": "kerrigan",
+        "name": "Kerrigan",
+        "slug": "kerrigan",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase",
+          "Assault Phase",
+          "Combat Phase"
+        ],
+        "squadTiers": [
+          {
+            "models": "-",
+            "supply": "0"
+          },
+          {
+            "models": "1 - 1",
+            "supply": "1"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 7 SPD\n\n 6+ EVA\n\n 5+ ARM\n\n 9 HP\n\n 2 SIZ\n\n SQUAD:\n\n -\n\n Models\n\n 0\n\n Supply\n\n 1 - 1\n\n Models\n\n 1\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 250/0\n\n TAGS: Biological, Psionic, Ground, Unique\n\n Abilities\n\n Any Phase\n\n Commander\n\n Passive\n\n Treat this Unit’s Supply characteristic as increased by 1 for Controlling and Contesting Mission Markers , completing objectives, and resolving Disengage checks.\n\n Movement Phase\n\n Crushing Grip\n\n Active\n(1 Biomass)\n\n Select one Enemy Unit Within 12\". That Unit counts as Activated in this Phase (set an Activation Marker next to it).\n\n Mutating Carapace\n\n Active\n(1 Biomass)\n\n Select one Enemy Unit Within 18\". This Unit is eligible to make an Evade Roll against all attacks made by the selected Enemy Unit, with a +2 Modifier applied to those Evade Rolls.\n\n Assault Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Energy Blast\n FOR -\n 8\n All\n 5\n 3+\n Light, Armoured\n D3\n 1\n\n Leaping Strike\n\n Active\n(1 Biomass)\n\n If Unengaged , resolve the PLACE (6) effect.\n\n Devastating Charge\n\n Passive\n\n Immediately after this Unit completes a successful Charge , resolve the IMPACT (4) 4+ effect.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Blades\n FOR -\n E\n Ground\n 6\n 4+\n -\n -\n 2\n CRITICAL HIT (2)"
+      },
+      {
+        "faction": "Zerg",
+        "id": "kerrigan_swarm_raptor__zergling_",
+        "name": "Kerrigan Swarm Raptor (Zergling)",
+        "slug": "kerriganswarmraptorzergling",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Assault Phase",
+          "Combat Phase"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 3",
+            "supply": "0"
+          },
+          {
+            "models": "4 - 6",
+            "supply": "1"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 5/9 SPD\n\n 4+ EVA\n\n 5+ ARM\n\n 2 HP\n\n 1 SIZ\n\n SQUAD:\n\n 1 - 3\n\n Models\n\n 0\n\n Supply\n\n 4 - 6\n\n Models\n\n 1\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 250/0\n\n TAGS: Kerrigan's Swarm, Biological, Light, Ground, Unique\n\n Abilities\n\n Any Phase\n\n Squadron\n\n Passive\n\n This Unit’s Horizontal Coherency is 4\".\n\n Raptor Strain\n\n Passive\n\n This Unit can move through IMPASSABLE TERRAIN of Size 4 or less and change elevation without using ACCESS POINTS.\n\n Assault Phase\n\n Leap\n\n Active\n(1 Biomass)\n\n When determining Charge Distance for this Unit, add 2 to the Charge Distance.\n\n Adrenal Overload\n\n Active\n(1 Biomass)\n\n This Unit gains a +1 Modifier to all IMPACT Hit Rolls.\n\n Devastating Charge\n\n Passive\n\n Immediately after this Unit completes a successful Charge , resolve the IMPACT (2) 5+ effect.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Claws\n FOR -\n E\n Ground\n 2\n 3+\n Light, Armoured\n D6\n 1\n INSTANT"
+      },
+      {
+        "faction": "Zerg",
+        "id": "omega_worm",
+        "name": "Omega Worm",
+        "slug": "omegaworm",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase"
+        ],
+        "squadTiers": [
+          {
+            "models": "-",
+            "supply": "0"
+          },
+          {
+            "models": "1 - 1",
+            "supply": "0"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n - SPD\n\n - EVA\n\n 5+ ARM\n\n 10 HP\n\n 3 SIZ\n\n SQUAD:\n\n -\n\n Models\n\n 0\n\n Supply\n\n 1 - 1\n\n Models\n\n 0\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 0\n\n TAGS: Kerrigan's Swarm, Armoured, Biological, Ground\n\n Abilities\n\n Any Phase\n\n Detection\n\n Passive\n\n While Enemy Units are Within 6\" of this Unit, they lose HIDDEN Status .\n\n Source of Creep\n\n Passive\n\n A Friendly or Enemy Ground Zerg Unit Within 6\" of this Unit, counts as being ON CREEP .\n\n Structure\n\n Passive\n\n This Unit cannot be Activated in any Phase and cannot perform actions. Additionally, its Current Supply Value is treated as 0, and it can never Control or Contest Mission Markers , ignoring the standard Zero Supply Exception. This Unit cannot be a target of an ability, unless stated otherwise.\n\n Omega Network\n\n Passive\n\n The base of the Omega Worm counts as an Entry Edge . Each Round, Friendly Units with a combined Supply cost of 2 or less may be Deployed via this Entry Edge .\n\nIf a Friendly Leading model finishes a Move , Disengage , or Run action in base-to-base contact with the Omega Worm, the controlling player may remove that Unit from the battlefield and return it to Reserves ."
+      },
+      {
+        "faction": "Zerg",
+        "id": "queen",
+        "name": "Queen",
+        "slug": "queen",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Assault Phase",
+          "Combat Phase",
+          "Any Phase - UPGRADES",
+          "Movement Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "-",
+            "supply": "0"
+          },
+          {
+            "models": "1 - 1",
+            "supply": "1"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 4 SPD\n\n - EVA\n\n 4+ ARM\n\n 9 HP\n\n 3 SIZ\n\n SQUAD:\n\n -\n\n Models\n\n 0\n\n Supply\n\n 1 - 1\n\n Models\n\n 1\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 150/0\n\n TAGS: Armoured, Biological, Psionic, Ground\n\n Abilities\n\n Any Phase\n\n Spawn Creep Tumor\n\n Active\n(1 Biomass)\n\n Set a Creep Tumor token in base-to-base contact with this Unit.\n\n Transfusion\n\n Reaction\n(1 Biomass)\n\n Use when another Friendly Biological Unit (including a Structure) suffers Damage Within 4\". Reduce the Total Damage before allocation by 2.\n\n Restoration\n\n Reaction\n(1 Biomass)\n\n Use when a Friendly Unit Within 4\" receives a DEBUFF . Remove all DEBUFFS from it.\n\n Psionic Link\n\n Passive\n\n Once per Round, if there are at least 7 Friendly models Within 6\" of this Unit, it may resolve its Special Ability with the BM cost reduced by 1.\n\n Assault Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Talons\n FOR -\n 6\n Ground\n 4\n 4+\n Light\n D3\n 2\n\n Acid spines\n FOR -\n 12\n Flying\n 4\n 4+\n Light, Armoured\n D3\n 2\n\n Devastating Charge\n\n Passive\n\n Immediately after this Unit completes a successful Charge , resolve the IMPACT (4) 3+ effect.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Talons\n FOR -\n E\n Ground\n 3\n 4+\n -\n -\n 1\n\n Upgrades\n\n Any Phase - UPGRADES\n\n Creep Speed PTS: 10\n\n Passive\n\n While this Unit is ON CREEP , increase this Unit's Speed characteristic by 2.\n\n Movement Phase - UPGRADES\n\n Domineering Presence PTS: 10\n\n Active\n(1 Biomass)\n\n Select another Friendly Unit Within 6\" ( Line of Sight is not required). That Unit’s Supply characteristic is increased by 1 for Controlling and Contesting Mission Markers and completing objectives."
+      },
+      {
+        "faction": "Zerg",
+        "id": "raptor__zergling_",
+        "name": "Raptor (Zergling)",
+        "slug": "raptorzergling",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Assault Phase",
+          "Combat Phase",
+          "Movement Phase - UPGRADES",
+          "Combat Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 6",
+            "supply": "0"
+          },
+          {
+            "models": "7 - 12",
+            "supply": "1"
+          },
+          {
+            "models": "13 - 18",
+            "supply": "2"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 5/9 SPD\n\n 4+ EVA\n\n 6+ ARM\n\n 1 HP\n\n 1 SIZ\n\n SQUAD:\n\n 1 - 6\n\n Models\n\n 0\n\n Supply\n\n 7 - 12\n\n Models\n\n 1\n\n Supply\n\n 13 - 18\n\n Models\n\n 2\n\n Supply\n\n PTS: 240/300\n\n TAGS: Biological, Light, Ground\n\n Abilities\n\n Any Phase\n\n Squadron\n\n Passive\n\n This Unit’s Horizontal Coherency is 4\".\n\n Raptor Strain\n\n Passive\n\n This Unit can move through IMPASSABLE TERRAIN of Size 4 or less and change elevation without using ACCESS POINTS.\n\n Assault Phase\n\n Adrenal Overload\n\n Active\n(1 Biomass)\n\n This Unit gains a +1 Modifier to all IMPACT Hit Rolls.\n\n Metabolic Boost\n\n Active\n(1 Biomass)\n\n When determining Charge Distance for this Unit, roll 2D6 instead of D6 and use the higher result to add to the Unit’s Speed characteristic.\n\n Devastating Charge\n\n Passive\n\n Immediately after this Unit completes a successful Charge , resolve the IMPACT (1) 5+ effect.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Claws\n FOR -\n E\n Ground\n 2\n 4+\n Light\n D3\n 1\n\n Upgrades\n\n Movement Phase - UPGRADES\n\n Burrow Ambush PTS: 20/30\n\n Passive\n\n When this Unit is nominated to deploy from the Reserves , it may resolve the PLACE (18) effect from the controlling player 's Entry Edge . No model may be set Within 10\" of any Enemy model. This Unit's Activation ends.\n\n Combat Phase - UPGRADES\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n PTS\n\n Shredding Claws\n FOR Claws\n E\n Ground\n 2\n 4+\n Light, Armoured\n D3\n 1\n\n 20\n\n Adrenal Glands PTS: 30\n\n Passive\n\n This Unit’s Claws and Shredding Claws weapons gain PRECISION (2)."
+      },
+      {
+        "faction": "Zerg",
+        "id": "roach",
+        "name": "Roach",
+        "slug": "roach",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Assault Phase",
+          "Combat Phase",
+          "Any Phase - UPGRADES",
+          "Movement Phase - UPGRADES",
+          "Assault Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 1",
+            "supply": "0"
+          },
+          {
+            "models": "2 - 3",
+            "supply": "1"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 4/7 SPD\n\n 5+ EVA\n\n 3+ ARM\n\n 4 HP\n\n 2 SIZ\n\n SQUAD:\n\n 1 - 1\n\n Models\n\n 0\n\n Supply\n\n 2 - 3\n\n Models\n\n 1\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 170/0\n\n TAGS: Armoured, Biological, Ground\n\n Abilities\n\n Any Phase\n\n Burrow\n\n Active\n(2 Biomass)\n\n If this Unit is Unengaged , it gains or loses the Burrowed Status .\n\n Assault Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Acid Saliva\n FOR -\n 8\n Ground\n 3\n 3+\n -\n -\n 1\n\n Regeneration\n\n Passive\n\n When this Unit becomes Activated, if it has the Burrowed Status , resolve the HEAL (2) effect.\n\n Devastating Charge\n\n Passive\n\n Immediately after this Unit completes a successful Charge , resolve the IMPACT (2) 4+ effect.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Claws\n FOR -\n E\n Ground\n 2\n 4+\n -\n -\n 1\n\n Upgrades\n\n Any Phase - UPGRADES\n\n Tunneling Claws PTS: 10\n\n Passive\n\n While this Unit has the Burrowed Status , it may perform the Move and Run actions without losing that Status . It may also move through other Units ’ bases .\n\n Movement Phase - UPGRADES\n\n Burrow Ambush PTS: 20\n\n Passive\n\n When this Unit is nominated to deploy from the Reserves , it may resolve the PLACE (18) effect from the controlling player 's Entry Edge . No model may be set Within 10\" of any Enemy model. This Unit's Activation ends.\n\n Glial Reconstitution PTS: 20\n\n Active\n(1 Biomass)\n\n This Unit gains BUFF SPEED (1), or BUFF SPEED (2) if the Unit is ON CREEP .\n\n Assault Phase - UPGRADES\n\n Hydriodic Bile PTS: 10\n\n Passive\n\n This Unit's Acid Saliva weapon gains Surge Type: Light, and S Dice : D3+1."
+      },
+      {
+        "faction": "Zerg",
+        "id": "roachling",
+        "name": "Roachling",
+        "slug": "roachling",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Combat Phase"
+        ],
+        "squadTiers": [
+          {
+            "models": "-",
+            "supply": "0"
+          },
+          {
+            "models": "1 - 3",
+            "supply": "0"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 4/7 SPD\n\n 6+ EVA\n\n 6+ ARM\n\n 1 HP\n\n 1 SIZ\n\n SQUAD:\n\n -\n\n Models\n\n 0\n\n Supply\n\n 1 - 3\n\n Models\n\n 0\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 0\n\n TAGS: Biological, Light, Ground\n\n Abilities\n\n Any Phase\n\n Underdeveloped Claws\n\n Passive\n\n This Unit cannot gain Burrowed Status .\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Claws\n FOR -\n E\n Ground\n 2\n 4+\n -\n -\n 1"
+      },
+      {
+        "faction": "Zerg",
+        "id": "swarmling__zergling_",
+        "name": "Swarmling (Zergling)",
+        "slug": "swarmlingzergling",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase",
+          "Assault Phase",
+          "Combat Phase",
+          "Movement Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 6",
+            "supply": "0"
+          },
+          {
+            "models": "7 - 18",
+            "supply": "1"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 4/8 SPD\n\n 5+ EVA\n\n 6+ ARM\n\n 1 HP\n\n 1 SIZ\n\n SQUAD:\n\n 1 - 6\n\n Models\n\n 0\n\n Supply\n\n 7 - 18\n\n Models\n\n 1\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 270/0\n\n TAGS: Biological, Light, Ground\n\n Abilities\n\n Any Phase\n\n Squadron\n\n Passive\n\n This Unit’s Horizontal Coherency is 4\".\n\n Movement Phase\n\n Zergling Reconstitution\n\n Active\n(1 Biomass)\n\n Resolve the RESPAWN (2) effect, or RESPAWN (3) if the Unit is ON CREEP .\n\n Assault Phase\n\n Metabolic Boost\n\n Active\n(1 Biomass)\n\n When determining Charge Distance for this Unit, roll 2D6 instead of D6 and use the higher result to add to the Unit’s Speed characteristic.\n\n Devastating Charge\n\n Passive\n\n Immediately after this Unit completes a successful Charge , resolve the IMPACT (1) 5+ effect.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Claws\n FOR -\n E\n Ground\n 2\n 5+\n -\n -\n 1\n\n Upgrades\n\n Movement Phase - UPGRADES\n\n Burrow Ambush PTS: 20\n\n Passive\n\n When this Unit is nominated to deploy from the Reserves , it may resolve the PLACE (18) effect from the controlling player 's Entry Edge . No model may be set Within 10\" of any Enemy model. This Unit's Activation ends."
+      },
+      {
+        "faction": "Zerg",
+        "id": "vile__roach_",
+        "name": "Vile (Roach)",
+        "slug": "vileroach",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Assault Phase",
+          "Combat Phase",
+          "Any Phase - UPGRADES",
+          "Movement Phase - UPGRADES",
+          "Assault Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 1",
+            "supply": "0"
+          },
+          {
+            "models": "2 - 3",
+            "supply": "1"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 4/7 SPD\n\n 5+ EVA\n\n 3+ ARM\n\n 4 HP\n\n 2 SIZ\n\n SQUAD:\n\n 1 - 1\n\n Models\n\n 0\n\n Supply\n\n 2 - 3\n\n Models\n\n 1\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 200/0\n\n TAGS: Armoured, Biological, Ground\n\n Abilities\n\n Any Phase\n\n Debilitating Saliva\n\n Reaction\n(1 Biomass)\n\n Use when an Enemy Unit Within 8\" of this Unit declares a Ranged Attack . Apply DEBUFF Hit (1) to each of that Unit's Ranged Weapons.\n\n Burrow\n\n Active\n(2 Biomass)\n\n If this Unit is Unengaged , it gains or loses the Burrowed Status .\n\n Assault Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Acid Saliva\n FOR -\n 8\n Ground\n 4\n 3+\n -\n -\n 1\n\n Regeneration\n\n Passive\n\n When this Unit becomes Activated, if it has the Burrowed Status , resolve the HEAL (2) effect.\n\n Devastating Charge\n\n Passive\n\n Immediately after this Unit completes a successful Charge , resolve the IMPACT (1) 4+ effect.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Vile Claws\n FOR -\n E\n Ground\n 2\n 4+\n -\n -\n 1\n\n Upgrades\n\n Any Phase - UPGRADES\n\n Tunneling Claws PTS: 10\n\n Passive\n\n While this Unit has the Burrowed Status , it may perform the Move and Run actions without losing that Status . It may also move through other Units ’ bases .\n\n Movement Phase - UPGRADES\n\n Burrow Ambush PTS: 20\n\n Passive\n\n When this Unit is nominated to deploy from the Reserves , it may resolve the PLACE (18) effect from the controlling player 's Entry Edge . No model may be set Within 10\" of any Enemy model. This Unit's Activation ends.\n\n Glial Reconstitution PTS: 20\n\n Active\n(1 Biomass)\n\n This Unit gains BUFF SPEED (1), or BUFF SPEED (2) if the Unit is ON CREEP .\n\n Assault Phase - UPGRADES\n\n Hydriodic Bile PTS: 10\n\n Passive\n\n This Unit's Acid Saliva weapon gains Surge Type: Light, and S Dice : D3+1."
+      },
+      {
+        "faction": "Zerg",
+        "id": "zergling",
+        "name": "Zergling",
+        "slug": "zergling",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Assault Phase",
+          "Combat Phase",
+          "Movement Phase - UPGRADES",
+          "Combat Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 6",
+            "supply": "0"
+          },
+          {
+            "models": "7 - 12",
+            "supply": "1"
+          },
+          {
+            "models": "13 - 18",
+            "supply": "2"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 4/8 SPD\n\n 4+ EVA\n\n 6+ ARM\n\n 1 HP\n\n 1 SIZ\n\n SQUAD:\n\n 1 - 6\n\n Models\n\n 0\n\n Supply\n\n 7 - 12\n\n Models\n\n 1\n\n Supply\n\n 13 - 18\n\n Models\n\n 2\n\n Supply\n\n PTS: 180/220\n\n TAGS: Biological, Light, Ground\n\n Abilities\n\n Any Phase\n\n Squadron\n\n Passive\n\n This Unit’s Horizontal Coherency is 4\".\n\n Assault Phase\n\n Metabolic Boost\n\n Active\n(1 Biomass)\n\n When determining Charge Distance for this Unit, roll 2D6 instead of D6 and use the higher result to add to the Unit’s Speed characteristic.\n\n Devastating Charge\n\n Passive\n\n Immediately after this Unit completes a successful Charge , resolve the IMPACT (1) 5+ effect.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Claws\n FOR -\n E\n Ground\n 2\n 4+\n Light\n D3\n 1\n\n Upgrades\n\n Movement Phase - UPGRADES\n\n Burrow Ambush PTS: 20/30\n\n Passive\n\n When this Unit is nominated to deploy from the Reserves , it may resolve the PLACE (18) effect from the controlling player 's Entry Edge . No model may be set Within 10\" of any Enemy model. This Unit's Activation ends.\n\n Combat Phase - UPGRADES\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n PTS\n\n Shredding Claws\n FOR Claws\n E\n Ground\n 2\n 4+\n Light, Armoured\n D3\n 1\n\n 20\n\n Adrenal Glands PTS: 30\n\n Passive\n\n This Unit’s Claws and Shredding Claws weapons gain PRECISION (2).\n\n TACTICAL CARDS (11)"
+      },
+      {
+        "faction": "Zerg",
+        "id": "accelerating_creep",
+        "name": "Accelerating Creep",
+        "slug": "acceleratingcreep",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n Card Abilities\n\n Any Phase\n\n Speed on Creep\n Passive\n\n If the active Friendly Zerg Unit is ON CREEP , increase its Speed characteristic by 1.\n\n Living Glob of Tissue\n Passive\n\n Creep Tumor tokens have STAY IN PLAY and DISPLACEMENT .\n\n Creep Removal\n Passive\n\n If an Enemy Unit ends a Move , Deploy , Run, Charge or Disengage action Within 1\" of a Friendly Creep Tumor token, remove that token from the battlefield."
+      },
+      {
+        "faction": "Zerg",
+        "id": "evolution_chamber",
+        "name": "Evolution Chamber",
+        "slug": "evolutionchamber",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase",
+          "Assault Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 BM\n\n CORE SLOT\n 1\n\n Card Abilities\n\n Any Phase\n\n Carapace\n Reaction\n\n Use before a Friendly Unit makes an Armour Roll. That Unit gains TOUGH (1) for this roll.\n\n Assault Phase\n\n Extended Claws\n Active\n\n The active Unit gains a +1 Modifier to all IMPACT Hit Rolls."
+      },
+      {
+        "faction": "Zerg",
+        "id": "hatchery",
+        "name": "Hatchery",
+        "slug": "hatchery",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 BM\n\n SUPPORT SLOT\n 1\n\n Card Abilities\n\n Movement Phase\n\n Lie in Wait\n Active\n\n The active, Unengaged Ground Unit gains the Burrowed Status .\n\n Creep Spread\n Active\n\n Place a Creep Tumor token on the battlefield Within 6\" ( Line of Sight is not required) of either a Friendly Entry Edge or an existing Friendly Creep Tumor token."
+      },
+      {
+        "faction": "Zerg",
+        "id": "hydralisk_den",
+        "name": "Hydralisk Den",
+        "slug": "hydraliskden",
+        "type": "Card Abilities",
+        "phases": [
+          "Assault Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 BM\n\n ELITE SLOT\n 2\n\n Card Abilities\n\n Assault Phase\n\n Missile Attacks\n Active\n\n The active Unit’s first Ranged Weapon used gains PRECISION (1)."
+      },
+      {
+        "faction": "Zerg",
+        "id": "lair",
+        "name": "Lair",
+        "slug": "lair",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 BM\n\n ELITE SLOT\n 1\n\n CORE SLOT\n 1\n\n Card Abilities\n\n Any Phase\n\n Predation\n Active\n\n The active Unit’s Close Combat Weapons gain INSTANT .\n\n Movement Phase\n\n Creep Spread\n Active\n\n Place a Creep Tumor token on the battlefield Within 6\" ( Line of Sight is not required) of either a Friendly Entry Edge or an existing Friendly Creep Tumor token."
+      },
+      {
+        "faction": "Zerg",
+        "id": "malignant_creep",
+        "name": "Malignant Creep",
+        "slug": "malignantcreep",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase",
+          "Assault Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n Card Abilities\n\n Any Phase\n\n Living Glob of Tissue\n Passive\n\n Creep Tumor tokens have STAY IN PLAY and DISPLACEMENT .\n\n Creep Removal\n Passive\n\n If an Enemy Unit ends a Move , Deploy , Run, Charge or Disengage action Within 1\" of a Friendly Creep Tumor token, remove that token from the battlefield.\n\n Assault Phase\n\n Malevolent Matriarch\n Passive\n\n If the active Friendly Zerg Unit declares a Charge action while ON CREEP , it gains +1 Modifier to IMPACT Hit Rolls."
+      },
+      {
+        "faction": "Zerg",
+        "id": "overlord",
+        "name": "Overlord",
+        "slug": "overlord",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase",
+          "Assault Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 BM\n\n HERO SLOT\n 1\n\n ELITE SLOT\n 1\n\n CORE SLOT\n 1\n\n Card Abilities\n\n Movement Phase\n\n Ventral Sacs\n Active\n\n Place a Faction Indicator anywhere on the battlefield more than 10\" away from any Enemy model. At the End of the Round, the controlling player may Deploy one Ground Unit from Reserves in base-to-base contact with this Faction Indicator.\n\n Assault Phase\n\n Excrete Creep\n Active\n\n Place a Creep Tumor token on the battlefield Within 6\" ( Line of Sight is not required) of either a Friendly Entry Edge or an existing Friendly Creep Tumor token."
+      },
+      {
+        "faction": "Zerg",
+        "id": "overseer",
+        "name": "Overseer",
+        "slug": "overseer",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase",
+          "Assault Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 BM\n\n SUPPORT SLOT\n 1\n\n Card Abilities\n\n Movement Phase\n\n Oversight Mode\n Active\n\n Place a Faction Indicator anywhere on the battlefield. While Enemy Units are Within 6\" of this Faction Indicator, they lose HIDDEN .\n\n Assault Phase\n\n Pneumatized Carapace\n Reaction\n\n Use after a Friendly Unit rolls a D6 for Charge Distance. Roll an additional D6 and use the higher result to calculate the total Charge Distance."
+      },
+      {
+        "faction": "Zerg",
+        "id": "roach_warren",
+        "name": "Roach Warren",
+        "slug": "roachwarren",
+        "type": "Card Abilities",
+        "phases": [
+          "Assault Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 BM\n\n CORE SLOT\n 1\n\n Card Abilities\n\n Assault Phase\n\n Nasty Surprise\n Active\n\n The active Ground Unit loses the Burrowed Status ."
+      },
+      {
+        "faction": "Zerg",
+        "id": "spawning_pool",
+        "name": "Spawning Pool",
+        "slug": "spawningpool",
+        "type": "Card Abilities",
+        "phases": [
+          "Combat Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 BM\n\n CORE SLOT\n 1\n\n Card Abilities\n\n Combat Phase\n\n Feral Rage\n Active\n\n The active Unit’s first Close Combat Weapon used gains PRECISION (2)."
+      },
+      {
+        "faction": "Zerg",
+        "id": "spawning_pool__six_pool_",
+        "name": "Spawning Pool (Six Pool)",
+        "slug": "spawningpoolsixpool",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase",
+          "Combat Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +2 BM\n\n CORE SLOT\n 2\n\n Card Abilities\n\n Movement Phase\n\n Timing Push\n Active\n\n The active Zergling Unit Deploys from any table edge that is not a Player’s Entry Edge . This action must end more than 10\" away from any Enemy model.\n\n Combat Phase\n\n Feral Rage\n Active\n\n The active Unit’s first Close Combat Weapon used gains PRECISION (2)."
+      }
+    ]
+  },
+  {
+    "faction": "Protoss",
+    "counts": {
+      "faction_cards": 2,
+      "unit_cards": 7,
+      "tactical_cards": 10
+    },
+    "items": [
+      {
+        "faction": "Protoss",
+        "id": "daelaam",
+        "name": "Daelaam",
+        "slug": "daelaam",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 EN\n\n ELITE SLOT\n 1\n\n CORE SLOT\n 3\n\n SUPPORT SLOT\n 1\n\n Card Abilities\n\n Any Phase\n\n Dae’Uhl\n Reaction\n\n When a Friendly Unit receives Damage, reduce the Total Damage by 2 (to a minimum of 1).\n\n Movement Phase\n\n Mass Recall\n Active\n\n Once per Game. Place a Faction Indicator anywhere on the battlefield. All Friendly Protoss Units Within 6\" of this Faction Indicator are removed from the battlefield and placed in Reserves ."
+      },
+      {
+        "faction": "Protoss",
+        "id": "khalai",
+        "name": "Khalai",
+        "slug": "khalai",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 EN\n\n HERO SLOT\n 1\n\n ELITE SLOT\n 2\n\n CORE SLOT\n 3\n\n Card Abilities\n\n Movement Phase\n\n Pylon Warp-In\n Active\n\n If there is no Friendly Pylon on the battlefield, place a Friendly Pylon Unit anywhere on the GROUND LEVEL of the battlefield more than 10\" away from any Enemy model. This Round, the Pylon is not eligible to use its Special Abilities (excluding Structure).\n\n Bound by the Khala\n Active\n\n At the end of the active Unit’s Activation, select one other Friendly Unit eligible to Activate in the current Phase. Immediately Activate that Unit.\n\n UNIT CARDS (7)"
+      },
+      {
+        "faction": "Protoss",
+        "id": "adept",
+        "name": "Adept",
+        "slug": "adept",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase",
+          "Assault Phase",
+          "Combat Phase",
+          "Assault Phase - UPGRADES",
+          "Combat Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 2",
+            "supply": "0"
+          },
+          {
+            "models": "3 - 4",
+            "supply": "1"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n 2 SHLD\n\n 5/8 SPD\n\n 5+ EVA\n\n 5+ ARM\n\n 3 HP\n\n 2 SIZ\n\n SQUAD:\n\n 1 - 2\n\n Models\n\n 0\n\n Supply\n\n 3 - 4\n\n Models\n\n 1\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 150/0\n\n TAGS: Biological, Light, Ground\n\n Abilities\n\n Any Phase\n\n Psionic Presence\n\n Passive\n\n All Weapons of Friendly Units targeting an Enemy Unit Within 4\" of this Unit’s Shade token gain PRECISION (1).\n\n Movement Phase\n\n Psionic Transfer\n\n Active\n(1 Psionic Energy)\n\n Set a Shade token Wholly Within 12\" of any model in this Unit. At the End of the Round, the controlling player may set all models of this Unit in Coherency, treating the Shade token as the Leading Model . The Shade token has DISPLACEMENT .\n\n Assault Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Glaive Cannon\n FOR -\n 8\n All\n 2\n 3+\n Light\n D3+1\n 1\n ANTI-EVADE (1)\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Strike\n FOR -\n E\n Ground\n 1\n 4+\n -\n -\n 1\n\n Upgrades\n\n Assault Phase - UPGRADES\n\n Resonating Glaives PTS: 20\n\n Active\n(1 Psionic Energy)\n\n This Unit's Glaive Cannon gains BUFF RoA (1).\n\n Guidance PTS: 10\n\n Passive\n\n This Unit's Glaive Cannon Ranged weapon gains ANTI-EVADE (2).\n\n Combat Phase - UPGRADES\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n PTS\n\n Glaive Strike\n FOR Strike\n E\n Ground\n 1\n 4+\n Light\n D3\n 1\n PIERCE Light (2)\n 20"
+      },
+      {
+        "faction": "Protoss",
+        "id": "artanis",
+        "name": "Artanis",
+        "slug": "artanis",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase",
+          "Assault Phase",
+          "Combat Phase"
+        ],
+        "squadTiers": [
+          {
+            "models": "-",
+            "supply": "0"
+          },
+          {
+            "models": "1 - 1",
+            "supply": "1"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n 4 SHLD\n\n 7 SPD\n\n 5+ EVA\n\n 4+ ARM\n\n 8 HP\n\n 2 SIZ\n\n SQUAD:\n\n -\n\n Models\n\n 0\n\n Supply\n\n 1 - 1\n\n Models\n\n 1\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 250/0\n\n TAGS: Biological, Psionic, Ground, Unique\n\n Abilities\n\n Any Phase\n\n Commander\n\n Passive\n\n Treat this Unit’s Supply characteristic as increased by 1 for Controlling and Contesting Mission Markers , completing objectives, and resolving Disengage checks.\n\n Movement Phase\n\n Phase Prism\n\n Passive\n\n When Artanis is nominated to deploy from Reserves , it may resolve the PLACE (0) effect from another Friendly Unit. That Friendly Unit is removed from the battlefield and returned to Reserves . Artanis ' Activation ends.\n\n Assault Phase\n\n Hierarch’s Stand\n\n Reaction\n(1 Psionic Energy)\n\n When another Friendly Unit Within 8\" is declared as the target of a Ranged Attack and this Unit is a valid target, redirect the attack to this Unit. This Unit is eligible to make an Evade Roll against the redirected attack. This Special Ability remains active until the End of the current Activation.\n\n Lightning Dash\n\n Reaction\n(1 Psionic Energy)\n\n After this Unit resolves a successful Charge action, it may declare a second Charge action against a different Enemy Unit, ignoring the restriction on Charging while Engaged . The Devastating Charge ability does not trigger a second time.\n\n Devastating Charge\n\n Passive\n\n Immediately after this Unit completes a successful Charge , resolve the IMPACT (6) 4+ effect.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Twilight Blades Strike\n FOR -\n E\n Ground\n 2\n 2+\n Armoured\n D3\n 3\n\n Twilight Blades Sweep\n FOR -\n E\n Ground\n 6\n 2+\n Light\n D3+1\n 1"
+      },
+      {
+        "faction": "Protoss",
+        "id": "praetor_guard__zealot_",
+        "name": "Praetor Guard (Zealot)",
+        "slug": "praetorguardzealot",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase",
+          "Assault Phase",
+          "Combat Phase"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 1",
+            "supply": "1"
+          },
+          {
+            "models": "2 - 3",
+            "supply": "2"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n 3 SHLD\n\n 4/7 SPD\n\n 5+ EVA\n\n 5+ ARM\n\n 4 HP\n\n 2 SIZ\n\n SQUAD:\n\n 1 - 1\n\n Models\n\n 1\n\n Supply\n\n 2 - 3\n\n Models\n\n 2\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 280/0\n\n TAGS: Khalai, Biological, Light, Ground, Unique\n\n Abilities\n\n Any Phase\n\n Shield Overcharge\n\n Passive\n\n This Unit gains TOUGH (2) on the first Armour Roll each Round.\n\n Movement Phase\n\n Leg Enhancements\n\n Active\n(1 Psionic Energy)\n\n This Unit performs a 2\" Move action. This does not count towards its action limit.\n\n Assault Phase\n\n Charge\n\n Active\n(1 Psionic Energy)\n\n When determining Charge Distance for this Unit, roll 2D6 instead of D6 and use the higher result to add to the Unit’s Speed characteristic.\n\n Devastating Charge\n\n Passive\n\n Immediately after this Unit completes a successful Charge , resolve the IMPACT (3) 4+ effect.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Psi Blades\n FOR -\n E\n Ground\n 4\n 3+\n Light\n D3\n 1\n\n Titan Killers\n\n Passive\n\n When this Unit makes a Close Combat Attack, and the target is Size 3 or larger, the weapon’s Damage characteristic is treated as 2.\n\n Precognition\n\n Passive\n\n This Unit is eligible to make an Evade roll against all attacks targeting it."
+      },
+      {
+        "faction": "Protoss",
+        "id": "pylon",
+        "name": "Pylon",
+        "slug": "pylon",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase"
+        ],
+        "squadTiers": [
+          {
+            "models": "-",
+            "supply": "0"
+          },
+          {
+            "models": "1 - 1",
+            "supply": "0"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n 2 SHLD\n\n - SPD\n\n - EVA\n\n 5+ ARM\n\n 8 HP\n\n 3 SIZ\n\n SQUAD:\n\n -\n\n Models\n\n 0\n\n Supply\n\n 1 - 1\n\n Models\n\n 0\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 0\n\n TAGS: Khalai, Armored, Ground\n\n Abilities\n\n Any Phase\n\n Structure\n\n Passive\n\n This Unit cannot be Activated in any Phase and cannot perform actions. Additionally, its Current Supply Value is treated as 0, and it can never Control or Contest Mission Markers , ignoring the standard Zero Supply Exception. This Unit cannot be a target of an ability, unless stated otherwise.\n\n Khalai Ingenuity\n\n Passive\n\n Once per Round, when a Friendly Unit Within 4\" of this Pylon uses a Special Ability that costs Psionic Energy, that ability’s PE cost is reduced by 1.\n\n Movement Phase\n\n Warp Conduit\n\n Passive\n\n Once per Round, the controlling player may deploy a Ground Unit from Reserves using this Pylon base as the Entry Edge . This Unit's Activation ends."
+      },
+      {
+        "faction": "Protoss",
+        "id": "sentry",
+        "name": "Sentry",
+        "slug": "sentry",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase",
+          "Assault Phase",
+          "Combat Phase",
+          "Movement Phase - UPGRADES",
+          "Assault Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 1",
+            "supply": "0"
+          },
+          {
+            "models": "2 - 2",
+            "supply": "1"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n 2 SHLD\n\n 4/7 SPD\n\n 6+ EVA\n\n 5+ ARM\n\n 4 HP\n\n 1 SIZ\n\n SQUAD:\n\n 1 - 1\n\n Models\n\n 0\n\n Supply\n\n 2 - 2\n\n Models\n\n 1\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 130/0\n\n TAGS: Light, Mechanical, Psionic, Ground\n\n Abilities\n\n Any Phase\n\n Restoration\n\n Reaction\n(1 Psionic Energy)\n\n Use when a Friendly Unit Within 4\" receives a DEBUFF . Remove all DEBUFFS from it.\n\n Movement Phase\n\n Force Field\n\n Active\n(1 Psionic Energy)\n\n Set a Force Field token Within 8\" in an unoccupied space. Units of Size 2 or lower cannot move across Force Fields. Models of Size 3 or more can move over it, and it's then removed.\n\n Guardian Shield\n\n Active\n(1 Psionic Energy)\n\n All Ranged Attacks targeting a Friendly Unit Within 4\" ( Line of Sight is not required) are made with 1 fewer die in the Attack Pool.\n\n Assault Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Disruption Beam\n FOR -\n 8\n All\n 2\n 2+\n -\n -\n 1\n INSTANT\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Beam\n FOR -\n E\n Ground\n 2\n 3+\n -\n -\n 1\n\n Upgrades\n\n Movement Phase - UPGRADES\n\n Solid-Field Projectors PTS: 20\n\n Active\n(1 Psionic Energy)\n\n Set a Force Field token Within 8\" in an unoccupied space. Units of Size 2 or lower cannot move across Force Fields. Models of Size 3 or more can move over it, and it's then removed.\n\n Assault Phase - UPGRADES\n\n Hallucination PTS: 30\n\n Reaction\n(0 Psionic Energy)\n\n When an Enemy Unit declares a Ranged Attack against a Friendly Unit Within 4\", the targeted Friendly Unit is eligible to make an Evade Roll against that attack."
+      },
+      {
+        "faction": "Protoss",
+        "id": "stalker",
+        "name": "Stalker",
+        "slug": "stalker",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase",
+          "Assault Phase",
+          "Combat Phase",
+          "Any Phase - UPGRADES",
+          "Assault Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "-",
+            "supply": "0"
+          },
+          {
+            "models": "1 - 1",
+            "supply": "1"
+          },
+          {
+            "models": "2 - 2",
+            "supply": "2"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n 3 SHLD\n\n 4/8 SPD\n\n 6+ EVA\n\n 4+ ARM\n\n 6 HP\n\n 3 SIZ\n\n SQUAD:\n\n -\n\n Models\n\n 0\n\n Supply\n\n 1 - 1\n\n Models\n\n 1\n\n Supply\n\n 2 - 2\n\n Models\n\n 2\n\n Supply\n\n PTS: 160/260\n\n TAGS: Armoured, Mechanical, Ground\n\n Abilities\n\n Any Phase\n\n Squadron\n\n Passive\n\n This Unit’s Horizontal Coherency is 4\".\n\n Movement Phase\n\n Blink\n\n Active\n(1 Psionic Energy)\n\n Resolve the PLACE (6) effect. Models set by this effect cannot be set up Within the Engagement Range of any Enemy Unit.\n\n Assault Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Particle Disruptors\n FOR -\n 12\n All\n 4\n 3+\n Armoured\n D3\n 2\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Stomp\n FOR -\n E\n Ground\n 2\n 5+\n -\n -\n 1\n\n Upgrades\n\n Any Phase - UPGRADES\n\n Path of Shadows PTS: 20/40\n\n Active\n(1 Psionic Energy)\n\n This Unit gains HIDDEN Status until it performs another action.\n\n Assault Phase - UPGRADES\n\n Fury of the Nerazim PTS: 20/30\n\n Passive\n\n When this Unit attacks an Enemy Unit that has already been Activated during this Phase, its Particle Disruptors gain INSTANT for that attack."
+      },
+      {
+        "faction": "Protoss",
+        "id": "zealot",
+        "name": "Zealot",
+        "slug": "zealot",
+        "type": "Abilities",
+        "phases": [
+          "Assault Phase",
+          "Combat Phase",
+          "Any Phase - UPGRADES",
+          "Movement Phase - UPGRADES",
+          "Assault Phase - UPGRADES",
+          "Combat Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 1",
+            "supply": "1"
+          },
+          {
+            "models": "2 - 3",
+            "supply": "2"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n 3 SHLD\n\n 4/7 SPD\n\n 5+ EVA\n\n 5+ ARM\n\n 4 HP\n\n 2 SIZ\n\n SQUAD:\n\n 1 - 1\n\n Models\n\n 1\n\n Supply\n\n 2 - 3\n\n Models\n\n 2\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 160/0\n\n TAGS: Biological, Light, Ground\n\n Abilities\n\n Assault Phase\n\n Charge\n\n Active\n(1 Psionic Energy)\n\n When determining Charge Distance for this Unit, roll 2D6 instead of D6 and use the higher result to add to the Unit’s Speed characteristic.\n\n Devastating Charge\n\n Passive\n\n Immediately after this Unit completes a successful Charge , resolve the IMPACT (3) 4+ effect.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Psi Blades\n FOR -\n E\n Ground\n 4\n 3+\n Light\n D3\n 1\n\n Upgrades\n\n Any Phase - UPGRADES\n\n My Life for Aiur PTS: 10\n\n Passive\n\n When this Unit resolves IMPACT , each eligible model generates 1 additional IMPACT die.\n\n Movement Phase - UPGRADES\n\n Leg Enhancements PTS: 20\n\n Active\n(1 Psionic Energy)\n\n This Unit performs a 2\" Move action. This does not count towards its action limit.\n\n Assault Phase - UPGRADES\n\n Zealous Round PTS: 10\n\n Reaction\n(0 Psionic Energy)\n\n When this Unit is not Activated and receives Damage, the controlling player may count this Unit as Activated in this Phase (flip its Activation Marker) to reduce the Total Damage by 2.\n\n Combat Phase - UPGRADES\n\n We Stand as One PTS: 20\n\n Passive\n\n When this Unit makes a Close Combat Attack, if the target is Engaged with at least 1 other Friendly Unit, this Unit's Close Combat Weapon gains PRECISION (2).\n\n TACTICAL CARDS (10)"
+      },
+      {
+        "faction": "Protoss",
+        "id": "forge",
+        "name": "Forge",
+        "slug": "forge",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase",
+          "Assault Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 EN\n\n ELITE SLOT\n 1\n\n Card Abilities\n\n Any Phase\n\n Ground Armor\n Reaction\n\n Use before a Friendly Ground Unit makes an Armour Roll. That Unit gains TOUGH (1) for this roll.\n\n Assault Phase\n\n Ground Weapons\n Active\n\n The active Ground Unit’s first Ranged Weapon used gains CRITICAL HIT (1)."
+      },
+      {
+        "faction": "Protoss",
+        "id": "gate_chronoboosted",
+        "name": "Gate Chronoboosted",
+        "slug": "gatechronoboosted",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase",
+          "Combat Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 EN\n\n ELITE SLOT\n 1\n\n CORE SLOT\n 1\n\n Card Abilities\n\n Movement Phase\n\n Zealous Charge\n Active\n\n The active Unit gains BUFF Speed (2).\n\n Combat Phase\n\n Quick Strikes\n Active\n\n The active Unit’s first Close Combat Weapon used gains PRECISION (2)."
+      },
+      {
+        "faction": "Protoss",
+        "id": "gateway",
+        "name": "Gateway",
+        "slug": "gateway",
+        "type": "Card Abilities",
+        "phases": [
+          "Combat Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 EN\n\n CORE SLOT\n 1\n\n Card Abilities\n\n Combat Phase\n\n Quick Strikes\n Active\n\n The active Unit’s first Close Combat Weapon used gains PRECISION (2)."
+      },
+      {
+        "faction": "Protoss",
+        "id": "nexus",
+        "name": "Nexus",
+        "slug": "nexus",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 EN\n\n CORE SLOT\n 2\n\n Card Abilities\n\n Any Phase\n\n Ancient Pride\n Active\n\n The active Unit’s first Weapon used gains INSTANT .\n\n Movement Phase\n\n Strategic Recall\n Active\n\n The active, Unengaged Ground Unit is placed in Reserves instead of performing an action."
+      },
+      {
+        "faction": "Protoss",
+        "id": "observer",
+        "name": "Observer",
+        "slug": "observer",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase",
+          "Assault Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 EN\n\n SUPPORT SLOT\n 1\n\n Card Abilities\n\n Movement Phase\n\n Surveillance\n Active\n\n Place a Faction Indicator anywhere on the battlefield. While Enemy Units are Within 6\" of this Faction Indicator, they lose HIDDEN .\n\n Assault Phase\n\n Gravitic Boosters\n Reaction\n\n Use after a Friendly Unit rolls a D6 for Charge Distance. Add 1 to the Charge Distance for this Unit."
+      },
+      {
+        "faction": "Protoss",
+        "id": "overcharged_nexus",
+        "name": "Overcharged Nexus",
+        "slug": "overchargednexus",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 EN\n\n ELITE SLOT\n 1\n\n CORE SLOT\n 1\n\n Card Abilities\n\n Any Phase\n\n Photon Overcharge\n Reaction\n\n Use when an Enemy Unit enters the battlefield from Reserves via a location other than its own Entry Edge . That Unit immediately suffers HITS 3 (1).\n\n Movement Phase\n\n Strategic Recall\n Active\n\n The active, Unengaged Ground Unit is placed in Reserves instead of performing an action."
+      },
+      {
+        "faction": "Protoss",
+        "id": "power_field",
+        "name": "Power Field",
+        "slug": "powerfield",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 EN\n\n HERO SLOT\n 1\n\n ELITE SLOT\n 1\n\n CORE SLOT\n 1\n\n Card Abilities\n\n Any Phase\n\n Guardian Shell\n Reaction\n\n Use before a Friendly Ground Unit makes an Armour Roll. That Unit gains DODGE (2) for this roll."
+      },
+      {
+        "faction": "Protoss",
+        "id": "twilight_council",
+        "name": "Twilight Council",
+        "slug": "twilightcouncil",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase",
+          "Assault Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 EN\n\n ELITE SLOT\n 1\n\n SUPPORT SLOT\n 1\n\n Card Abilities\n\n Any Phase\n\n Veil of Shadows\n Reaction\n\n Use after a Friendly Unit resolves a PLACE effect. That Unit immediately resolves the HEAL (2) effect.\n\n Assault Phase\n\n Weapons of the Firstborn\n Active\n\n The active Ground Unit’s first Ranged Weapon used gains BUFF Range (4)."
+      },
+      {
+        "faction": "Protoss",
+        "id": "warp_gate",
+        "name": "Warp Gate",
+        "slug": "warpgate",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase",
+          "Combat Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 EN\n\n CORE SLOT\n 2\n\n Card Abilities\n\n Movement Phase\n\n Warp In\n Active\n\n The active Ground Unit Deploys from any table edge that is not a player’s Entry Edge . This deployment must end more than 10\" away from any Enemy model. The controlling player cannot use this ability if another Friendly Ground Unit has already Deployed this Round.\n\n Combat Phase\n\n Quick Strikes\n Active\n\n The active Unit’s first Close Combat Weapon used gains PRECISION (2)."
+      },
+      {
+        "faction": "Protoss",
+        "id": "warp_prism",
+        "name": "Warp Prism",
+        "slug": "warpprism",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 EN\n\n CORE SLOT\n 2\n\n Card Abilities\n\n Movement Phase\n\n Phase\n Active\n\n The active Unit resolves the PLACE (3) effect.\n\n Warp Conduit\n Active\n\n Place a Faction Indicator anywhere on the battlefield more than 10\" away from any Enemy model. At the End of the Round, the controlling player may Deploy one Ground Unit from Reserves in base-to-base contact with this Faction Indicator."
+      }
+    ]
+  },
+  {
+    "faction": "Terran",
+    "counts": {
+      "faction_cards": 2,
+      "unit_cards": 7,
+      "tactical_cards": 10
+    },
+    "items": [
+      {
+        "faction": "Terran",
+        "id": "raynor_s_raiders",
+        "name": "Raynor's Raiders",
+        "slug": "raynorsraiders",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "RESOURCE\n +1 CP\n\n HERO SLOT\n 1\n\n CORE SLOT\n 3\n\n SUPPORT SLOT\n 1\n\n Card Abilities\n\n Movement Phase\n\n Rapid Reinforcements\n Active\n\n Place a Friendly Point Defence Drone Unit anywhere on the battlefield, more than 1\" away from any Enemy model. Remove this Unit at the End of the Round.\n\n Ready for Pickup?\n Active\n\n Once per Game. The active Unit resolves the PLACE (12) effect. Models placed by this effect cannot be set up Within the Engagement Range of any Enemy Unit. This resolves instead of performing a standard action."
+      },
+      {
+        "faction": "Terran",
+        "id": "terran_armed_forces",
+        "name": "Terran Armed Forces",
+        "slug": "terranarmedforces",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "RESOURCE\n +1 CP\n\n ELITE SLOT\n 1\n\n CORE SLOT\n 3\n\n SUPPORT SLOT\n 1\n\n Card Abilities\n\n Movement Phase\n\n Tactical Retreat\n Active\n\n The active Unit ignores the Disengage penalty for the remainder of the Round.\n\n Terran Tenacity\n Active\n\n Once per Game. Immediately claim the First Player Marker . No other player may claim the First Player Marker for the remainder of this Phase.\n\n UNIT CARDS (7)"
+      },
+      {
+        "faction": "Terran",
+        "id": "goliath",
+        "name": "Goliath",
+        "slug": "goliath",
+        "type": "Abilities",
+        "phases": [
+          "Movement Phase",
+          "Assault Phase",
+          "Combat Phase",
+          "Any Phase - UPGRADES",
+          "Assault Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "-",
+            "supply": "0"
+          },
+          {
+            "models": "1 - 1",
+            "supply": "2"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 7 SPD\n\n - EVA\n\n 4+ ARM\n\n 10 HP\n\n 3 SIZ\n\n SQUAD:\n\n -\n\n Models\n\n 0\n\n Supply\n\n 1 - 1\n\n Models\n\n 2\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 190/0\n\n TAGS: Armoured, Mechanical, Ground\n\n Abilities\n\n Movement Phase\n\n Target Lock\n\n Active\n(1 Command Point)\n\n Select one Enemy Unit Within 12\". Whenever a Friendly Goliath Unit targets that enemy with an Autocannon, that weapon gains Surge Type: Light, Armoured, and S Dice : D3+1.\n\n Assault Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Autocannon\n FOR -\n 12\n Ground\n 9\n 4+\n -\n -\n 1\n LONG RANGE (18\")\n\n Underbelly Machine Gun\n FOR -\n 8\n Ground\n 6\n 3+\n Light\n D3\n 1\n PINPOINT , SIDEARM\n\n Hellfire Missiles\n FOR -\n 16\n Flying\n 6\n 3+\n Light\n D3\n 1\n ANTI-EVADE (1), SIDEARM\n\n Indomitable\n\n Passive\n\n While Engaged , this Unit may target and be targeted by Unengaged Enemy Units . In both cases, the defending Unit gains an Evade Roll against those attacks.\n\n Devastating Charge\n\n Passive\n\n Immediately after this Unit completes a successful Charge , resolve the IMPACT (4) 3+ effect.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Stomp\n FOR -\n E\n Ground\n 4\n 5+\n -\n -\n 1\n\n Upgrades\n\n Any Phase - UPGRADES\n\n Ares-Class Targeting System PTS: 20\n\n Passive\n\n This Unit’s Autocannon and Underbelly Machine Gun weapons gain PRECISION (1).\n\n Assault Phase - UPGRADES\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n PTS\n\n Scatter Missiles\n FOR Hellfire Missiles\n 18\n Ground\n 6\n 5+\n Light\n D3\n 1\n INDIRECT FIRE , LOCKED IN (6), LONG RANGE (24\"), SIDEARM\n 30\n\n Haywire Missiles\n FOR Hellfire Missiles\n 12\n Ground\n 3\n 3+\n Armoured\n D3\n 1\n PIERCE Armoured (3), SIDEARM\n 40"
+      },
+      {
+        "faction": "Terran",
+        "id": "jim_raynor",
+        "name": "Jim Raynor",
+        "slug": "jimraynor",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase",
+          "Assault Phase",
+          "Combat Phase"
+        ],
+        "squadTiers": [
+          {
+            "models": "-",
+            "supply": "0"
+          },
+          {
+            "models": "1 - 1",
+            "supply": "1"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 7 SPD\n\n 5+ EVA\n\n 4+ ARM\n\n 8 HP\n\n 2 SIZ\n\n SQUAD:\n\n -\n\n Models\n\n 0\n\n Supply\n\n 1 - 1\n\n Models\n\n 1\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 230/0\n\n TAGS: Biological, Ground, Unique\n\n Abilities\n\n Any Phase\n\n Commander\n\n Passive\n\n Treat this Unit’s Supply characteristic as increased by 1 for Controlling and Contesting Mission Markers , completing objectives, and resolving Disengage checks.\n\n Freedom Fighters\n\n Passive\n\n The Supply Value of all Friendly Units Within 8\" of this Unit cannot be reduced below 1 for Contesting Mission Markers and completing objectives.\n\n Movement Phase\n\n Orders\n\n Active\n(X Command Point)\n\n REPEATABLE . Select another Friendly Biological Unit Within 8\", spend CP and apply one of the following effects:\n\n1 CP: That Unit’s first used weapon gains the CRITICAL HIT (2).\n\n1 CP: That Unit ignores the Disengage penalty for the remainder of the Round.\n\n2 CP: Remove the Activation Marker from that Unit.\n\n Assault Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Commando Rifle\n FOR -\n 18\n All\n 3\n 3+\n Armoured\n D3\n 1\n BULKY , PIERCE Armoured (3)\n\n C-14 rifle\n FOR Commando Rifle\n 12\n All\n 6\n 3+\n Light\n D3+1\n 1\n BURST FIRE 8\" (3)\n\n “Justice” Revolver\n FOR -\n 6\n Ground\n 2\n 3+\n -\n -\n 2\n ANTI-EVADE (2), SIDEARM , PINPOINT\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Bayonet\n FOR -\n E\n Ground\n 2\n 4+\n Light\n D3\n 1"
+      },
+      {
+        "faction": "Terran",
+        "id": "marauder",
+        "name": "Marauder",
+        "slug": "marauder",
+        "type": "Abilities",
+        "phases": [
+          "Movement Phase",
+          "Assault Phase",
+          "Combat Phase",
+          "Any Phase - UPGRADES",
+          "Assault Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 1",
+            "supply": "0"
+          },
+          {
+            "models": "2 - 2",
+            "supply": "1"
+          },
+          {
+            "models": "3 - 4",
+            "supply": "2"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 4/7 SPD\n\n 6+ EVA\n\n 4+ ARM\n\n 5 HP\n\n 2 SIZ\n\n SQUAD:\n\n 1 - 1\n\n Models\n\n 0\n\n Supply\n\n 2 - 2\n\n Models\n\n 1\n\n Supply\n\n 3 - 4\n\n Models\n\n 2\n\n Supply\n\n PTS: 150/280\n\n TAGS: Armoured, Biological, Ground\n\n Abilities\n\n Movement Phase\n\n Stimpack\n\n Active\n(1 Command Point)\n\n This Unit suffers NON-LETHAL DAMAGE (2). This Unit gains BUFF Speed (3). Additionally, its Quad K12 and all Close Combat Weapons gain PRECISION (2).\n\n Assault Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Quad K12\n FOR -\n 12\n Ground\n 3\n 3+\n Armoured\n D3\n 1\n PIERCE Armoured (2)\n\n Concusive Shells\n\n Reaction\n(1 Command Point)\n\n When an Enemy declares a Charge against a Friendly Unit Within 8\", that Enemy gains DEBUFF Speed (2).\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Strike\n FOR -\n E\n Ground\n 2\n 4+\n -\n -\n 1\n\n Upgrades\n\n Any Phase - UPGRADES\n\n Veteran of Tarsonis PTS: 20/40\n\n Passive\n\n While this Unit is Within 3\" of a Mission Marker, its Armour characteristic is increased by 1.\n\n Kinetic Foam PTS: 20/40\n\n Passive\n\n Increase this Unit's Hit Points characteristic by 1.\n\n Assault Phase - UPGRADES\n\n Laser Targeting Systems PTS: 20/40\n\n Passive\n\n This Unit’s Quad K12 weapon gains LONG RANGE (16\")."
+      },
+      {
+        "faction": "Terran",
+        "id": "marine",
+        "name": "Marine",
+        "slug": "marine",
+        "type": "Abilities",
+        "phases": [
+          "Movement Phase",
+          "Assault Phase",
+          "Combat Phase",
+          "Movement Phase - UPGRADES",
+          "Assault Phase - UPGRADES",
+          "Combat Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 3",
+            "supply": "0"
+          },
+          {
+            "models": "4 - 6",
+            "supply": "1"
+          },
+          {
+            "models": "7 - 9",
+            "supply": "2"
+          }
+        ],
+        "text": "- SHLD\n\n 4/7 SPD\n\n 5+ EVA\n\n 5+ ARM\n\n 2 HP\n\n 2 SIZ\n\n SQUAD:\n\n 1 - 3\n\n Models\n\n 0\n\n Supply\n\n 4 - 6\n\n Models\n\n 1\n\n Supply\n\n 7 - 9\n\n Models\n\n 2\n\n Supply\n\n PTS: 160/210\n\n TAGS: Biological, Light, Ground\n\n Abilities\n\n Movement Phase\n\n Stimpack\n\n Active\n(1 Command Point)\n\n This Unit suffers NON-LETHAL DAMAGE (2). This Unit gains BUFF Speed (3). Additionally, its C-14 Rifle and all Close Combat Weapons gain PRECISION (3).\n\n Assault Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n C-14 rifle\n FOR -\n 12\n All\n 2\n 3+\n Light\n D3\n 1\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Strike\n FOR -\n E\n Ground\n 1\n 5+\n -\n -\n 1\n\n Upgrades\n\n Movement Phase - UPGRADES\n\n Combat Shield PTS: 20/30\n\n Active (1 Command Point)\n\n This Unit is always eligible to make an Evade Roll against any Close Combat Attack targeting it and any Damage from an Enemy Special Ability .\n\n Assault Phase - UPGRADES\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n PTS\n\n AGG-12\n FOR C-14 Rifle\n 12\n Ground\n 2\n 3+\n Armoured\n D3\n 1\n LONG RANGE (18\"), SPECIALIST\n 10\n\n Rocket Launcher\n FOR -\n 12\n Ground\n 4\n 3+\n -\n -\n 1\n INDIRECT FIRE , LONG RANGE (18\"), SIDEARM , SPECIALIST\n 40\n\n Slugthrower PTS: 10/20\n\n Passive\n\n When this Unit makes a Ranged Attack with a C-14 Rifle and the target is Within 8\", that weapon gains ANTI-EVADE (1).\n\n Grenades - Frag PTS: 10\n\n Passive\n\n When this Unit makes a Ranged Attack with a C-14 Rifle and the target is Within 8\", that weapon’s S Dice is replaced by D6.\n\n Combat Phase - UPGRADES\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n PTS\n\n Bayonet\n FOR Strike\n E\n Ground\n 2\n 5+\n -\n -\n 1\n\n 20/30"
+      },
+      {
+        "faction": "Terran",
+        "id": "medic",
+        "name": "Medic",
+        "slug": "medic",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase",
+          "Movement Phase",
+          "Combat Phase",
+          "Any Phase - UPGRADES"
+        ],
+        "squadTiers": [
+          {
+            "models": "1 - 1",
+            "supply": "0"
+          },
+          {
+            "models": "2 - 3",
+            "supply": "1"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 4/7 SPD\n\n 5+ EVA\n\n 5+ ARM\n\n 2 HP\n\n 2 SIZ\n\n SQUAD:\n\n 1 - 1\n\n Models\n\n 0\n\n Supply\n\n 2 - 3\n\n Models\n\n 1\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 110/0\n\n TAGS: Biological, Light, Ground\n\n Abilities\n\n Any Phase\n\n Life Support\n\n Reaction\n(1 Command Point)\n\n Use when another Friendly Biological Unit suffers Damage Within 4\". Reduce the Total Damage before allocation by 1 for each model in this Unit that is Within 4\" of the damaged Unit.\n\n Restoration\n\n Reaction\n(1 Command Point)\n\n Use when a Friendly Unit Within 4\" receives a DEBUFF . Remove all DEBUFFS from it.\n\n Movement Phase\n\n Medpack\n\n Active\n(1 Command Point)\n\n Select another Friendly Biological Unit Within 4\". Resolve the HEAL (X) effect for the targeted Unit, where X is the number of models in this Unit that are Within 4\" of the target Unit.\n\n Optical Flare\n\n Active\n(2 Command Point)\n\n Select one Enemy Unit Within 12\". Until the End of the Round, apply DEBUFF Range (4) to that Unit’s Ranged Weapons. That Unit cannot benefit from LONG RANGE .\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Strike\n FOR -\n E\n Ground\n 1\n 5+\n -\n -\n 1\n\n Upgrades\n\n Any Phase - UPGRADES\n\n Advanced Medic Facilities PTS: 60\n\n Passive\n\n This Unit’s Supply Value counts as 0 when calculating the Supply Pool .\n\n A-13 Flash Grenade Launcher PTS: 20\n\n Passive\n\n Increase the Optical Flare special ability 's Range to 16\".\n\n Stabilizer Medpacks PTS: 30\n\n Passive\n\n When this Unit resolves a Life Support or Medpack ability, treat it as having 1 additional model Within Range for calculating that ability's effects."
+      },
+      {
+        "faction": "Terran",
+        "id": "point_defense_drone",
+        "name": "Point Defense Drone",
+        "slug": "pointdefensedrone",
+        "type": "Abilities",
+        "phases": [
+          "Any Phase"
+        ],
+        "squadTiers": [
+          {
+            "models": "-",
+            "supply": "0"
+          },
+          {
+            "models": "1 - 1",
+            "supply": "0"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n - SPD\n\n 6+ EVA\n\n 6+ ARM\n\n 3 HP\n\n - SIZ\n\n SQUAD:\n\n -\n\n Models\n\n 0\n\n Supply\n\n 1 - 1\n\n Models\n\n 0\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 0\n\n TAGS: Raynor's Raiders, Armoured, Flying, Mechanical\n\n Abilities\n\n Any Phase\n\n Point Defense Laser\n\n Passive\n\n When another Friendly Unit Within 4\" is targeted by a Ranged Attack without the INSTANT keyword, remove up to 2 dice from the Attack Pool. Then remove this Unit from the battlefield.\n\n Gliding\n\n Passive\n\n This model has DISPLACEMENT .\n\n Structure\n\n Passive\n\n This Unit cannot be Activated in any Phase and cannot perform actions. Additionally, its Current Supply Value is treated as 0, and it can never Control or Contest Mission Markers , ignoring the standard Zero Supply Exception. This Unit cannot be a target of an ability, unless stated otherwise."
+      },
+      {
+        "faction": "Terran",
+        "id": "raynor_s_raider__marine_",
+        "name": "Raynor's Raider (Marine)",
+        "slug": "raynorsraidermarine",
+        "type": "Abilities",
+        "phases": [
+          "Movement Phase",
+          "Assault Phase",
+          "Combat Phase"
+        ],
+        "squadTiers": [
+          {
+            "models": "-",
+            "supply": "0"
+          },
+          {
+            "models": "1 - 6",
+            "supply": "1"
+          },
+          {
+            "models": "-",
+            "supply": "0"
+          }
+        ],
+        "text": "ART PLACEHOLDER\n\n - SHLD\n\n 4/7 SPD\n\n 5+ EVA\n\n 5+ ARM\n\n 2 HP\n\n 2 SIZ\n\n SQUAD:\n\n -\n\n Models\n\n 0\n\n Supply\n\n 1 - 6\n\n Models\n\n 1\n\n Supply\n\n -\n\n Models\n\n 0\n\n Supply\n\n PTS: 230/0\n\n TAGS: Raynor's Raiders, Biological, Light, Ground\n\n Abilities\n\n Movement Phase\n\n Stimpack\n\n Active\n(1 Command Point)\n\n This Unit suffers NON-LETHAL DAMAGE (2). This Unit gains BUFF Speed (3). Additionally, its C-14 Rifle and all Close Combat Weapons gain PRECISION (3).\n\n Raiders Roll!\n\n Passive\n\n When this Unit is nominated to deploy from Reserves , it may resolve its Stimpack ability with the CP cost reduced by 1 (to a minimum of 0).\n\n Rapid Reinforcements\n\n Passive\n\n When this Unit is nominated to deploy from Reserves , it may resolve the PLACE (10) effect from another Friendly Unit. No model may be set Within 8\" of any Enemy model. This Unit's Activation ends.\n\n Assault Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n C-14 rifle\n FOR -\n 12\n All\n 2\n 3+\n Light\n D3\n 1\n\n Slugthrower\n\n Passive\n\n When this Unit makes a Ranged Attack with a C-14 Rifle and the target is Within 8\", that weapon gains ANTI-EVADE (1).\n\n Grenades - Frag\n\n Passive\n\n When this Unit makes a Ranged Attack with a C-14 Rifle and the target is Within 8\", that weapon’s S Dice is replaced by D6.\n\n Combat Phase\n\n NAME\n RNG\n TGT\n RoA\n HIT\n SURGE\n S.DIE\n DMG\n KEYWORD\n\n Bayonet\n FOR -\n E\n Ground\n 2\n 5+\n -\n -\n 1\n\n TACTICAL CARDS (10)"
+      },
+      {
+        "faction": "Terran",
+        "id": "academy",
+        "name": "Academy",
+        "slug": "academy",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase"
+        ],
+        "squadTiers": [],
+        "text": "RESOURCE\n +1 CP\n\n SUPPORT SLOT\n 2\n\n Card Abilities\n\n Any Phase\n\n Advanced Training\n Reaction\n\n Once per Round, when a Friendly Support Unit activates a Special Ability that costs CP, resolve that ability with its CP cost reduced by 1 (to a minimum of 0). Do not Exhaust this card."
+      },
+      {
+        "faction": "Terran",
+        "id": "armory",
+        "name": "Armory",
+        "slug": "armory",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase",
+          "Assault Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 CP\n\n ELITE SLOT\n 1\n\n Card Abilities\n\n Any Phase\n\n Vehicle Plating\n Reaction\n\n Use before a Friendly Mechanical Unit makes an Armour Roll. That Unit gains TOUGH (1) for this roll.\n\n Assault Phase\n\n Vehicle Weapons\n Active\n\n The active Mechanical Unit’s first Ranged Weapon used gain CRITICAL HIT (1)."
+      },
+      {
+        "faction": "Terran",
+        "id": "barracks",
+        "name": "Barracks",
+        "slug": "barracks",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "RESOURCE\n +1 CP\n\n CORE SLOT\n 1\n\n Card Abilities\n\n Movement Phase\n\n Go! Go! Go!\n Active\n\n The active Biological Unit performs a 2\" Move action. This does not count towards its action limit."
+      },
+      {
+        "faction": "Terran",
+        "id": "barracks__proxy_",
+        "name": "Barracks (Proxy)",
+        "slug": "barracksproxy",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +2 CP\n\n CORE SLOT\n 2\n\n Card Abilities\n\n Movement Phase\n\n Go! Go! Go!\n Active\n\n The active Biological Unit performs a 2\" Move action. This does not count towards its action limit.\n\n Armed and Ready\n Active\n\n The active Biological Unit Deploys from any table edge that is not a player's Entry Edge . No model may be placed Within 10\" of any Enemy model. This ability cannot be used if another Friendly Biological Unit has already been Deployed this Round."
+      },
+      {
+        "faction": "Terran",
+        "id": "barracks__tech_lab_",
+        "name": "Barracks (Tech Lab)",
+        "slug": "barrackstechlab",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase",
+          "Assault Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +2 CP\n\n ELITE SLOT\n 1\n\n CORE SLOT\n 1\n\n Card Abilities\n\n Movement Phase\n\n Go! Go! Go!\n Active\n\n The active Biological Unit performs a 2\" Move action. This does not count towards its action limit.\n\n Assault Phase\n\n Let's Have a Blast!\n Active\n\n The active Biological Unit’s first Ranged Weapon used gain ANTI-EVADE (1)."
+      },
+      {
+        "faction": "Terran",
+        "id": "dropship",
+        "name": "Dropship",
+        "slug": "dropship",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "RESOURCE\n +1 CP\n\n CORE SLOT\n 1\n\n SUPPORT SLOT\n 1\n\n Card Abilities\n\n Movement Phase\n\n Strap in!\n Active\n\n The active, Unengaged Ground Unit is placed in Reserves instead of performing an action.\n\n Ready For Dust-off\n Active\n\n Place a Faction Indicator anywhere on the battlefield more than 10\" away from any Enemy model. At the End of the Round, the controlling player may Deploy one Ground Unit from Reserves in base-to-base contact with this Faction Indicator."
+      },
+      {
+        "faction": "Terran",
+        "id": "engineering_bay",
+        "name": "Engineering Bay",
+        "slug": "engineeringbay",
+        "type": "Card Abilities",
+        "phases": [
+          "Any Phase",
+          "Assault Phase"
+        ],
+        "squadTiers": [],
+        "text": "RESOURCE\n +1 CP\n\n CORE SLOT\n 1\n\n Card Abilities\n\n Any Phase\n\n Infantry Armor\n Reaction\n\n Use before a Friendly Biological Unit makes an Armour Roll. That Unit gains TOUGH (1) for this roll.\n\n Assault Phase\n\n Infantry Weapons\n Active\n\n The active Biological Unit’s first Ranged Weapon used gains CRITICAL HIT (1)."
+      },
+      {
+        "faction": "Terran",
+        "id": "factory",
+        "name": "Factory",
+        "slug": "factory",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "ART PLACEHOLDER\n\n RESOURCE\n +1 CP\n\n ELITE SLOT\n 2\n\n Card Abilities\n\n Movement Phase\n\n Field Repair\n Active\n\n The active Mechanical Unit resolves the HEAL (2) effect."
+      },
+      {
+        "faction": "Terran",
+        "id": "orbital_command",
+        "name": "Orbital Command",
+        "slug": "orbitalcommand",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "RESOURCE\n +1 CP\n\n CORE SLOT\n 1\n\n Card Abilities\n\n Movement Phase\n\n ComSat Station\n Active\n\n Select one table edge that is not a player’s Entry Edge . Until the End of the Round, Enemy Units cannot Deploy from that edge.\n\n Scanner Sweep\n Active\n\n Place a Faction Indicator anywhere on the battlefield. While Enemy Units are Within 6\" of this Faction Indicator, they lose HIDDEN ."
+      },
+      {
+        "faction": "Terran",
+        "id": "supply_depot",
+        "name": "Supply Depot",
+        "slug": "supplydepot",
+        "type": "Card Abilities",
+        "phases": [
+          "Movement Phase"
+        ],
+        "squadTiers": [],
+        "text": "RESOURCE\n +1 CP\n\n HERO SLOT\n 1\n\n ELITE SLOT\n 1\n\n CORE SLOT\n 1\n\n Card Abilities\n\n Movement Phase\n\n Additional Supply Depots\n Active\n\n The active Unit’s Supply Value is improved by 1 for Controlling and Contesting Mission Markers and completing objectives."
+      }
+    ]
+  }
+]

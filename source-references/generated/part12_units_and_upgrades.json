@@ -1,0 +1,640 @@
+[
+  {
+    "faction": "Terran",
+    "units": [
+      {
+        "name": "Marine",
+        "slug": "marine",
+        "compositionOptions": [
+          {
+            "Models": "6",
+            "Mineral Cost": "160",
+            "Supply Value": "1"
+          },
+          {
+            "Models": "9",
+            "Mineral Cost": "210",
+            "Supply Value": "2"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "AGG-12",
+            "Type": "SPECIALIST , \n ↑ FOR C-14 Rifle",
+            "Mineral Cost\n (6- Models )": "10",
+            "Mineral Cost\n (9- Models )": "10"
+          },
+          {
+            "Upgrade": "Bayonet",
+            "Type": "-",
+            "Mineral Cost\n (6- Models )": "20",
+            "Mineral Cost\n (9- Models )": "30"
+          },
+          {
+            "Upgrade": "Combat Shield",
+            "Type": "-",
+            "Mineral Cost\n (6- Models )": "20",
+            "Mineral Cost\n (9- Models )": "30"
+          },
+          {
+            "Upgrade": "Grenades - Frag",
+            "Type": "-",
+            "Mineral Cost\n (6- Models )": "10",
+            "Mineral Cost\n (9- Models )": "10"
+          },
+          {
+            "Upgrade": "Rocket Launcher",
+            "Type": "SPECIALIST",
+            "Mineral Cost\n (6- Models )": "40",
+            "Mineral Cost\n (9- Models )": "40"
+          },
+          {
+            "Upgrade": "Slugthrower",
+            "Type": "-",
+            "Mineral Cost\n (6- Models )": "10",
+            "Mineral Cost\n (9- Models )": "20"
+          }
+        ]
+      },
+      {
+        "name": "Raynor’s Raider (Marine)",
+        "slug": "raynorsraidermarine",
+        "compositionOptions": [
+          {
+            "Models": "6",
+            "Mineral Cost": "230",
+            "Supply Value": "1"
+          }
+        ],
+        "upgradeCosts": []
+      },
+      {
+        "name": "Marauder",
+        "slug": "marauder",
+        "compositionOptions": [
+          {
+            "Models": "2",
+            "Mineral Cost": "150",
+            "Supply Value": "1"
+          },
+          {
+            "Models": "4",
+            "Mineral Cost": "280",
+            "Supply Value": "2"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "Kinetic Foam",
+            "Type": "-",
+            "Mineral Cost\n (2- Models )": "20",
+            "Mineral Cost\n (4- Models )": "40"
+          },
+          {
+            "Upgrade": "Laser Targeting Systems",
+            "Type": "-",
+            "Mineral Cost\n (2- Models )": "20",
+            "Mineral Cost\n (4- Models )": "40"
+          },
+          {
+            "Upgrade": "Veteran of Tarsonis",
+            "Type": "-",
+            "Mineral Cost\n (2- Models )": "20",
+            "Mineral Cost\n (4- Models )": "40"
+          }
+        ]
+      },
+      {
+        "name": "Medic",
+        "slug": "medic",
+        "compositionOptions": [
+          {
+            "Models": "3",
+            "Mineral Cost": "110",
+            "Supply Value": "1"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "A-13 Flash Grenade Launcher",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "20",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Advanced Medic Facilities",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "60",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Stabilizer Medpacks",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "30",
+            "Mineral Cost": "-"
+          }
+        ]
+      },
+      {
+        "name": "Goliath",
+        "slug": "goliath",
+        "compositionOptions": [
+          {
+            "Models": "1",
+            "Mineral Cost": "190",
+            "Supply Value": "2"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "Ares-Class Targeting System",
+            "Type": "-",
+            "Mineral Cost\n (1-Model)": "20",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Haywire Missiles",
+            "Type": "↑ Hellfire Missiles",
+            "Mineral Cost\n (1-Model)": "40",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Scatter Missiles",
+            "Type": "↑ Hellfire Missiles",
+            "Mineral Cost\n (1-Model)": "30",
+            "Mineral Cost": "-"
+          }
+        ]
+      },
+      {
+        "name": "Jim Raynor",
+        "slug": "jimraynor",
+        "compositionOptions": [
+          {
+            "Models": "1",
+            "Mineral Cost": "230",
+            "Supply Value": "1"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "C-14 rifle",
+            "Type": "↑ Commando Rifle",
+            "Mineral Cost\n (1-Model)": "0",
+            "Mineral Cost": "-"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "faction": "Zerg",
+    "units": [
+      {
+        "name": "Zergling",
+        "slug": "zergling",
+        "compositionOptions": [
+          {
+            "Models": "12",
+            "Mineral Cost": "180",
+            "Supply Value": "1"
+          },
+          {
+            "Models": "18",
+            "Mineral Cost": "220",
+            "Supply Value": "2"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "Adrenal Glands",
+            "Type": "-",
+            "Mineral Cost\n (12- Models )": "30",
+            "Mineral Cost\n (18- Models )": "30"
+          },
+          {
+            "Upgrade": "Burrow Ambush",
+            "Type": "-",
+            "Mineral Cost\n (12- Models )": "20",
+            "Mineral Cost\n (18- Models )": "30"
+          },
+          {
+            "Upgrade": "Shredding Claws",
+            "Type": "↑ Claws",
+            "Mineral Cost\n (12- Models )": "20",
+            "Mineral Cost\n (18- Models )": "20"
+          }
+        ]
+      },
+      {
+        "name": "Raptor (Zergling)",
+        "slug": "raptorzergling",
+        "compositionOptions": [
+          {
+            "Models": "12",
+            "Mineral Cost": "240",
+            "Supply Value": "1"
+          },
+          {
+            "Models": "18",
+            "Mineral Cost": "300",
+            "Supply Value": "2"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "Adrenal Glands",
+            "Type": "-",
+            "Mineral Cost\n (12- Models )": "30",
+            "Mineral Cost\n (18- Models )": "30"
+          },
+          {
+            "Upgrade": "Burrow Ambush",
+            "Type": "-",
+            "Mineral Cost\n (12- Models )": "20",
+            "Mineral Cost\n (18- Models )": "30"
+          },
+          {
+            "Upgrade": "Shredding Claws",
+            "Type": "↑ Claws",
+            "Mineral Cost\n (12- Models )": "20",
+            "Mineral Cost\n (18- Models )": "20"
+          }
+        ]
+      },
+      {
+        "name": "Kerrigan Swarm Raptor (Zergling)",
+        "slug": "kerriganswarmraptorzergling",
+        "compositionOptions": [
+          {
+            "Models": "6",
+            "Mineral Cost": "250",
+            "Supply Value": "1"
+          }
+        ],
+        "upgradeCosts": []
+      },
+      {
+        "name": "Swarmling (Zergling)",
+        "slug": "swarmlingzergling",
+        "compositionOptions": [
+          {
+            "Models": "18",
+            "Mineral Cost": "270",
+            "Supply Value": "1"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "Burrow Ambush",
+            "Type": "-",
+            "Mineral Cost\n (18- Models )": "20",
+            "Mineral Cost": "-"
+          }
+        ]
+      },
+      {
+        "name": "Roach",
+        "slug": "roach",
+        "compositionOptions": [
+          {
+            "Models": "3",
+            "Mineral Cost": "170",
+            "Supply Value": "1"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "Burrow Ambush",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "20",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Glial Reconstitution",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "20",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Hydriodic Bile",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "10",
+            "Mineral Cost": ""
+          },
+          {
+            "Upgrade": "Tunneling Claws",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "10",
+            "Mineral Cost": "-"
+          }
+        ]
+      },
+      {
+        "name": "Vile (Roach)",
+        "slug": "vileroach",
+        "compositionOptions": [
+          {
+            "Models": "3",
+            "Mineral Cost": "200",
+            "Supply Value": "1"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "Burrow Ambush",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "20",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Glial Reconstitution",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "20",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Hydriodic Bile",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "10",
+            "Mineral Cost": ""
+          },
+          {
+            "Upgrade": "Tunneling Claws",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "10",
+            "Mineral Cost": "-"
+          }
+        ]
+      },
+      {
+        "name": "Corpser (Roach)",
+        "slug": "corpserroach",
+        "compositionOptions": [
+          {
+            "Models": "3",
+            "Mineral Cost": "250",
+            "Supply Value": "1"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "Burrow Ambush",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "20",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Glial Reconstitution",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "20",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Hydriodic Bile",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "10",
+            "Mineral Cost": ""
+          },
+          {
+            "Upgrade": "Tunneling Claws",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "10",
+            "Mineral Cost": "-"
+          }
+        ]
+      },
+      {
+        "name": "Hydralisk",
+        "slug": "hydralisk",
+        "compositionOptions": [
+          {
+            "Models": "2",
+            "Mineral Cost": "140",
+            "Supply Value": "2"
+          },
+          {
+            "Models": "4",
+            "Mineral Cost": "260",
+            "Supply Value": "3"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "Ancillary Carapace",
+            "Type": "-",
+            "Mineral Cost\n (2- Models )": "20",
+            "Mineral Cost\n (4- Models )": "40"
+          },
+          {
+            "Upgrade": "Burrow Ambush",
+            "Type": "-",
+            "Mineral Cost\n (2- Models )": "20",
+            "Mineral Cost\n (4- Models )": "40"
+          },
+          {
+            "Upgrade": "Grooved Spines",
+            "Type": "-",
+            "Mineral Cost\n (2- Models )": "20",
+            "Mineral Cost\n (4- Models )": "40"
+          },
+          {
+            "Upgrade": "Lurking",
+            "Type": "-",
+            "Mineral Cost\n (2- Models )": "10",
+            "Mineral Cost\n (4- Models )": "20"
+          }
+        ]
+      },
+      {
+        "name": "Queen",
+        "slug": "queen",
+        "compositionOptions": [
+          {
+            "Models": "1",
+            "Mineral Cost": "150",
+            "Supply Value": "1"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "Creep Speed",
+            "Type": "-",
+            "Mineral Cost\n (1-Model)": "10",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Domineering Presence",
+            "Type": "-",
+            "Mineral Cost\n (1-Model)": "40",
+            "Mineral Cost": "-"
+          }
+        ]
+      },
+      {
+        "name": "Kerrigan",
+        "slug": "kerrigan",
+        "compositionOptions": [
+          {
+            "Models": "1",
+            "Mineral Cost": "250",
+            "Supply Value": "1"
+          }
+        ],
+        "upgradeCosts": []
+      }
+    ]
+  },
+  {
+    "faction": "Protoss",
+    "units": [
+      {
+        "name": "Zealot",
+        "slug": "zealot",
+        "compositionOptions": [
+          {
+            "Models": "3",
+            "Mineral Cost": "160",
+            "Supply Value": "2"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "Leg Enhancements",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "20",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "My Life for Aiur",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "10",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "We Stand as One",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "20",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Zealous Round",
+            "Type": "-",
+            "Mineral Cost\n (3- Models )": "10",
+            "Mineral Cost": "-"
+          }
+        ]
+      },
+      {
+        "name": "Praetor Guard (Zealot)",
+        "slug": "praetorguardzealot",
+        "compositionOptions": [
+          {
+            "Models": "3",
+            "Mineral Cost": "280",
+            "Supply Value": "2"
+          }
+        ],
+        "upgradeCosts": []
+      },
+      {
+        "name": "Adept",
+        "slug": "adept",
+        "compositionOptions": [
+          {
+            "Models": "4",
+            "Mineral Cost": "150",
+            "Supply Value": "1"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "Glaive Strike",
+            "Type": "↑ Strike",
+            "Mineral Cost\n (4- Models )": "20",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Guidance",
+            "Type": "-",
+            "Mineral Cost\n (4- Models )": "10",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Resonating Glaives",
+            "Type": "-",
+            "Mineral Cost\n (4- Models )": "20",
+            "Mineral Cost": "-"
+          }
+        ]
+      },
+      {
+        "name": "Sentry",
+        "slug": "sentry",
+        "compositionOptions": [
+          {
+            "Models": "2",
+            "Mineral Cost": "130",
+            "Supply Value": "1"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "Hallucination",
+            "Type": "-",
+            "Mineral Cost\n (4- Models )": "30",
+            "Mineral Cost": "-"
+          },
+          {
+            "Upgrade": "Solid-Field Projectors",
+            "Type": "-",
+            "Mineral Cost\n (4- Models )": "20",
+            "Mineral Cost": "-"
+          }
+        ]
+      },
+      {
+        "name": "Stalker",
+        "slug": "stalker",
+        "compositionOptions": [
+          {
+            "Models": "1",
+            "Mineral Cost": "160",
+            "Supply Value": "1"
+          },
+          {
+            "Models": "2",
+            "Mineral Cost": "260",
+            "Supply Value": "2"
+          }
+        ],
+        "upgradeCosts": [
+          {
+            "Upgrade": "Fury of the Nerazim",
+            "Type": "-",
+            "Mineral Cost\n (1-Model)": "20",
+            "Mineral Cost\n (2- Models )": "30"
+          },
+          {
+            "Upgrade": "Path of Shadows",
+            "Type": "-",
+            "Mineral Cost\n (1-Model)": "20",
+            "Mineral Cost\n (2- Models )": "40"
+          }
+        ]
+      },
+      {
+        "name": "Artanis",
+        "slug": "artanis",
+        "compositionOptions": [
+          {
+            "Models": "1",
+            "Mineral Cost": "250",
+            "Supply Value": "1"
+          }
+        ],
+        "upgradeCosts": []
+      }
+    ]
+  }
+]

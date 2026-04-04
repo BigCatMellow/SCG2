@@ -1,58 +1,41 @@
-# StarCraft TMG Engine - Phase 1 Foundation
+# StarCraft TMG GitHub Copy
 
-This build is a rules-first rewrite of the uploaded grid mockup.
+This folder is the GitHub-friendly copy of the runtime-driven StarCraft TMG site.
 
-## What is playable right now
+## GitHub Pages layout
 
-- alternating activation in Movement, Assault, and placeholder Combat phases
-- all units begin in reserves
-- supply pool and available supply
-- deployment from entry edges
-- normal move for unengaged units
-- disengage for engaged units
-- Run in Assault Phase (prototype action)
-- Declare Ranged Attack in Assault (targets nearest in-range enemy in this prototype)
-- hold
-- pass and first-player-marker handoff
-- AI opponent for Movement and Assault action selection with objective-aware target heuristics
-- round advancement with supply escalation
-- objective control by current supply at end of round
-- round-end VP scoring and game winner on VP
-- mission-card scoring framework (windows, specific marker scoring, instant-win checks)
-- effect/modifier engine with timing hooks, duration tracking, and priority-based modifier stacking
-- tactical card engine foundations (`PLAY_CARD`) with two starter cards and timing-bound effects
-- validation harness tests for matchup sanity, mission scoring cadence, and edge-case scenarios
+- `index.html` is in the repo root
+- faction pages like `zerg.html`, `protoss.html`, and `terran.html` are also in the repo root
+- `runtime/` stays beside the HTML files so browser module imports work on GitHub Pages
 
-## What is deliberately not finished yet
+That means this copy can be published directly from the repository root on GitHub Pages without needing the old `site/` subfolder.
 
-- full Assault Phase action set (currently Run + Hold + Ranged declaration + Charge declaration)
-- full Combat Phase action set (currently ranged + charge/melee resolution with stochastic dice)
-- faction cards (modifier hooks are now in place)
-- tactical cards
-- advanced terrain interactions
-- advanced melee pile-in/consolidation tactics (basic movement hooks are now in place)
-- reserve arrival exceptions from special abilities
+## What is included
 
-## How the board works
+- the live site pages
+- the shared runtime and data layer
+- rebuild/validation scripts
+- generated rule references used for accuracy checks
 
-- the source of truth is continuous inches, not square occupancy
-- the SVG grid is visual only
-- movement uses a straight-line path in this build
-- non-leading models are auto-set around the leading model
+## Publish target
 
-## Structure
+If you use GitHub Pages, the simplest setup is:
 
-- `data/` holds declarative unit, mission, and deployment data (including mission scoring windows and setup variants)
-- `engine/` holds state, supply, activation, movement, deployment, and legality logic
-- `ui/` renders the board and panels
-- `ai/` picks from the same action system as the player
+1. push this folder as the repository content
+2. set Pages to deploy from the repository root
+3. use the default `index.html` entry page
 
-## Suggested next step
+## Accuracy workflow
 
-Build out card timing + tactical depth next:
+When the `Rules/` source files change, run:
 
-1. card timing hooks
-2. event-driven modifier pipeline
-3. melee pile-in/consolidation movement
-4. advanced charge reactions/overwatch (basic overwatch response hook now in place)
-5. faction + tactical card content
+```bash
+npm run rebuild:runtime
+```
+
+That pipeline will:
+
+1. regenerate extracted rule references
+2. rebuild runtime support/content/detail layers
+3. validate the runtime against the rules
+4. smoke-check the published page structure

@@ -1,0 +1,11 @@
+{
+  "name": "starcraft-tmg-runtime",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "extract:rules": "node ./scripts/extract_rules_reference.mjs",
+    "rebuild:runtime": "node ./scripts/rebuild_and_validate_runtime.mjs",
+    "validate:runtime": "node ./scripts/validate_runtime_against_rules.mjs",
+    "smoke:site": "node ./scripts/smoke_check_site_runtime.mjs"
+  }
+}

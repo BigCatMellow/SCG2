@@ -1,0 +1,145 @@
+[
+  {
+    "faction": "Terran",
+    "tacticalCards": [
+      {
+        "Name": "Barracks",
+        "Vespene Gas Cost": "25"
+      },
+      {
+        "Name": "Barracks (Proxy)",
+        "Vespene Gas Cost": "40"
+      },
+      {
+        "Name": "Barracks (Tech Lab)",
+        "Vespene Gas Cost": "45"
+      },
+      {
+        "Name": "Supply Depot",
+        "Vespene Gas Cost": "40"
+      },
+      {
+        "Name": "Factory",
+        "Vespene Gas Cost": "35"
+      },
+      {
+        "Name": "Engineering Bay",
+        "Vespene Gas Cost": "30"
+      },
+      {
+        "Name": "Armory",
+        "Vespene Gas Cost": "30"
+      },
+      {
+        "Name": "Academy",
+        "Vespene Gas Cost": "35"
+      },
+      {
+        "Name": "Orbital Command",
+        "Vespene Gas Cost": "25"
+      },
+      {
+        "Name": "Dropship",
+        "Vespene Gas Cost": "40"
+      }
+    ],
+    "extraCards": []
+  },
+  {
+    "faction": "Zerg",
+    "tacticalCards": [
+      {
+        "Name": "Spawning Pool",
+        "Vespene Gas Cost": "25"
+      },
+      {
+        "Name": "Spawning Pool (Six Pool)",
+        "Vespene Gas Cost": "40"
+      },
+      {
+        "Name": "Roach Warren",
+        "Vespene Gas Cost": "25"
+      },
+      {
+        "Name": "Hydralisk Den",
+        "Vespene Gas Cost": "35"
+      },
+      {
+        "Name": "Evolution Chamber",
+        "Vespene Gas Cost": "30"
+      },
+      {
+        "Name": "Hatchery",
+        "Vespene Gas Cost": "30"
+      },
+      {
+        "Name": "Lair",
+        "Vespene Gas Cost": "35"
+      },
+      {
+        "Name": "Overseer",
+        "Vespene Gas Cost": "25"
+      },
+      {
+        "Name": "Overlord",
+        "Vespene Gas Cost": "45"
+      }
+    ],
+    "extraCards": [
+      {
+        "Name": "Accelerating Creep",
+        "Vespene Gas Cost": "0"
+      },
+      {
+        "Name": "Malignant Creep",
+        "Vespene Gas Cost": "10"
+      }
+    ]
+  },
+  {
+    "faction": "Protoss",
+    "tacticalCards": [
+      {
+        "Name": "Gateway",
+        "Vespene Gas Cost": "25"
+      },
+      {
+        "Name": "Warp Gate",
+        "Vespene Gas Cost": "40"
+      },
+      {
+        "Name": "Gate Chronoboosted",
+        "Vespene Gas Cost": "40"
+      },
+      {
+        "Name": "Observer",
+        "Vespene Gas Cost": "25"
+      },
+      {
+        "Name": "Nexus",
+        "Vespene Gas Cost": "35"
+      },
+      {
+        "Name": "Nexus Overcharged",
+        "Vespene Gas Cost": "35"
+      },
+      {
+        "Name": "Power Field",
+        "Vespene Gas Cost": "40"
+      },
+      {
+        "Name": "Forge",
+        "Vespene Gas Cost": "30"
+      },
+      {
+        "Name": "Warp Prism",
+        "Vespene Gas Cost": "45"
+      },
+      {
+        "Name": "Twilight Council",
+        "Vespene Gas Cost": "40"
+      }
+    ],
+    "extraCards": []
+  }
+]

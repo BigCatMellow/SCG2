@@ -1,0 +1,3097 @@
+are you able to look at the rules of the game, and build me lists for each army that maximizes builds between faction cards, units and tactical cards. synergy is key and so is maxing out the points available to us. Take on the role as a high level player, youre going to enter a tournament and you need some options to win. Make sure all your lists are rules complient but the best the can be
+
+I’m pulling the army-building rules and the faction data together first, then I’ll turn that into tournament-style lists for each army/faction. I’m going to assume Standard size unless the files clearly point somewhere else, and I’ll flag any places where the data is incomplete.
+
+I’ve confirmed the key list-building constraints: one faction card, units must match its tags, tactical cards spend the 10% Vespene budget, and tactical cards are what open extra slots beyond the faction card. The next step is extracting the actual unit and tactical card pools from each faction file so I can build real lists instead of hand-waving.
+
+I’ve got the legal framework pinned down now. I’m using the exact composition costs and slot math from the quick reference so the lists are not just thematic, but actually legal under Standard army-building.
+
+Yes. I went at this as a tournament prep problem, not a casual list dump.
+
+I assumed Standard play, because the uploaded rules set that at up to 2,000 Minerals and 200 Vespene, with Minerals buying units/upgrades and Vespene buying tactical cards. I also enforced the core list-building constraints: one faction card, faction-tag legality, tactical cards opening extra slots, units occupying slots equal to their starting Supply Value, and summoned units like Pylons, Point Defence Drones, and Roachlings not counting as army-list purchases.
+
+These lists are built from the current Terran, Protoss, and Zerg faction/unit/tactical pools in the uploaded faction files.
+
+My three highest-confidence tournament picks from this pool are:
+Khalai, Kerrigan’s Swarm, and Raynor’s Raiders.
+1) Terran Armed Forces — combined-arms attrition
+
+Total: 2000 Minerals / 200 Gas
+Faction: Terran Armed Forces
+
+Tactical package
+Factory, Armory, Engineering Bay, Barracks (Tech Lab), Academy, Orbital Command
+
+Units
+
+    Goliath — 190
+
+    Goliath — 190
+
+    Marauder (4) + Kinetic Foam, Laser Targeting Systems — 360
+
+    Marine (9) + Bayonet, Combat Shield, Rocket Launcher, Slugthrower — 330
+
+    Marine (6) + AGG-12, Bayonet, Combat Shield, Grenades - Frag, Rocket Launcher, Slugthrower — 270
+
+    Medic (3) + A-13 Flash Grenade Launcher, Advanced Medic Facilities, Stabilizer Medpacks — 220
+
+    Medic (3) + A-13 Flash Grenade Launcher, Advanced Medic Facilities, Stabilizer Medpacks — 220
+
+    Medic (3) + A-13 Flash Grenade Launcher, Advanced Medic Facilities, Stabilizer Medpacks — 220
+
+Why this list is strong
+This is the cleanest “real army” Terran list in the current pool. It stacks:
+
+    mech quality from Factory + Armory for the Goliaths
+
+    infantry efficiency from Engineering Bay + Barracks Tech Lab
+
+    obscene sustain and action economy from triple upgraded Medics
+
+    initiative control from Terran Tenacity
+
+The nasty part is the Medic package. Advanced Medic Facilities makes them much better in the supply game, while the rest of the army is already hard to crack. This list does not win by flashy alpha strikes. It wins by making the opponent fail to remove enough material.
+
+How I’d pilot it
+Deploy bodies first, keep the Goliaths safe until their firing lanes matter, and use the Medics to make every trade feel unfair. This is your best Terran “I want to grind people out over 5 rounds” list.
+2) Raynor’s Raiders — pressure and reserve abuse
+
+Total: 2000 Minerals / 190 Gas
+Faction: Raynor’s Raiders
+
+Tactical package
+Barracks (Proxy), Dropship, Barracks (Tech Lab), Engineering Bay, Academy
+
+Units
+
+    Jim Raynor — 230
+
+    Raynor’s Raider (Marine) (6) — 230
+
+    Marine (9) + AGG-12, Bayonet, Combat Shield, Grenades - Frag, Rocket Launcher, Slugthrower — 350
+
+    Marine (9) + AGG-12, Bayonet, Combat Shield, Grenades - Frag, Rocket Launcher, Slugthrower — 350
+
+    Marauder (4) + Kinetic Foam, Laser Targeting Systems, Veteran of Tarsonis — 400
+
+    Medic (3) + A-13 Flash Grenade Launcher, Advanced Medic Facilities, Stabilizer Medpacks — 220
+
+    Medic (3) + A-13 Flash Grenade Launcher, Advanced Medic Facilities, Stabilizer Medpacks — 220
+
+Why this list is strong
+This is the best Terran tempo list in the current pool.
+The core interaction is:
+
+    Raynor’s Raiders faction movement tricks
+
+    Raynor’s Raider (Marine) reserve/deploy abuse
+
+    Barracks (Proxy) and Dropship for nonstandard angles
+
+    Jim Raynor giving your biological brick extra leverage
+
+This list asks the opponent to screen perfectly. If they do not, you appear somewhere awkward, spike a flank, and force them into bad activation order.
+
+How I’d pilot it
+Use the threat of off-angle deployment before you actually commit. Do not spend your best delivery trick too early. The whole point is to make the opponent deploy and pass awkwardly, then hit where their line is thin.
+3) Khalai — best Protoss tempo list
+
+Total: 2000 Minerals / 200 Gas
+Faction: Khalai
+
+Tactical package
+Power Field, Warp Gate, Twilight Council, Observer, Forge, Gateway
+
+Units
+
+    Artanis — 250
+
+    Stalker (2) + Fury of the Nerazim — 290
+
+    Stalker (1) + Fury of the Nerazim — 180
+
+    Praetor Guard (Zealot) (3) — 280
+
+    Zealot (3) + Leg Enhancements, My Life for Aiur, We Stand as One, Zealous Round — 220
+
+    Zealot (3) + Leg Enhancements, My Life for Aiur, We Stand as One, Zealous Round — 220
+
+    Adept (4) + Glaive Strike, Guidance, Resonating Glaives — 200
+
+    Sentry (2) + Hallucination, Solid-Field Projectors — 180
+
+    Sentry (2) + Hallucination, Solid-Field Projectors — 180
+
+Why this list is strong
+This is the nastiest Protoss list because Khalai gives you two things tournament lists love:
+
+    free board infrastructure via the Pylon
+
+    extra activation leverage via Bound by the Khala
+
+Artanis, Stalkers, Praetors, Zealots, Adepts, and double Sentry means the list plays in every zone:
+
+    ranged pressure
+
+    charge threat
+
+    denial
+
+    durability
+
+    positional cheating
+
+It also punishes mistakes immediately. The opponent gets one screen error, one mis-sequenced activation, or one exposed unit, and the whole Protoss machine folds onto that point.
+
+How I’d pilot it
+Build the turn around Bound by the Khala. Do not think of it as “a bonus activation.” Think of it as “I choose where the phase breaks.” That is the winning skill with this faction.
+4) Daelaam — Protoss control/attrition
+
+Total: 2000 Minerals / 190 Gas
+Faction: Daelaam
+
+Tactical package
+Power Field, Twilight Council, Forge, Gate Chronoboosted, Warp Gate
+
+Units
+
+    Stalker (2) + Fury of the Nerazim, Path of Shadows — 330
+
+    Stalker (1) + Fury of the Nerazim, Path of Shadows — 200
+
+    Praetor Guard (Zealot) (3) — 280
+
+    Zealot (3) + Leg Enhancements, My Life for Aiur, We Stand as One, Zealous Round — 220
+
+    Zealot (3) + Leg Enhancements, My Life for Aiur, We Stand as One, Zealous Round — 220
+
+    Adept (4) + Glaive Strike, Resonating Glaives — 190
+
+    Adept (4) + Glaive Strike, Guidance, Resonating Glaives — 200
+
+    Sentry (2) + Hallucination, Solid-Field Projectors — 180
+
+    Sentry (2) + Hallucination, Solid-Field Projectors — 180
+
+Why this list is strong
+Where Khalai is tempo, Daelaam is control.
+The faction’s flat damage reduction is excellent on expensive shielded bodies, and Mass Recall gives you one huge positional reset button. This list is for players who want to:
+
+    preserve expensive elites
+
+    force inefficient exchanges
+
+    re-stage the board when the opponent finally gets traction
+
+It is less explosive than Khalai, but more forgiving over a long event.
+
+How I’d pilot it
+Play the middle game patiently. Your goal is not to blow the opponent out on turn structure. Your goal is to make them overcommit, then use Daelaam durability and recall pressure to unwind their good turn.
+5) Kerrigan’s Swarm — best Zerg all-comers list
+
+Total: 2000 Minerals / 200 Gas
+Faction: Kerrigan’s Swarm
+Mandatory creep card included: Malignant Creep
+
+Tactical package
+Malignant Creep, Hydralisk Den, Hatchery, Overlord, Overseer, Evolution Chamber, Roach Warren
+
+Units
+
+    Kerrigan — 250
+
+    Kerrigan Swarm Raptor (Zergling) (6) — 250
+
+    Hydralisk (4) + Ancillary Carapace, Burrow Ambush, Grooved Spines, Lurking — 400
+
+    Queen + Creep Speed — 160
+
+    Corpser (Roach) (3) + Glial Reconstitution, Tunneling Claws — 280
+
+    Vile (Roach) (3) + Hydriodic Bile, Tunneling Claws — 220
+
+    Roach (3) + Glial Reconstitution — 190
+
+    Zergling (18) + Adrenal Glands — 250
+
+Why this list is strong
+This is the best Zerg list because it actually behaves like a layered Zerg army:
+
+    Kerrigan as the precision hammer
+
+    KS Raptors as pressure and angle threat
+
+    Hydralisks as ranged damage backbone
+
+    Roach variants as durable midfield control
+
+    Queen + creep package to make the whole table yours
+
+    Omega Worm utility from the faction card
+
+It has speed, board presence, charge pressure, ranged threat, burrow play, creep play, and real attrition.
+
+How I’d pilot it
+Do not treat this like a pure rush list. It is a board-shaping list. Build creep, force the opponent to respect the burrow/arrival vectors, then pick the turn where Kerrigan and the Hydras both hit with support.
+6) Zerg Swarm — board flood with real teeth
+
+Total: 2000 Minerals / 200 Gas
+Faction: Zerg Swarm
+Mandatory creep card included: Malignant Creep
+
+Tactical package
+Malignant Creep, Hydralisk Den, Hatchery, Evolution Chamber, Spawning Pool, Overseer, Overlord
+
+Units
+
+    Hydralisk (2) — 140
+
+    Raptor (Zergling) (18) — 300
+
+    Swarmling (Zergling) (18) — 270
+
+    Corpser (Roach) (3) + Burrow Ambush, Glial Reconstitution, Hydriodic Bile — 300
+
+    Vile (Roach) (3) + Burrow Ambush, Glial Reconstitution, Hydriodic Bile, Tunneling Claws — 260
+
+    Roach (3) + Burrow Ambush, Glial Reconstitution, Hydriodic Bile, Tunneling Claws — 230
+
+    Queen + Creep Speed, Domineering Presence — 200
+
+    Zergling (18) + Adrenal Glands, Burrow Ambush, Shredding Claws — 300
+
+Why this list is strong
+This is the best “classic swarm” list.
+It pressures:
+
+    markers
+
+    deployment space
+
+    disengage math
+
+    activation efficiency
+
+Unlike a fake swarm list, this one still has quality pieces. The Roach block and Queen stop it from being just a pile of bodies, while Malignant Creep and Spawning Pool give the melee wing real bite.
+
+How I’d pilot it
+Contest early, flood space, and make the opponent spend activations cleaning trash while your upgraded Roaches and Queen hold the real center. This is the list for missions where table coverage matters more than precision.
+My actual tournament shortlist
+
+If I had to register three today from this pool, I would take:
+
+    Khalai
+
+    Kerrigan’s Swarm
+
+    Raynor’s Raiders
+
+Why those three:
+
+    Khalai has the best phase control.
+
+    Kerrigan’s Swarm has the best all-phase flexibility.
+
+    Raynor’s Raiders has the best punishment game against imperfect deployment and sequencing.
+
+The two safest “long event” picks are Khalai and Terran Armed Forces.
+The two most explosive are Raynor’s Raiders and Kerrigan’s Swarm.
+
+One honest caveat: I can say these are the strongest lists I can build from the uploaded pool and rules, but I cannot honestly claim they are universally optimal across every mission/deployment pairing. In this ruleset, supply pacing, marker layouts, and activation sequencing matter enough that some matchups will tilt. The lists above are the ones I’d trust most going into a blind tournament field.
+
+Next step could be turning these into clean roster sheets with slot totals, upgrade costs, and a 3-round deployment plan for each.
+
+can you also do skirmish lists?
+
+I can. I’m checking the Skirmish resource cap and then I’ll build smaller, tighter versions that keep the same faction identity instead of just chopping the Standard lists in half.
+
+Skirmish is cleaner to optimize, honestly. On a 36"×36" board with up to 1,000 Minerals and 100 Vespene, bad bloat gets punished fast, so I’m trimming these toward early-board impact and reserve efficiency rather than late-game luxury.
+
+Yes. I tightened the legality on this pass.
+
+One important correction from my first round: Daelaam cannot take Khalai-tagged units like Praetor Guard. The faction rule is strict: every tag on a Unit or Tactical Card has to appear on the chosen Faction Card. I rebuilt the skirmish lists with that in mind. Skirmish is up to 1,000 Minerals, 10% Vespene, on 36" × 36", with Minerals spent on units/upgrades and Vespene spent only on tactical cards.
+
+I also aimed to hit 1,000 Minerals exactly on every list. I did not force every list to 100 Vespene if the extra cards were just filler. The card pools, unit compositions, upgrades, and tactical options are all taken from the uploaded faction files and quick reference.
+Terran Armed Forces — skirmish combined-arms brick
+
+Minerals: 1000
+Vespene: 65
+
+Faction: Terran Armed Forces
+Tactical cards: Factory, Engineering Bay
+
+Units
+
+    Goliath + Ares-Class Targeting System, Scatter Missiles — 240
+
+    Marine (9) + AGG-12, Bayonet, Combat Shield, Grenades - Frag, Slugthrower — 310
+
+    Marine (6) + AGG-12, Bayonet, Combat Shield, Grenades - Frag, Slugthrower — 230
+
+    Medic (3) + Advanced Medic Facilities, A-13 Flash Grenade Launcher, Stabilizer Medpacks — 220
+
+Why this works
+This is the cleanest Terran skirmish list because it keeps the same Standard-game logic: one hard elite anchor, two efficient infantry bodies, and one overperforming support piece. On a small board, the upgraded Goliath gives real threat projection while Engineering Bay makes the Marines punch above cost.
+Raynor’s Raiders — skirmish tempo hit
+
+Minerals: 1000
+Vespene: 80
+
+Faction: Raynor’s Raiders
+Tactical cards: Barracks (Proxy), Dropship
+
+Units
+
+    Jim Raynor — 230
+
+    Raynor’s Raider (Marine) (6) — 230
+
+    Marine (9) + Rocket Launcher, Bayonet, Combat Shield, Grenades - Frag — 320
+
+    Medic (3) + Advanced Medic Facilities, A-13 Flash Grenade Launcher, Stabilizer Medpacks — 220
+
+Why this works
+This is the best Terran skirmish list if you want to win on position and pressure, not just raw trades. Barracks (Proxy) and Dropship stack with the Raiders identity and let you attack awkward edges early. Jim plus the Raider squad gives you a threat package your opponent has to respect from deployment onward.
+Khalai — skirmish tempo/control
+
+Minerals: 1000
+Vespene: 55
+
+Faction: Khalai
+Tactical cards: Forge, Gateway
+
+Units
+
+    Artanis — 250
+
+    Stalker (2) + Fury of the Nerazim, Path of Shadows — 330
+
+    Zealot (3) + Leg Enhancements, My Life for Aiur, We Stand as One, Zealous Round — 220
+
+    Adept (4) + Glaive Strike, Guidance, Resonating Glaives — 200
+
+Why this works
+This is my favorite Protoss skirmish list. It has no wasted piece. Artanis is your bully and insurance policy, the Stalkers are your elite scalpel, the Zealots are your reliable contest/charge body, and the Adepts give you ranged pressure plus board manipulation. On a small table, Bound by the Khala is nasty because every activation matters more.
+Daelaam — skirmish control shell
+
+Minerals: 1000
+Vespene: 80
+
+Faction: Daelaam
+Tactical cards: Gate Chronoboosted, Twilight Council
+
+Units
+
+    Stalker (1) + Fury of the Nerazim, Path of Shadows — 200
+
+    Stalker (1) + Fury of the Nerazim, Path of Shadows — 200
+
+    Zealot (3) + Leg Enhancements, My Life for Aiur, We Stand as One, Zealous Round — 220
+
+    Adept (4) + Glaive Strike, Guidance, Resonating Glaives — 200
+
+    Sentry (2) + Hallucination, Solid-Field Projectors — 180
+
+Why this works
+This is the most technical Protoss skirmish list. It is less blunt than Khalai, but it is more annoying to play into. Double solo Stalkers create real angle pressure, the Sentry gives you space control, and Daelaam’s durability tools make every bad trade from the opponent sting more. This is the list for a patient player.
+Kerrigan’s Swarm — skirmish alpha pressure
+
+Minerals: 1000
+Vespene: 60
+
+Faction: Kerrigan’s Swarm
+Creep card: Malignant Creep
+Tactical cards: Malignant Creep, Spawning Pool, Roach Warren
+
+Units
+
+    Kerrigan — 250
+
+    Kerrigan Swarm Raptor (Zergling) (6) — 250
+
+    Raptor (Zergling) (12) + Adrenal Glands, Burrow Ambush, Shredding Claws — 310
+
+    Roach (3) + Hydriodic Bile, Tunneling Claws — 190
+
+Why this works
+This is the most explosive skirmish list in the bunch. It does not want a slow game. Kerrigan and both Raptor units force immediate respect, while the Roach gives you a sturdier piece that does not evaporate when the initial rush is answered. For Zerg, I enforced the creep-card requirement rather than treating it as optional.
+Zerg Swarm — skirmish board-control swarm
+
+Minerals: 1000
+Vespene: 65
+
+Faction: Zerg Swarm
+Creep card: Accelerating Creep
+Tactical cards: Accelerating Creep, Hydralisk Den, Evolution Chamber
+
+Units
+
+    Hydralisk (2) + Ancillary Carapace, Grooved Spines — 180
+
+    Queen + Creep Speed — 160
+
+    Zergling (12) + Adrenal Glands, Burrow Ambush, Shredding Claws — 250
+
+    Roach (3) + Glial Reconstitution, Hydriodic Bile, Tunneling Claws — 210
+
+    Vile (Roach) (3) — 200
+
+Why this works
+This is the best “real” Zerg Swarm skirmish list because it is not just bugs for the sake of bugs. You get speed from creep, a real ranged elite piece in the Hydras, a Queen to shape the board, and two Roach bodies that stop the list from collapsing to one good enemy volley.
+My skirmish shortlist
+
+If I were actually walking into a tournament, my top three skirmish registrations would be:
+
+    Khalai
+
+    Raynor’s Raiders
+
+    Kerrigan’s Swarm
+
+Why those three:
+
+    Khalai has the best action-sequencing ceiling.
+
+    Raynor’s Raiders punishes deployment mistakes hardest.
+
+    Kerrigan’s Swarm has the highest “you die now” pressure on a 36"×36" table.
+
+If you want, I can do the next layer and give you opening plans for each list—what I would deploy first, what stays in reserve longer, and what each list is trying to kill or contest in rounds 1 and 2.
+
+go for it, lets just focus on zerg for now 
+
+I’m narrowing to Zerg only and checking the exact faction, creep, and slot details again before I map out openers. I’d rather tighten the pilot plans against the actual text than give you generic “rush with bugs” advice.
+
+I’ve got the legal shell again. Now I’m pulling the actual Zerg faction abilities and creep interactions so the opener advice is about how these lists really function in this ruleset, not just how Zerg “usually” functions in other games.
+
+Good call. Zerg is where the most interesting opener decisions are.
+
+I’m going to focus on the skirmish Zerg lists first, because that is where we left off. In this ruleset, nobody starts on the table; everything begins in Reserves and comes in during the Movement Phase as Supply allows. Also, the first player to Pass in a phase takes the First Player Marker for the next phase, so your opener is really about tempo control as much as raw aggression.
+The best blind tournament pick: Kerrigan’s Swarm
+
+If I had to register one Zerg skirmish list without knowing the field, I would take Kerrigan’s Swarm.
+
+Why: this faction gives you Wild Mutation on creep, which adds speed and accuracy to the active unit, and Omega Network, which places an Omega Worm anywhere on ground level more than 10" from enemies. The Worm itself acts as a Source of Creep, strips HIDDEN within 6", and can function as a reserve-entry tool for small-supply units. On top of that, Malignant Creep rewards on-creep charges with better IMPACT hit rolls. That is a real tempo engine, not just “Zerg go fast.”
+How I would open Kerrigan’s Swarm
+
+Round 1 Movement
+Usually, if I win the roll-off, I would give the opponent the marker for Round 1 Movement. The rules explicitly note that going second in Movement lets you react, and passing early can hand you first activation in Assault. That is exactly what this list wants.
+
+My deployment order is usually:
+
+    Roach first, into the safest central lane.
+
+    Raptor unit second, on the flank or behind terrain where it threatens a turn-2 launch.
+
+    Kerrigan stays back unless the board state is unusually favorable.
+
+    Omega Worm only if it creates a real fork, not just because you can.
+
+That last part matters. The Worm is not a gimmick piece. It is your creep anchor and your future launch point. A bad Worm placement is how you throw the game away.
+
+Round 1 Assault
+Do not force bad charges. Basic charge distance is Speed + 1D6, and a failed charge wastes the whole activation. This game punishes lazy melee math.
+
+So Round 1 is often about:
+
+    taking board space,
+
+    threatening charge lanes,
+
+    chipping with the Roach,
+
+    holding Biomass for the turn that actually matters.
+
+Your Raptor chassis is excellent at navigating awkward tables because Raptor Strain ignores a lot of terrain friction, and the unit has charge-boosting tools like Metabolic Boost and Adrenal Overload.
+
+Round 2 spike
+Round 2 is where the list becomes unfair.
+
+This is the turn where you try to stack:
+
+    Omega Worm / creep position
+
+    Wild Mutation
+
+    Malignant Creep
+
+    Kerrigan
+
+    the Raptor pressure piece
+
+Kerrigan has Leaping Strike and Devastating Charge, so she is not just a stat brick; she is your surgical finisher.
+
+What you are trying to kill is not the closest unit. It is the enemy piece that holds their line together:
+
+    support character
+
+    ranged anchor
+
+    durable midfield objective holder
+
+The biggest Kerrigan mistake is charging the first thing in range instead of collapsing the opponent’s structure.
+What not to do with Kerrigan’s Swarm
+
+Do not:
+
+    deploy Kerrigan too early,
+
+    place the Worm where it does not create a next-turn problem,
+
+    charge off-creep when you could wait one turn and do it properly,
+
+    spend Biomass on medium-value attacks.
+
+This list wins by one decisive tempo break, not by trading fairly.
+The safer marker-control pick: Zerg Swarm
+
+If the mission packet leans harder into markers, spread control, and grinding board space, I like Zerg Swarm better.
+
+Why: Brood Instinct gives a reaction bonus to Evade Rolls, and Rapid Burrowing lets you make an unengaged ground Zerg unit Burrowed, even if it already activated. That is outstanding for protecting an exposed piece or preserving a scoring body. Accelerating Creep adds speed while on creep, and this faction has clean access to generic Zerg bodies like Zerglings, Roaches, Hydralisks, and the Queen. The faction-tag rule is strict, so this is also the list where you must remember that Kerrigan Swarm Raptor is illegal here.
+How I would open Zerg Swarm
+
+Round 1 Movement
+This opener is more positional and less explosive.
+
+My usual order:
+
+    Roach or Queen first, depending on the board.
+
+    Zerglings second, to start contesting space.
+
+    Hydras later, once there is a safe lane for them.
+
+If the board is open and dangerous, I start with the Roach.
+If the board is more central-marker focused, I like the Queen earlier.
+
+The Queen matters because her upgrade package is built for board control: Creep Speed makes her much faster on creep, and Domineering Presence boosts another friendly unit’s Supply for controlling or contesting markers.
+
+Rapid Burrowing usage
+This is the key skill test with Zerg Swarm.
+
+Do not think of Rapid Burrowing as a cute trick. It is your way to say:
+“you do not get to punish this unit right now.”
+
+Best targets are usually:
+
+    a Roach that moved up to hold space,
+
+    a Zergling unit that took an aggressive marker,
+
+    occasionally a Queen that is about to eat return fire.
+
+Because the faction ability works even if the unit already activated, you can extend first and then hide. That is a very strong timing pattern.
+
+Round 1 Assault
+With this list, I am much less eager to launch charges unless the geometry is easy. Charges can fail, and failed charges waste activations. Zerg Swarm usually wins by making the opponent clear you off the board piece by piece while you keep scoring.
+
+So my Round 1 priority is:
+
+    take space,
+
+    set scoring positions,
+
+    stay alive,
+
+    make the Hydras arrive into a board state that already favors them.
+
+Round 2
+Round 2 is when the list starts to feel oppressive.
+
+You now want:
+
+    creep lanes established,
+
+    one durable body in the middle,
+
+    one fast body threatening a side marker,
+
+    Hydras entering where they can shoot without immediately dying.
+
+This list is less flashy than Kerrigan’s Swarm, but more forgiving. It wins slower and more honestly.
+Which Zerg list I would actually enter
+
+For a blind tournament:
+
+    Kerrigan’s Swarm if I want the highest ceiling.
+
+    Zerg Swarm if I expect more marker-heavy, grindy games.
+
+Put more bluntly:
+
+    Kerrigan’s Swarm is the predator list.
+
+    Zerg Swarm is the board-control list.
+
+If I thought the field would be a lot of elite, low-model armies, I would lean Kerrigan’s Swarm.
+If I thought the missions would decide more games than raw kills, I would lean Zerg Swarm.
+
+The next useful step is not more listbuilding. It is writing the exact first two rounds for each Zerg list by mission type: kill mission, center-hold mission, and spread-marker mission.
+
+i guess i dont understnad even how to play, what do the tactical cards do, how do i use them effectively. ive never played the game, this is all theory for me. so being able to walk into my first game with a strong understanding of the concepts would help me a lot. how to take advantage of passive abilities and keywords. 
+
+I’m switching from listbuilding to teaching mode. First I’m pulling the exact rules for tactical cards, ability timing, and the key keyword categories, then I’ll turn that into a “how to actually think during a game” guide instead of just reciting definitions.
+
+I’ve got the core timing framework now. The useful part from here is turning the rules language into table habits: what you should be scanning for at the start of a round, when to spend a card, and when to hold it.
+
+Yes — and this is the right place to slow down.
+
+You do not need to learn this game by memorizing every card. The better way is to learn the logic of the system first: what tactical cards are doing, what kinds of abilities exist, when they can fire, and what a keyword is actually changing. Once that clicks, the cards stop looking like random text and start looking like tools.
+The big picture
+
+Think of your army as having three layers.
+
+Your Faction Card says what kind of army you are and what units/cards you are allowed to take. Your Tactical Cards are your infrastructure, doctrines, and extra support systems. Your Units are what actually fight on the table. Tactical Cards also unlock extra army slots, so they are not just “tricks”; they are part of how your army is built in the first place.
+
+That matters because new players often think tactical cards are like one-shot spell cards in another game. They are not. In this ruleset, they are closer to buildings, support infrastructure, and command resources that sit face-up on the table and shape how your army works.
+What tactical cards actually do
+
+A Tactical Card does three jobs.
+
+First, it can unlock extra Army Slots so you are legally allowed to include more or different units. Second, it can provide a resource value when exhausted. Third, it may have one or more special abilities on it.
+
+The resource part is especially important. Each faction has its own resource type — CP for Terran, BM for Zerg, PE for Protoss. You get those resources by Exhausting ready cards. Exhausting means flipping the card face down. If you do that, the card is spent for the round. You cannot partially spend a card, bank leftover resources, or use one burst of generated resource on multiple abilities.
+
+Also, a ready Tactical Card or Faction Card can be exhausted in two different ways:
+
+    to use the ability printed on that card, or
+
+    to generate faction resource for an ability somewhere else, like on a unit card.
+    Once exhausted, it gives no more resources and its abilities cannot be used again until Cleanup refreshes it.
+
+That leads to the first real strategic lesson:
+
+Every tactical card is a choice between present effect and future flexibility.
+
+If you exhaust a card now for a moderate effect, you may lose the ability to pay for a much more important ability later in the round. That is one of the biggest beginner mistakes.
+The three kinds of abilities
+
+Every named ability in the game is one of three types: Active, Passive, or Reaction. If you understand these three, you understand the timing system.
+1) Active abilities
+
+These are deliberate choices you make when your unit is activated. They must happen immediately before declaring an action or immediately after one fully resolves. You cannot interrupt the middle of an action to use one. A unit in reserves normally cannot use them, and a specific named active ability is usually only usable once per round per unit unless it has REPEATABLE.
+
+Plain-English version:
+an Active ability is a button you push on your turn, in a narrow timing window.
+
+A good Zerg example is Wild Mutation from Kerrigan’s Swarm: if the active unit is ON CREEP, it gains BUFF Speed (1) and its first weapon used gains PRECISION (1). That is an active ability, so you build the whole activation around it.
+2) Passive abilities
+
+These are always on while the unit is on the battlefield. They do not require activation and do not cost you a decision at the moment they function. They are off while the unit is in reserves unless a rule says otherwise.
+
+Plain-English version:
+a Passive ability is not a button; it is a condition you want to arrange.
+
+A Zerg example is Malevolent Matriarch on Malignant Creep: if your active Zerg unit declares a charge while ON CREEP, it gets +1 Modifier to IMPACT hit rolls. You do not “activate” that at the table. You earn it by setting up creep and charging from the right place.
+
+Another good example is Zerg Creep on the faction cards, which requires the army to include exactly one creep card. That is passive list structure, not an in-game button.
+3) Reaction abilities
+
+These happen in response to a trigger. They must be declared at the exact moment that trigger occurs. If you miss the window, you lose it. Each player can resolve only one Reaction per activation, and a named reaction on a specific unit is usually only once per round. If both players want to react to the same thing, the active player resolves theirs first.
+
+Plain-English version:
+a Reaction is an interrupt, but the window is strict.
+
+A strong Zerg example is Brood Instinct from Zerg Swarm: use it before a friendly unit makes an Evade Roll to give that roll +1. That means you do not throw it out casually. You save it for the evade that actually matters.
+How to think about keywords
+
+Keywords are standardized rules terms written in bold caps, like PRECISION, PIERCE, HIDDEN, BURROWED, and so on. A keyword means the same thing everywhere it appears. They also do not stack; if you gain the same keyword twice, you only get the highest value.
+
+This matters because beginners often see:
+
+    a passive giving PRECISION (1)
+
+    an active giving PRECISION (1)
+
+    maybe another effect also giving precision
+
+and think those combine into PRECISION (3). They do not, unless the rules text says something different. By default, same keyword does not stack; use the highest value only.
+
+There is another important rule: specific rules beat general rules. So if a card’s text contradicts the basic rulebook, the card text wins.
+
+That gives you the right reading habit:
+
+    identify the ability type,
+
+    identify the phase or trigger,
+
+    identify the keyword it grants,
+
+    check whether a more specific text overrides the default rule.
+
+The beginner mental model for a turn
+
+This is the part I would actually use in a first game.
+
+At the start of a round, ask three questions:
+
+What is my one offensive plan this round?
+Example: “I want a Raptor unit to charge from creep with bonuses.”
+
+What is my one defensive plan this round?
+Example: “I want to save a reaction for the one attack or evade that matters most.”
+
+Which card am I willing to exhaust for that plan?
+Because once a card is exhausted, it is done for the round.
+
+If you cannot answer those, you are probably spending resources too early or too vaguely.
+How phases matter to card usage
+
+In the Movement Phase, you are alternating activations one unit at a time. You can activate a unit on the battlefield to Move, Hold, or Disengage, or activate a unit in reserves to Deploy. The first player to Pass gets the First Player Marker for the next phase.
+
+That rule is bigger than it looks. It means sometimes the strongest play is not doing one more mediocre movement. Sometimes the strongest play is passing first so you control activation order in the Assault Phase.
+
+In the Assault Phase, this is where ranged attacks and charges happen. That is where a lot of your active buffs and passive charge bonuses matter most.
+
+So a lot of tactical-card play is really phase planning:
+
+    set up in Movement,
+
+    spend in Assault,
+
+    keep one reaction available if the opponent can punish you.
+
+What “using a passive well” really means
+
+A passive ability is only “free” in the sense that it costs no decision at the moment it triggers. It is not free in positioning.
+
+That is the key concept.
+
+If your passive says “while ON CREEP,” then the real skill is spreading creep and moving so the fight happens there. If your passive affects enemies within a certain distance, then the real skill is putting that unit in the right place. If your passive boosts a certain kind of attack, then the real skill is choosing the correct target.
+
+So when reading a passive, ask:
+What board state must exist for this to matter?
+
+That one question turns passives from background text into a plan.
+Zerg examples, translated into actual table thinking
+Wild Mutation
+
+Rule text: if the active unit is ON CREEP, it gets BUFF Speed (1) and its first weapon gains PRECISION (1).
+
+What that means in practice:
+
+    do not spend it on a unit that is only jogging somewhere irrelevant
+
+    use it on the unit whose first attack or charge matters most
+
+    it is best when the extra speed changes whether you can reach a marker, line up a charge, or get a first meaningful weapon attack
+
+This is not just “more stats.” It is a timing spike.
+Brood Instinct
+
+Rule text: use before a friendly unit makes an Evade Roll; give it +1.
+
+What that means in practice:
+
+    do not waste it on a low-value shot
+
+    use it when a failed evade would expose a key scorer, anchor, or support piece
+
+    because reactions are limited, every use of this means you are giving up other reaction opportunities that activation
+
+This is a “save the important piece” tool, not a casual efficiency tool.
+Rapid Burrowing
+
+Rule text: choose a friendly unengaged ground Zerg unit; it gains Burrowed, even if it already activated this round.
+
+What that means in practice:
+
+    you can move a unit up, take space, and then hide it
+
+    that makes it excellent for preserving a marker-holder or a forward piece
+
+    this is a classic tempo tool: extend first, protect second
+
+That is much stronger than it looks, because it changes the usual risk of moving forward.
+Malevolent Matriarch
+
+Rule text: charging while ON CREEP gives +1 to IMPACT hit rolls.
+
+What that means in practice:
+
+    creep is not decoration
+
+    if you are planning melee, creep placement is part of your attack sequence
+
+    if you charge off-creep when you could have waited a turn and charged on-creep, you may be throwing away free value
+
+A simple first-game framework for reading any card
+
+When you pick up a card, read it in this order:
+
+1. What type is it?
+Active, Passive, or Reaction.
+
+2. When does it happen?
+Any phase, movement phase, assault phase, before an evade roll, after a charge, and so on.
+
+3. What is the condition?
+On creep, within 6", friendly unit, unengaged, ground, etc.
+
+4. What resource does it cost?
+If it costs BM/CP/PE, ask which ready card you are willing to exhaust for it.
+
+5. What keyword or modifier does it create?
+PRECISION, BUFF Speed, BURROWED, IMPACT bonus, and so on. Then remember keywords do not stack by default.
+
+If you do those five steps, most cards become readable.
+The most common beginner mistakes
+
+The first is spending resources on the first legal option instead of the best option. Because exhausting a card is round-long, impatience gets punished.
+
+The second is forgetting the timing window. Active abilities are not mid-action tricks; reactions are not retroactive; passives are not buttons you click.
+
+The third is misreading keywords as flavor text. In this game, tags and keywords are mechanical. Combat tags matter for targeting and surge. Keywords are rules objects, not decoration.
+
+The fourth is ignoring tempo from passing. The first player to pass gets the marker for the next phase, so passing can be a deliberate tactical choice, not just “I’m done.”
+
+The fifth is treating tactical cards as disconnected from army design. They are also your slot structure and resource base.
+What I would memorize before a first game
+
+Only this:
+
+Tactical cards
+
+    unlock slots
+
+    sit face-up
+
+    can be exhausted for their own ability or for faction resource
+
+    once exhausted, they are done for the round
+
+Ability types
+
+    Active = your turn, before/after an action
+
+    Passive = always on while on battlefield
+
+    Reaction = exact trigger window, one reaction per activation per player
+
+Keywords
+
+    standardized rules terms
+
+    do not stack unless specifically overridden
+
+    higher numeric value wins
+
+Practical habit
+
+    one offensive plan
+
+    one defensive plan
+
+    one card you are willing to exhaust to support them
+
+That is enough to start playing without feeling lost.
+
+The next best thing would be for me to make you a Zerg beginner play guide with one sample skirmish list and a “Round 1 / Round 2 / what to spend / what to save” walkthrough.
+
+explain the on creep stuff to me, i just dont understand it 
+
+I’m pulling the exact Creep rules text and the places where “ON CREEP” is defined, because this is one of those terms that only feels confusing until you see what the board state actually has to look like.
+
+Yes. The simplest way to understand it is:
+
+“On Creep” is not a separate action. It just means a Ground Zerg unit is close enough to Zerg creep infrastructure that certain bonuses turn on. A Ground Zerg unit is ON CREEP if it is within 6" of either a Creep Tumor token or a model that is a Source of Creep. That state exists for friendly or enemy Ground Zerg units.
+
+So in plain English:
+
+If your Zerg unit is standing near the goo, its “on creep” bonuses work. If it is not near the goo, they do not.
+What actually creates creep
+
+Your Zerg faction requires you to pick exactly one Creep Card during army building. That card is part of your army, not an optional add-on.
+
+Then, during the game, creep usually comes from two places:
+
+1. Creep Tumor tokens
+Cards like Accelerating Creep and the Overlord’s Excrete Creep ability can place a Creep Tumor token within 6" of your entry edge or an existing friendly Creep Tumor token. That is how creep spreads across the board.
+
+2. A Source of Creep model
+An Omega Worm has Source of Creep, which means any Ground Zerg unit within 6" of it counts as ON CREEP.
+
+So the board picture is:
+
+    Creep Tumor token here
+
+    Omega Worm there
+
+    any Ground Zerg unit within 6" of one of those counts as ON CREEP
+
+That is it.
+What “ON CREEP” gives you by itself
+
+By itself, ON CREEP does not automatically mean “you get all-purpose stats.”
+What it really does is unlock rules that specifically say “if this unit is ON CREEP…” The glossary says being ON CREEP lets the unit trigger abilities or upgrades that require that state.
+
+So you should think of ON CREEP like a switch:
+
+    off creep = switch off
+
+    on creep = switch on
+
+The bonus comes from the card text, not from the keyword alone.
+Examples so it feels real
+
+Here are concrete examples from your Zerg files.
+
+Kerrigan’s Swarm — Wild Mutation
+If the active unit is ON CREEP, it gets BUFF Speed (1) and its first weapon gets PRECISION (1). So if your Raptor unit is near creep when it activates, it moves faster and its first attack is more accurate. If it is not near creep, that faction ability does nothing for that unit.
+
+Accelerating Creep — Speed on Creep
+If the active friendly Zerg unit is ON CREEP, its Speed increases by 1. Again, the creep is not damage by itself. It is the condition that turns this bonus on.
+
+Malignant Creep — Malevolent Matriarch
+If the active friendly Zerg unit declares a Charge while ON CREEP, it gets +1 to IMPACT hit rolls. That means a melee Zerg unit wants to start that charge while inside the 6" creep zone.
+
+Swarmling / Zergling Reconstitution
+It gets RESPAWN (2) normally, but RESPAWN (3) if the unit is ON CREEP. Same idea: creep is the condition that upgrades the effect.
+The part that usually confuses people
+
+Most people picture creep as “the whole purple floor area.”
+
+In these rules, it is better to picture it as a set of 6" bubbles around:
+
+    each Creep Tumor token
+
+    each model with Source of Creep
+
+That mental model makes the rule much easier.
+
+Not:
+“am I somewhere on the Zerg side of the board?”
+
+But:
+“am I within 6 inches of one of my creep sources right now?”
+Important gotchas
+
+Only Ground Zerg units care about ON CREEP.
+The definition is specifically for Ground Zerg units. So not every model in your army automatically benefits.
+
+Enemy Ground Zerg can also count as ON CREEP.
+The rule says friendly or enemy Ground Zerg units. So in a Zerg mirror match, your opponent can benefit from your creep if they are in the zone.
+
+Creep Tumors are removable.
+Cards like Accelerating Creep and Malignant Creep say if an enemy unit ends a Move, Deploy, Run, Charge, or Disengage within 1" of a friendly Creep Tumor token, that token is removed. So your creep network can be disrupted.
+How to use this well in a game
+
+The practical lesson is:
+
+Do not think “I have creep, so I’m stronger.”
+Think:
+“I want this specific unit’s activation to happen inside a creep bubble.”
+
+For example:
+
+    if you want a charge unit to hit harder, make sure it starts its charge ON CREEP
+
+    if you want a fast turn, activate a unit that is ON CREEP while your speed bonus is available
+
+    if you want to respawn more models, keep that unit near creep before using the ability
+
+So creep is really a positioning tool. It rewards you for staging your attack from the right place.
+One super short version to memorize
+
+Memorize this:
+
+ON CREEP = Ground Zerg unit within 6" of a Creep Tumor or Source of Creep.
+Being ON CREEP does not do something by itself; it turns on other card text.
+
+If you want, I can do the next step and draw out a very simple fake battlefield example in text, like “Tumor here, unit here, yes/no on creep,” which usually makes it click fast.
+
+so do you keep adding tokens to the board each round?
+
+I’m checking the exact timing on Creep Tumor placement, because the answer is probably “sometimes, not automatically,” and the timing text matters here.
+
+Not automatically.
+
+The way it reads from the Zerg creep cards is:
+
+    You place more Creep Tumor tokens only when you use a rule that tells you to place one, such as Creep Spread. That ability says to place a Creep Tumor token within 6" of either your friendly entry edge or an existing friendly Creep Tumor token.
+
+    Because tactical and faction cards are either Ready or Exhausted, and an exhausted card cannot be used again until Cleanup refreshes it, that usually means you are not spraying out free tumors nonstop. You use the card, it exhausts, and then it comes back next round.
+
+So the practical answer is:
+
+You can keep adding creep over the game, but not “one free token every round just because it’s a new round.”
+You add them when you spend the relevant creep-card ability.
+
+Also, the old ones do not usually vanish on their own:
+
+    Creep Tumor tokens have STAY IN PLAY, so they remain on the battlefield through cleanup.
+
+    But they can be removed if an enemy unit ends a Move, Deploy, Run, Charge, or Disengage within 1" of one of your Creep Tumor tokens.
+
+So the real table flow is:
+
+    Start with your chosen creep card in your army.
+
+    Use Creep Spread when you want to extend your creep network.
+
+    That token stays there unless the enemy steps close enough to clear it.
+
+    Next round, once the card refreshes, you can do it again.
+
+A good simple mental model is:
+
+Creep grows like a chain of nodes, not like the whole board gets a fresh coating every round.
+
+If you want, I can do a very simple “Round 1 / Round 2” Zerg creep example with exact token placement logic in plain English.
+
+how does the omega worm work? how do i place it on the board?
+
+I’m pulling the exact Omega Worm and Omega Network text so I can answer this as “what you physically do on the table,” not just card jargon.
+
+Yes. The Omega Worm is basically a forward tunnel node for Kerrigan’s Swarm.
+
+The important part is this: you do not deploy it from your entry edge like a normal unit. In the Movement Phase, Kerrigan’s Swarm has Omega Network. If there is no friendly Omega Worm already on the battlefield, you place a friendly Omega Worm anywhere on ground level, as long as it is more than 10" away from any enemy model.
+
+So on the table, what you physically do is:
+
+    Wait until a Movement Phase.
+
+    Use Omega Network from the Kerrigan’s Swarm faction card.
+
+    Check that you do not already have a friendly Omega Worm on the battlefield.
+
+    Put the Omega Worm model anywhere legal on ground level, keeping it over 10" from all enemy models.
+
+That is the placement rule. It is not a move, not a deploy from reserves, and not tied to your table edge. You just place it where the faction ability allows.
+
+The big catch is that the round you place it, it cannot use its special abilities, except Structure. So the turn it appears, it is mostly just establishing position.
+
+After that, the Worm becomes useful in three main ways.
+
+First, it is a Structure. That means it cannot be activated, cannot perform actions, its current supply is treated as 0, it cannot control or contest mission markers, and it normally cannot be the target of abilities unless something specifically says otherwise.
+
+Second, it is a Source of Creep. A friendly or enemy Ground Zerg unit within 6" of it counts as ON CREEP. So once the Worm is functioning, it creates one of those 6" creep bubbles we talked about.
+
+Third, its base counts as an Entry Edge. Each round, friendly units with a combined Supply cost of 2 or less may be deployed via the Omega Worm’s base instead of your normal entry edge.
+
+That last part is the real power.
+
+Normally, all your units start in Reserves and arrive during the Movement Phase as Supply allows. A unit can only be deployed if you have enough Available Supply, and when a unit arrives it cannot end that arrival inside the enemy’s Zone of Influence.
+
+The Worm lets you do that arrival from the Worm’s base instead of from your board edge. In other words, it gives you a forward tunnel mouth. When a unit deploys from an entry edge, the leading model enters first, the rest are set in coherency, and the unit still cannot finish inside the enemy zone of influence.
+
+It also has a pickup function. If a friendly unit’s leading model finishes a Move, Run, or Disengage in base-to-base contact with the Omega Worm, you may remove that unit from the battlefield and return it to Reserves. When that happens, its used Supply is released, and if you redeploy it later, it keeps its upgrades and existing damage.
+
+So the simplest version is:
+
+Place Worm forward.
+Next round, use it as a mini-entry edge.
+Small units can come out there.
+Units touching it can also go back into reserves.
+
+The most common beginner misunderstanding is thinking the Worm is a monster you send in to fight. It is not. It is more like:
+
+    a forward spawn point,
+
+    a creep anchor,
+
+    and a transport node.
+
+A good beginner way to use it is:
+
+    place it somewhere annoying but safe,
+
+    not too close to the enemy,
+
+    and near a lane where a small unit arriving next round would matter.
+    Do not throw it somewhere flashy if the position does not help future deployments.
+
+One important rules-reading note: because the placement text says the Worm cannot use its special abilities the round it is placed, I would play it as not giving the entry-edge network or creep-source benefits until after that round, with only Structure functioning immediately. That is the plain reading of the text.
+
+A simple example:
+
+Round 1 Movement: you place the Omega Worm behind central cover, more than 10" from enemies.
+Round 2 Movement: now its base is acting like an entry edge, so you deploy a small Zerg unit through it, and that area also becomes a creep anchor.
+
+If you want, the next thing I can do is draw a tiny fake battlefield example in text, like “enemy here, worm here, legal / illegal placements,” which would probably make it click immediately.
+
+i love this breakdown for the unit, can you do that for all the units in the zerg army?
+
+I’m mapping the Zerg roster into plain-English battlefield roles now. I’ll keep the same format as the Omega Worm explanation: what the unit is, what it actually does on the table, what beginners usually miss, and how to use it without getting cute.
+
+Yes. I’ll do it the same way: what the unit is, what it really does on the table, what beginners miss, and how to use it without overcomplicating it.
+
+One important rules note first: the Zerg file has 12 unit cards, and Overlord/Overseer are tactical cards, not units. Also, Kerrigan Swarm Raptor and Omega Worm carry the Kerrigan’s Swarm tag, so they are not legal in plain Zerg Swarm armies, because every tag on a unit has to appear on your faction card.
+Kerrigan
+
+What she is: your assassin, bully piece, and problem-solver. She is fast, has high HP for Zerg, can manipulate enemy activations with Crushing Grip, can become much harder for one enemy to hurt with Mutating Carapace, can PLACE (6) with Leaping Strike, hits with IMPACT (4) on a successful charge, and her melee weapon throws a lot of attacks with CRITICAL HIT (2).
+
+What she really does: she is not just a beatstick. She is the piece that lets you decide which enemy unit matters this turn. Sometimes that means killing it. Sometimes that means shutting down its movement activation. Sometimes that means jumping into a weak angle and forcing the opponent to react.
+
+What beginners miss: the mistake is charging Kerrigan into the nearest target because she looks scary. She is too valuable for that. Her best use is deleting the enemy’s support piece, anchor shooter, or objective-holder.
+
+How I’d use her: keep her as your “answer piece.” Let your cheaper units create the mess, then use Kerrigan to break the opponent’s structure.
+Kerrigan Swarm Raptor
+
+What it is: the elite version of the raptor unit. It has the same mobility theme, but each model is tougher and deadlier than a normal Raptor. It has Raptor Strain, Leap for extra charge distance, Adrenal Overload for better IMPACT, Devastating Charge, and melee attacks with INSTANT and strong surge output.
+
+What it really does: this is your precision missile unit. It exists to hit first, hit hard, and hit somewhere awkward. It is much less of a tarpit and much more of a hunter-killer squad.
+
+What beginners miss: because it is fast, people overexpose it. Fast does not mean disposable. It means it gets to choose fights better than most units.
+
+How I’d use it: use terrain, creep, and charge setup so that when it commits, it is hitting something important and not just trading into chaff.
+Omega Worm
+
+What it is: not a fighter, but a battlefield node. It has Detection, is a Source of Creep, is a Structure, and its base counts as an Entry Edge for small-supply deployments. It can also send friendly units back to reserves if they finish a move, run, or disengage in base contact with it.
+
+What it really does: it is a forward spawn point, creep anchor, and transport node all at once. It lets Kerrigan’s Swarm project pressure away from the normal entry edge.
+
+What beginners miss: they treat it like a monster. It is not. The Worm wins by where it is placed, not by what it attacks.
+
+How I’d use it: place it where a future small-unit deployment or creep bubble will matter, not where it merely looks aggressive.
+Queen
+
+What she is: the glue piece in a Zerg army. She can Spawn Creep Tumor, reduce damage with Transfusion, remove debuffs with Restoration, and discount one special ability per round if enough friendly models are near her via Psionic Link. With upgrades, she also gets much faster ON CREEP and can boost another unit’s supply for marker control with Domineering Presence.
+
+What she really does: she turns a pile of units into an army. She supports, stabilizes, grows creep, and helps you win missions instead of only fights.
+
+What beginners miss: they often try to use the Queen like a front-line brawler first. She can fight, but that is not why she is valuable. Her value is that she makes everything around her better.
+
+How I’d use her: keep her near the important cluster of your army, especially in marker games. She should be close enough to matter, not so far forward that she dies for no reason.
+Hydralisk
+
+What it is: your cleanest ranged damage unit. It has long basic shooting with Needle Spines, a reaction called Lunge that lets it move and charge after another friendly unit nearby is targeted by a ranged attack, and upgrades that make it tougher, longer-ranged, and better while stationary or on creep.
+
+What it really does: this is your ranged anchor. It punishes exposed enemy units and gives Zerg a real threat that does not depend on melee getting there first.
+
+What beginners miss: they either overprotect Hydras and get too little value, or they throw them too far forward and lose them immediately. Hydras want lanes, cover, and support.
+
+How I’d use it: set up safe fire lanes and make the opponent come into its threat. Think of Hydras as your punishment tool, not your spear tip.
+Zergling
+
+What it is: the baseline fast melee swarm unit. It has Metabolic Boost for better charge distance, Devastating Charge, and upgrades that improve accuracy with Adrenal Glands and improve anti-armour relevance with Shredding Claws.
+
+What it really does: it is your cheap pressure body. It threatens markers, screens space, ties things up, and punishes weak flanks.
+
+What beginners miss: they expect Zerglings to kill everything. That is not their job. Their job is often to be in the right place, force awkward activations, and make your real hitters better.
+
+How I’d use it: use them to flood space and make the opponent spend actions inefficiently.
+Swarmling
+
+What it is: the more disposable, attrition-oriented Zergling variant. It has worse raw fighting stats than a regular Zergling, but it gets Zergling Reconstitution, which lets it RESPAWN, and that improves further while ON CREEP.
+
+What it really does: this is not your “killer Zergling” unit. It is your annoyance, tarpitting, scoring, and board-control unit.
+
+What beginners miss: they compare Swarmlings to normal Zerglings as pure damage pieces and think they are worse. They are worse at killing. They are better at being a recurring problem.
+
+How I’d use it: use them in games where holding space matters more than clean trades.
+Raptor
+
+What it is: the fast, aggressive Zergling variant. It has Raptor Strain, which lets it move through a lot of terrain and change elevation without access points, plus Metabolic Boost, Adrenal Overload, and Devastating Charge.
+
+What it really does: this is your flanking missile. Raptors exist to exploit board geometry better than standard melee units.
+
+What beginners miss: they assume “faster Zergling” means “just send it first.” That is how you lose it. Raptors are best when they attack from weird lanes the opponent did not properly protect.
+
+How I’d use it: keep them just out of reach until the turn when terrain, creep, and charge math line up.
+Roach
+
+What it is: the basic Zerg anvil. It can Burrow, heals if activated while Burrowed, has decent ranged and melee profiles, and can be upgraded for tunnel movement, ambush deployment, better speed, and better ranged surge.
+
+What it really does: this is your dependable mid-board body. It does not do one flashy thing; it does several useful things well enough to be annoying.
+
+What beginners miss: they think Roaches are boring. Boring is good. Roaches hold ground, absorb pressure, and make your more fragile pieces easier to use.
+
+How I’d use it: move them into the center or into the lane the opponent has to respect, then dare the enemy to spend real effort removing them.
+Corpser
+
+What it is: the more explosive Roach variant. It still has burrow and regeneration, but it also has Roachling Infestation to summon Roachlings once per game, and its charge impact is better than a regular Roach’s.
+
+What it really does: it is your Roach with extra board presence. It brings the usual Roach durability package, but also creates more bodies and more congestion.
+
+What beginners miss: they wait too long for the perfect Roachling summon. Usually the right timing is whenever those extra bodies will change board control, not whenever the cinematic moment appears.
+
+How I’d use it: use Corposers in the midfield, where the summon actually matters for screening, contesting, or clogging movement.
+Vile
+
+What it is: the control/disruption Roach. It has Debilitating Saliva, a reaction that weakens an enemy unit’s ranged attacks, plus the usual burrow/regeneration package and slightly more aggressive ranged pressure.
+
+What it really does: this is your anti-shooting tax piece. It tells the opponent that if they want to lean on ranged pressure near it, their efficiency drops.
+
+What beginners miss: they play it like a normal Roach and forget the reaction. That is the whole reason to bring it. The unit’s value is partly psychological: it makes enemy shooting less clean.
+
+How I’d use it: park it where enemy shooters want to operate. It should make the opponent’s best shooting lane feel awkward.
+Roachling
+
+What it is: a summoned disposable body, not a real roster centerpiece. It is free, fragile, and simple. Its only notable special rule is that it cannot gain Burrowed.
+
+What it really does: screen, clog, contest, and be irritating. That is enough.
+
+What beginners miss: they try to make Roachlings do real work. They are not there to win duels. They are there to waste enemy time and space.
+
+How I’d use it: throw them in the way of things that would rather not deal with them.
+The cleanest way to think about the whole Zerg roster
+
+If you want one simple mental model, it is this:
+
+Zerglings / Swarmlings / Raptors are your space and pressure pieces.
+Roaches / Corposers / Viles are your midfield and durability pieces.
+Hydralisks are your ranged punishment.
+Queens are your glue and support.
+Kerrigan is your knife.
+Omega Worm is your positioning engine.
+
+For a brand-new player, I would start by understanding them in exactly those buckets, not as twelve separate puzzles.
+
+The next most useful step would be doing the same style of breakdown for the Zerg tactical cards, because that is where the army’s real “engine” lives.
+
+can you do the same for the tactical cards?
+
+I’m pulling the Zerg tactical card section directly so I can do the same thing cleanly: what each card is, what it really does, what beginners misread, and how to use it on the table.
+
+Yes. And for Zerg, this is arguably even more important than the unit breakdown, because the tactical cards are where the army’s engine lives.
+
+A quick framing point first:
+
+Tactical cards are not just little bonus effects. They are part of your army’s structure. They are bought with Vespene Gas, they can unlock extra Army Slots, they generate Biomass (BM) when exhausted, and they also carry special abilities. A ready tactical card can either be exhausted to use its own effect, or exhausted to pay for an ability somewhere else. Once exhausted, it is done for the round until Cleanup.
+
+So the right beginner mindset is:
+
+Units are your bodies. Tactical cards are your support network.
+
+I’ll do these the same way as the units:
+what it is, what it really does, what beginners miss, and how I’d use it.
+
+All of the card-specific effects below come from the Zerg tactical-card section of the uploaded faction file.
+Accelerating Creep
+
+What it is: the pure mobility creep card. It costs 0 Gas, and its main payoff is simple: if the active friendly Zerg unit is ON CREEP, increase its Speed by 1. It also gives your Creep Tumor tokens STAY IN PLAY and DISPLACEMENT, and enemy units can remove those tumors by ending certain moves within 1" of them.
+
+What it really does: this is your “my army gets where it needs to be” card. It does not kill anything by itself. It makes your timing and positioning better.
+
+What beginners miss: they think “+1 Speed” is small. It is not. In a game with charge math, deployment pressure, and marker races, +1 Speed is often the difference between:
+
+    making a charge,
+
+    reaching a marker,
+
+    getting behind cover,
+
+    or threatening a lane one turn earlier.
+
+How I’d use it: if your list wants to flood space, stage charges, or keep tempo up, this is the safest creep card. It is the easiest Zerg card for a new player to get value from.
+Malignant Creep
+
+What it is: the aggressive creep card. It also keeps Creep Tumors in play and removable the same way, but its real payoff is Malevolent Matriarch: if the active friendly Zerg unit declares a Charge while ON CREEP, it gets +1 to IMPACT hit rolls.
+
+What it really does: this is the “my melee turn hits harder” card. It converts good creep positioning into better charge damage.
+
+What beginners miss: they think it is a passive stat boost. It is not. It only matters if you are:
+
+    ON CREEP, and
+
+    actually charging.
+
+So it rewards planning, not just existing.
+
+How I’d use it: take this if your list is built to hit with Raptors, Zerglings, Kerrigan, or charging Roaches. If your game plan is mostly board control and ranged pressure, Accelerating Creep is usually easier and cleaner.
+Hatchery
+
+What it is: a support/board-state card. It gives a Support Slot and +1 BM. In the Movement Phase, it gives you Lie in Wait to make the active unengaged ground unit gain Burrowed, and Creep Spread to place a Creep Tumor within 6" of your entry edge or an existing friendly tumor.
+
+What it really does: this card is about setting the board up rather than spiking a fight. It helps you extend creep and protect units by putting them underground.
+
+What beginners miss: they often compare it to a damage card and think it is weak. That is the wrong comparison. Hatchery is not a punch card. It is a staging card.
+
+How I’d use it: bring it when your plan involves creep control, burrow tricks, or a slower game where the board shape matters.
+Lair
+
+What it is: a more aggressive tech card. It gives +1 BM, 1 Elite Slot, and 1 Core Slot. It has Predation, which gives the active unit’s close-combat weapons INSTANT, and it also has Creep Spread in the Movement Phase.
+
+What it really does: this is a hybrid card. It both develops your creep network and improves your melee spike turn.
+
+What beginners miss: they often see “INSTANT” and just think “good melee buff.” But what matters is that it sharpens the unit’s attack timing. It is not just damage; it is making the attack more decisive.
+
+How I’d use it: if your list wants both creep development and a meaningful melee threat, Lair is one of the best flexible cards in the whole faction.
+Evolution Chamber
+
+What it is: a core support card. It gives +1 BM and 1 Core Slot. It has Carapace, a reaction used before a friendly unit makes an Armour Roll to gain TOUGH (1) for that roll, and Extended Claws, which gives the active unit +1 to all IMPACT hit rolls in Assault.
+
+What it really does: this card smooths both sides of the fight:
+
+    it helps you survive at the right moment,
+
+    and it helps your charging units hit harder.
+
+What beginners miss: they often burn Carapace too early. Reactions are precious. This is not a “why not” button. It is for the armour roll that actually keeps an important unit alive.
+
+How I’d use it: this is one of the most generally good Zerg cards. If I do not know exactly what I need, I am rarely unhappy to have Evolution Chamber.
+Hydralisk Den
+
+What it is: the ranged-support card. It gives +1 BM and 2 Elite Slots. Its key effect is Missile Attacks: the active unit’s first ranged weapon used gains PRECISION (1).
+
+What it really does: it makes your best ranged activation cleaner.
+
+What beginners miss: they often think “this is only for Hydralisks.” It is obviously best with Hydra shooting, but the real principle is broader: use it on the unit whose first ranged attack actually matters.
+
+How I’d use it: this is mandatory-feeling if you want Hydras to be a serious part of your plan. It makes your ranged anchor much more trustworthy.
+Roach Warren
+
+What it is: a Roach support card. It gives +1 BM and 1 Core Slot. Its effect is Nasty Surprise, which makes the active ground unit lose Burrowed in the Assault Phase.
+
+What it really does: this is a burrow-transition card. It helps you set up from underground and then spring back into the fight.
+
+What beginners miss: they often look at “lose Burrowed” and think that sounds bad. But the point is not the loss itself. The point is that it lets you convert your hidden position into an attack turn.
+
+How I’d use it: bring this when your list genuinely uses Roaches, Corposers, Viles, or burrow tricks. Do not bring it just because it sounds thematic.
+Spawning Pool
+
+What it is: the basic Zergling aggression card. It gives +1 BM and 1 Core Slot. Its effect is Feral Rage, which gives the active unit’s first close-combat weapon PRECISION (2) in the Combat Phase.
+
+What it really does: this is your “make the melee unit actually connect” card.
+
+What beginners miss: they think of it as a generic “good melee buff,” which is true, but too vague. What it really does is improve the reliability of your first melee attack. Reliability is often more important than raw ceiling.
+
+How I’d use it: if you are running Zerglings, Raptors, or other melee-first pressure pieces, this is one of the most straightforward value cards in the faction.
+Spawning Pool (Six Pool)
+
+What it is: the sharper, riskier version of Spawning Pool. It gives +2 BM and 2 Core Slots, not 1, and it keeps Feral Rage. But its real special rule is Timing Push, which lets the active Zergling unit deploy from any table edge that is not a player’s entry edge, as long as it ends more than 10" from enemy models.
+
+What it really does: this is an ambush tempo card. It is one of the clearest “I am trying to get ahead of you early” signals in the whole Zerg toolkit.
+
+What beginners miss: they think “cool, surprise deployment” and then throw it away on the first chance. That is usually wrong. The strength is not just appearing somewhere strange. The strength is appearing where your opponent’s screen is weakest.
+
+How I’d use it: best in aggressive Zergling lists and best in the hands of someone who is willing to wait half a turn longer for the right angle.
+Overlord
+
+What it is: a big utility/slot card. It gives +1 BM plus 1 Hero, 1 Elite, and 1 Core Slot. In Movement, Ventral Sacs lets you place a Faction Indicator anywhere on the battlefield more than 10" from enemies; at the end of the round, you may deploy one ground unit from reserves in base contact with it. In Assault, Excrete Creep places a Creep Tumor token within 6" of your entry edge or another tumor.
+
+What it really does: this is one of the best utility cards in the faction. It does three things:
+
+    opens list space,
+
+    gives forward deployment pressure,
+
+    helps grow creep.
+
+What beginners miss: they underestimate how important the Faction Indicator is. It is not just a neat trick. It changes where the opponent has to worry about future arrivals.
+
+How I’d use it: if you want flexible Zerg, Overlord is excellent. It is less blunt than a pure damage card, but it wins games by shaping where the next turn happens.
+Overseer
+
+What it is: a support/vision card. It gives +1 BM and 1 Support Slot. In Movement, Oversight Mode places a Faction Indicator anywhere; enemy units within 6" of it lose HIDDEN. In Assault, Pneumatized Carapace is a reaction that lets a friendly unit rolling for charge distance roll an extra D6 and keep the higher one.
+
+What it really does: this card solves two common Zerg problems:
+
+    hidden or sneaky enemy positioning,
+
+    bad charge distance variance.
+
+What beginners miss: they think of it as a niche anti-hidden card. That is only half the story. The charge-distance reaction is often the more important half.
+
+How I’d use it: this is very good in a melee-heavy list where failed charges are your biggest enemy. It is also a great meta card if your local games use HIDDEN a lot.
+Lair vs Overlord vs Hatchery — the common confusion
+
+A lot of these cards look “kind of similar” at first because they are all doing some combination of:
+
+    slots,
+
+    BM,
+
+    creep,
+
+    positioning.
+
+Here is the simple distinction:
+
+    Hatchery = setup and burrow support
+
+    Lair = creep + melee pressure
+
+    Overlord = forward deployment + creep + slots
+
+That is how I would separate them in your head.
+The beginner way to think about the full Zerg tactical suite
+
+If you want the cleanest mental buckets:
+
+Creep cards
+
+    Accelerating Creep
+
+    Malignant Creep
+
+These decide what your creep network is for.
+Speed, or harder charges.
+
+Board-shaping cards
+
+    Hatchery
+
+    Lair
+
+    Overlord
+
+    Overseer
+
+These decide where the fight happens and how your units enter or move through it.
+
+Direct combat cards
+
+    Evolution Chamber
+
+    Hydralisk Den
+
+    Roach Warren
+
+    Spawning Pool
+
+    Spawning Pool (Six Pool)
+
+These make one kind of activation better:
+armour, ranged, burrow-attack flow, or melee reliability.
+Which ones are easiest for a new player
+
+If you are still learning, I would call these the easiest to understand and get value from:
+
+    Accelerating Creep
+
+    Evolution Chamber
+
+    Hydralisk Den
+
+    Spawning Pool
+
+Why these four:
+they all do something clear, repeatable, and easy to notice on the table. You do not need to be fancy to make them useful.
+
+The trickier ones are:
+
+    Overlord
+
+    Overseer
+
+    Lair
+
+    Spawning Pool (Six Pool)
+
+Not because they are weak, but because they ask for better timing and board reading.
+If I were teaching a first Zerg game
+
+I would tell you this:
+
+Do not try to “use every card every round.”
+That is the wrong mindset.
+
+Instead ask:
+
+    Which unit matters most this round?
+
+    What one tactical card makes that unit better?
+
+    Which one card am I willing to exhaust for that plan?
+
+That is how tactical cards stop feeling like clutter and start feeling like a system.
+
+The next useful step would be to build you a very simple beginner Zerg package, like:
+“start with these 4 tactical cards, here is what each is for, and here is when you spend them in your first two rounds.”
+
+make this an md for me
+
+I’m turning the Zerg tactical-card breakdown into a clean markdown handout so it reads like a reference doc instead of chat text.
+
+Done — here’s the markdown file:
+
+I can do the unit breakdown as a matching MD too.
+
+yeah, can you put both in one md?
+
+I’m merging the unit and tactical-card breakdowns into one cleaner reference file so you have a single Zerg beginner guide instead of two separate docs.
+
+Done — here’s the combined file:
+
+Next, I’d turn this into a shorter one-page cheat sheet for your first game.
+
+do that for protoss and terran too 
+
+I’m using the same structure as the Zerg guide so the three faction docs line up. First I’m pulling the Protoss and Terran unit and tactical-card pools from the faction files, then I’ll package each one as a combined beginner MD.
+
+I’ve got the file structure. Now I’m extracting the actual Protoss and Terran card pools so the docs stay grounded in what’s in your files, not generic RTS faction stereotypes.
+
+I have the actual Protoss and Terran pools mapped now. I’m packaging each one as the same kind of beginner handout: faction mindset, every unit in plain English, every tactical card in plain English, then easy buckets and first-game advice.
+
+Done.
+
+
+If you want, the next useful step is a much shorter “first game cheat sheet” version for all three factions.
+
+could you also do the opposite and talk about the keys to defeating each army?
+
+I’m building this as a matchup guide, not just “their stuff is good / shoot it first.” I’m pulling the actual faction abilities and card themes so the advice is about what each army is trying to do, where it’s vulnerable, and what mistakes let it beat you.
+
+I have the matchup logic now. I’m packaging it as a practical opponent guide: what each faction is trying to do, what board states it hates, what pieces matter most, and which tricks are worth respecting versus baiting out.
+
+Done.
+
+It is built around the real pressure points in the rules: all armies start in reserves and arrive as Supply allows, objective control is by current Supply rather than model count, arrivals are blocked by Zone of Influence, and faction/tactical cards only stay online until they are exhausted for the round.
+
+I also grounded each faction section in what their faction cards are actually trying to do: Raynor’s Raiders leans on placement and surprise angles while Terran Armed Forces leans on disengage freedom and phase control; Khalai leans on forward Pylons and chained activations while Daelaam leans on damage reduction and recall; Kerrigan’s Swarm leans on creep-boosted tempo plus the Omega Worm, while Zerg Swarm leans on evade support and post-activation burrowing.
+
+The next document I’d make from here is a shorter “matchup cheat sheet” version with just the top 5 mistakes not to make against each faction.
+
+Go for it 
+
+I’m turning that into the short version: one page of “don’t do this” errors for each faction, with the advice aimed at first games and tournament fundamentals rather than edge-case tricks.
+
+Done.
+
+The next useful version would be even shorter: a literal one-page “at the table” card with just the danger signs and priority targets for each army.
+
+whats the strongest zerg list i can get for 1k 
+
+I’m re-checking the Zerg pool against the actual faction tags, slot math, and 1k constraints before I give you a “strongest list” answer. I’d rather give you one tight legal build than another maybe-good pile.
+
+Treating “strongest” as best blind all-comers 1k tournament list, my highest-confidence answer is:
+Kerrigan’s Swarm — 1,000 Minerals / 90 Vespene
+
+Faction: Kerrigan’s Swarm
+Tactical cards: Malignant Creep, Spawning Pool, Evolution Chamber, Overseer
+Units:
+
+    Kerrigan — 250
+
+    Kerrigan Swarm Raptor (6) — 250
+
+    Raptor (12) + Adrenal Glands + Burrow Ambush — 290
+
+    Roach (3) + Glial Reconstitution + Hydriodic Bile + Tunneling Claws — 210
+
+That lands exactly at 1,000 Minerals, and the tactical package is 90 Gas, which is legal for Skirmish because Skirmish is up to 1,000 Minerals and 10% Vespene on a 36" × 36" board.
+
+Why I think this is the strongest one:
+
+Kerrigan’s Swarm gives you the best tempo ceiling at 1k. The faction’s two real payoffs are Wild Mutation—speed and precision for a unit that is ON CREEP—and Omega Network, which gives you a forward Omega Worm placement game. On a small 36" × 36" table, that kind of projection matters a lot more than it does in a bigger format.
+
+The list is also cleanly legal on slots. The faction card itself gives 1 Hero, 2 Elite, and 3 Core on the faction file, and units occupy slots equal to their starting Supply Value. Kerrigan is 1 supply, the Kerrigan Swarm Raptor is 1 supply, the 12-model Raptor unit is 1 supply, and the 3-model Roach unit is 1 supply, so the list fits without needing slot-filler tactical cards.
+
+The unit mix is why it wins games:
+
+Kerrigan is the best single Zerg piece in the pool at 250 / 1 supply.
+The Kerrigan Swarm Raptor gives you a second elite melee missile at 250 / 1 supply.
+The regular Raptor (12) is, in my view, the best value elite body in the generic Zerg pool at 240 / 1 supply, and the upgrades make it much more reliable at actually arriving and connecting.
+The Roach is there because 1k games are still won on markers, and markers are controlled by supply, not model count; a durable 1-supply Roach unit that can heal, tunnel, and contribute ranged pressure gives the list a real midfield anchor instead of making it all-in glass.
+
+The tactical package is built to make one melee turn devastating instead of cute:
+
+Malignant Creep is mandatory here because the list is trying to charge from creep, not merely stand on it. Spawning Pool gives you the clean melee-accuracy push. Evolution Chamber is the best all-purpose combat support card in the Zerg set. Overseer is there because bad charge variance loses melee games, and it also gives you anti-HIDDEN utility. Their gas costs are 10, 25, 30, and 25, so the package stays legal at 90 Gas.
+
+If I were putting it in one sentence:
+
+This is the hardest-hitting legal 1k Zerg list that still has a real scoring piece.
+
+One honest caveat: there is a small rules-document inconsistency where Part 9 uses Kerrigan’s Swarm as an example and mentions support slots, while the faction file’s actual slot block shows Hero 1 / Elite 2 / Core 3. I am using the faction file’s actual slot block as the source of truth for the list above.
+
+If you want, the next thing I’d do is give you the exact first two rounds for this list: what to deploy first, what stays back, when to place the Omega Worm, and what the kill turn is supposed to look like.
+
+this is my army size
+
+42x Zergling miniatures
+6x Roach miniatures
+4x Hydralisk
+2x Queen miniature
+1x Kerrigan miniature
+1x Omega Worm miniature
+
+
+I’m converting the “best 1k Zerg list” into “best 1k Zerg list you can actually field with your models.” The key check is whether your collection supports the unit card model counts and whether there’s a cleaner version that leans harder into the pieces you physically own.
+
+I’ve got the collection constraint now, and it changes the answer in one important way: your best theoretical 1k Zerg list used a Kerrigan Swarm Raptor, but you did not list a distinct model for that. So I’m checking whether the strongest no-proxy version is actually a Hydra/Queen/Roach mix or a pure Zergling/Roach/Kerrigan pressure shell.
+
+Given the minis you actually own, my highest-confidence 1,000-point Zerg list is this:
+Best 1k Zerg list from your collection
+
+Faction: Kerrigan’s Swarm
+Kerrigan’s Swarm gives 1 Hero, 2 Elite, and 3 Core slots, plus Wild Mutation and Omega Network, so it is still the best ceiling faction at 1k.
+Units — 1,000 Minerals exactly
+
+    Kerrigan — 250
+
+    Raptor (Zergling) (12) + Adrenal Glands + Burrow Ambush — 290
+    240 + 30 + 20
+
+    Zergling (12) + Adrenal Glands + Burrow Ambush + Shredding Claws — 250
+    180 + 30 + 20 + 20
+
+    Roach (3) + Glial Reconstitution + Hydriodic Bile + Tunneling Claws — 210
+    170 + 20 + 10 + 10
+
+Total: 1,000 Minerals
+Tactical cards — 90 Vespene
+
+    Malignant Creep — 10
+
+    Spawning Pool — 25
+
+    Evolution Chamber — 30
+
+    Overseer — 25
+
+Total: 90 Vespene, which is legal for Skirmish because Skirmish is up to 1,000 Minerals and 10% Vespene.
+Why this is the strongest version from what you own
+
+The important constraint is your model pool, not just the rules.
+
+Your earlier “max ceiling” Kerrigan list wanted a Kerrigan Swarm Raptor, which is a separate Elite unit with its own tag and its own 6-model entry. That unit costs 250 for 6 models and is tagged Kerrigan’s Swarm.
+
+Since you did not list a distinct Kerrigan Swarm Raptor unit in your collection, I would not treat that as your default no-proxy tournament option. The rules expect representation to be accurate where possible and require you to clearly disclose non-represented differences.
+
+So, using only what you actually listed, this Kerrigan + Raptor + Zergling + Roach shell is the cleanest answer because:
+
+    Kerrigan is still your best single piece.
+
+    Raptors are your best generic pressure unit. The 12-model unit is 240 / 1 supply, which is excellent.
+
+    A second 12-model Zergling unit gives you more board control and marker pressure than trying to squeeze in a fragile side package. Zerglings are 180 / 1 supply before upgrades.
+
+    The Roach gives the list a real midfield anchor instead of making it pure glass-cannon melee. A 3-model Roach unit is 170 / 1 supply before upgrades.
+
+That matters because units arrive from Reserves as Supply allows, so at 1k you want pieces that stage well across rounds instead of one expensive package that peaks awkwardly.
+Why I am not picking Hydralisks or Queens here
+
+You own enough Hydras and Queens to use them, but I still would not make them the center of your strongest 1k list.
+
+A small Hydralisk unit is 2 models for 140 and already takes 2 Elite slots; a full 4-model unit is 260 and takes 3 Elite slots.
+Kerrigan’s Swarm only gives 2 Elite slots on the faction card, so full Hydras need extra slot support.
+
+A Queen is a Support unit, and Kerrigan’s Swarm does not start with support slots on the faction card.
+
+That means the Hydra/Queen routes are legal only if you spend more of your gas and structure the list around them. They are playable. I do not think they are the strongest blind 1k build from your collection.
+How this list wants to play
+
+This is a tempo melee list with one durable anchor.
+
+The plan is:
+
+    use Malignant Creep and Wild Mutation to make your best activation hit harder and arrive farther, since Wild Mutation boosts an active unit that is ON CREEP and Omega Network gives you the Worm placement game.
+
+    use Spawning Pool and Evolution Chamber to make your melee turn more reliable and your key armour roll matter more.
+
+    use Overseer because bad charge variance is one of the cleanest ways a melee list loses.
+
+    let the Roach take ugly space while Kerrigan and the Raptor unit threaten the actual kill turn.
+
+If you are okay with proxies
+
+If your group or TO is fine with it, and you are willing to use 6 of your Zerglings as a count-as Kerrigan Swarm Raptor, then the stronger version is still:
+
+    Kerrigan
+
+    Kerrigan Swarm Raptor (6)
+
+    Raptor (12) with upgrades
+
+    Roach (3) with upgrades
+
+That version has a slightly higher ceiling because the Kerrigan Swarm Raptor is a better elite missile piece than generic Zerglings.
+
+But if you want the clean “use exactly what I own, no questions” answer, the list above is the one I would register.
+
+If you want, I’ll turn this into a proper roster sheet and then give you the first two rounds for how I’d actually pilot it.
+
+can you double check that roach can take "Glial Reconstitution + Hydriodic Bile + Tunneling Claws"
+
+I’m checking the Roach card text directly rather than relying on the earlier list math. The key question is whether those upgrades are all in the Roach’s legal upgrade options, and whether any of them are mutually exclusive.
+
+Yes — Roach can legally take all three: Glial Reconstitution, Hydriodic Bile, and Tunneling Claws.
+
+Why:
+
+The Roach upgrade list explicitly includes all three of those upgrades on its
+
+This is my current list. It uses all of the units like a real alpha 
+
+Shane Stater
+1000 Points | 950 Minerals | 100 Vespene
+==============================
+Faction: Daelaam
+==============================
+-- Dae'Uhl
+-- Mass Recall
+==============================
+Tactics
+==============================
+Observer - 25 Gas
+-- Surveillance
+-- Gravitic Boosters
+-----------------------------------
+Power Field - 40 Gas
+-- Void Shroud
+-----------------------------------
+Nexus - 35 Gas
+-- Ancient Pride
+-- Strategic Recall
+-----------------------------------
+==============================
+Units
+==============================
+Sentry
+130 Minerals | 1 support Supply
+-- Restoration
+-- Force Field
+-- Guardian Shield
+-- Solid-Field Projectors | +20 Minerals
+-- Disruption Beams
+-- Beam
+Unit Total: 180 Minerals
+-----------------------------------
+Stalker
+150 Minerals | 1 elite Supply
+-- Squadron
+-- Blink
+-- Path of Shadows | +20 Minerals
+-- Particle Disruptors
+-- Stomp
+Unit Total: 190 Minerals
+-----------------------------------
+Zealot
+170 Minerals | 2 core Supply
+-- Charge
+-- Devastating Charge
+-- My Life for Aiur | +10 Minerals
+-- Leg Enhancement | +20 Minerals
+-- Psi Blades
+Unit Total: 230 Minerals
+-----------------------------------
+Adept
+150 Minerals | 1 core Supply
+-- Psionic Presence
+-- Psionic Transfer
+-- Guidance | +10 Minerals
+-- Glaive Cannon
+-- Strike
+-- Glaive Strike | +20 Minerals
+Unit Total: 200 Minerals
+-----------------------------------
+Artanis
+250 Minerals | 1 hero Supply
+-- Commander
+-- Phase Prism
+-- Hierarch's Stand
+-- Lightning Dash
+-- Devastating Charge
+-- Twilight Blades Strike
+-- Twilight Blades Sweep
+Unit Total: 250 Minerals
+-----------------------------------
+
+
+
+
+My buddy is bringing this, is it legal? 
+
+I’m checking it against the actual faction tags, slot limits, and unit/tactical costs. The first thing I’m testing is whether the minerals even add up, because the header and the per-unit totals already look out of sync.
+
+Yes — if this is for a 1,000-mineral Skirmish game, the list is legal.
+
+What checks out:
+
+    Minerals: Skirmish is up to 1,000 Minerals. This list is 950 Minerals, so it fits the cap.
+
+    Vespene: The Protoss tactical cards here cost 25 + 40 + 35 = 100 Gas, which matches the Skirmish cap for a 1,000-mineral game.
+
+    Faction/slots: Daelaam starts with 1 Elite, 3 Core, 1 Support. Observer adds 1 Support, Nexus adds 2 Core, and Power Field adds 1 Hero, 1 Elite, 1 Core, so the army has enough slots for Artanis (Hero 1), Stalker (Elite 1), Zealot (Core 2), Adept (Core 1), Sentry (Support 1). Units occupy slots equal to starting Supply.
+
+The one thing that is wrong is the exported per-unit totals in the list text. The list is still legal, but several unit subtotals are mis-added.
+
+The correct mineral math is:
+
+    Sentry = 130 base + 20 for Solid-Field Projectors = 150, not 180.
+
+    Stalker = 160 base + 20 for Path of Shadows = 180, not 190.
+
+    Zealot = 160 base + 20 Leg Enhancements + 10 My Life for Aiur = 190, not 230.
+
+    Adept = 150 base + 20 Glaive Strike + 10 Guidance = 180, not 200.
+
+    Artanis = 250.
+
+That adds up to 950 Minerals exactly, which matches the header.
+
+So the clean answer is:
+
+Legal army, sloppy roster math display.
+
+One caveat: that answer assumes you are using the normal 1,000-mineral Skirmish cap. If your group is using some different event packet or a house rule for Vespene, that could change it. But under the uploaded rules, this list is fine.
+
+How will my 1k Zerg list do against this and what should I do to succeed and what do I need to avoid going against it
+
+I’m treating this as a real matchup plan: what your list is better at, what his list is better at, where the swing turns are, and what mistakes lose the game fast. I’m assuming a normal 1k Skirmish mission unless a specific scenario changes the priorities.
+
+Assuming your current 1k list is the Kerrigan’s Swarm build we were working from, I think this matchup is winnable, but unforgiving.
+
+My honest read is:
+
+On a normal board with decent cover, I’d rather have your Zerg list.
+On an open board with bad approach lanes, I’d rather have his Daelaam list.
+
+Why I say that:
+
+Your army is built to create one brutal tempo turn. Kerrigan’s Swarm gives you Wild Mutation for extra speed and accuracy while ON CREEP, plus Omega Network for the Worm placement game. Your Raptors and Zerglings are exactly the kind of units that benefit from that.
+
+His army is built to make your alpha strike less clean:
+
+    Dae’Uhl reduces incoming damage by 2, minimum 1.
+
+    Sentry can throw up Force Fields, and Size 2 or lower units cannot move across them. That is a huge problem for your Zerglings and Raptors.
+
+    Guardian Shield cuts ranged attack dice against nearby friendly units.
+
+    Artanis can use Hierarch’s Stand to redirect a ranged attack from a nearby unit onto himself if he is a valid target.
+
+    Mass Recall and Strategic Recall mean he can pull threatened pieces off the table instead of letting you finish them.
+
+    Observer gives him anti-HIDDEN tech and better charge distance support.
+
+So this is not “my fast melee beats his elite army.”
+It is “can your fast melee hit the right piece, in the right order, before his tricks blunt it.”
+The biggest truth about this matchup
+
+You do not want a fair, spread-out game.
+
+He has five units and better defensive tools. You have four units, but a nastier spike turn. Since marker control is by current Supply, not model count, and control is sticky, you should not try to politely contest everything. You should try to take one flank, overload one section, and force his army to split awkwardly.
+
+That is the core idea.
+What your list is better at
+
+You are better at:
+
+    explosive melee pressure,
+
+    punishing overextension,
+
+    making one side of the board collapse,
+
+    turning creep into tempo,
+
+    and using the Worm to threaten a future angle rather than just your entry edge.
+
+Your Raptor (12) with Adrenal Glands and your Zergling (12) with Adrenal Glands / Burrow Ambush / Shredding Claws are both real melee threats, and your Roach gives you one piece that can anchor space instead of making the whole list glass.
+What his list is better at
+
+He is better at:
+
+    making your charge lanes ugly,
+
+    soaking the first punch,
+
+    repositioning out of danger,
+
+    and creating small rules traps that waste your activation.
+
+That matters because charges are not automatic. You roll Speed + 1D6, and the charge fails if you cannot legally finish in engagement with declared targets and without clipping undeclared enemies or illegal space.
+
+So if he can make your approach lane narrow or awkward with Force Fields and positioning, your army can look much worse than it really is.
+Your kill priorities
+
+If he plays competently, I would usually prioritize his army like this:
+1. Sentry
+
+This is the piece I want dead first most of the time.
+
+Why:
+
+    Force Fields can ruin your melee turn.
+
+    Guardian Shield reduces your ranged chip.
+
+    Restoration can undo debuff value.
+
+    Hallucination can hand out evade support in a ranged exchange.
+
+The Sentry is the “this whole Protoss shell is annoying” piece.
+2. Adept or Zealot, depending board state
+
+If the Adept is exposed, I like killing it because it is one of his better flexible output pieces and Guidance makes its gun nastier into evade-style play.
+
+If the Zealot is the one actually holding the lane or marker, kill that instead. Its starting supply is 2, which matters a lot for markers.
+3. Artanis
+
+Artanis is dangerous, but he is often a trap target early. If you go after him first while the Sentry shell is still alive, you may spend your whole turn just crashing into protection and damage reduction. He is often better as the second major kill, once his support pieces are weakened.
+4. Stalker
+
+The Stalker is annoying, but it is not the first thing I would overcommit to unless it gives you a free angle. Path of Shadows makes it slippery, and if the Observer is active, he can help strip stealth-style positioning.
+What you should do to succeed
+Stage the game for one side collapse
+
+Do not spread your army evenly. You only have four units. All units start in Reserves, and deployment is gradual through the Movement Phase, so the early game is about where the real fight will happen, not “put everything down everywhere.”
+
+I would usually think:
+
+    Roach takes ugly midfield space first.
+
+    One melee body pressures the real lane.
+
+    Kerrigan stays hidden in intent, even if not literally hidden.
+
+    The Worm is for future leverage, not immediate drama.
+
+Let him commit first if possible
+
+Going second in Round 1 Movement can be good because it lets him commit first and you react; then passing first can set up first player for the next phase. The rules explicitly call that out as strategic.
+
+Against this Protoss list, that matters a lot. You want to know where the Sentry, Artanis, and Zealot are actually going before you expose Kerrigan.
+Bait Dae’Uhl before your real hit
+
+This is one of the biggest concepts.
+
+Dae’Uhl is a reaction. Reactions are tightly timed, and each player only gets one reaction per activation.
+
+So you do not want your biggest, most important attack to be the first thing that asks him a question.
+
+Better sequence:
+
+    Roach shoots or a lesser attack lands first.
+
+    He either spends Dae’Uhl there, or he doesn’t.
+
+    Then your real melee spike goes in.
+
+That is how you make his defense inefficient.
+Use the Roach as a job piece, not a hero
+
+Your Roach is not there to win the game by itself. It is there to:
+
+    hold awkward midfield,
+
+    threaten light units with Hydriodic Bile,
+
+    move better with Glial Reconstitution,
+
+    and force him to respect a durable body.
+
+If the Roach can either bait a reaction or pin attention while Kerrigan and the Raptors line up the real attack, it already did its job.
+Fight on creep whenever you can
+
+This matchup is exactly why creep matters.
+
+Your faction gets better when attacking ON CREEP, and your list chose a creep plan for aggression. Wild Mutation plus your melee pieces is how your army reaches “problem” speed and accuracy.
+
+If you launch off-creep when you could have staged for one better turn, you are probably giving away your list’s biggest built-in edge.
+What you absolutely need to avoid
+Do not charge through obvious Force Field lanes
+
+This is the biggest one.
+
+Your Zerglings and Raptors are Size 2 or lower bodies in practical terms for movement problems, and the Sentry’s Force Field explicitly blocks units of Size 2 or lower from moving across it.
+
+So if the center lane is narrow and obvious, assume he wants you there.
+Take wider lanes. Use terrain. Make him guess the angle.
+Do not deploy Kerrigan first unless the board hands you a gift
+
+If Kerrigan appears too early, his whole army gets to orient around her:
+
+    Sentry support,
+
+    Artanis protection,
+
+    Zealot counter-charge,
+
+    Recall effects if needed.
+
+Kerrigan should be your answer piece, not your opening statement.
+Do not waste Roach shooting into an Artanis bodyguard turn
+
+If Artanis can legally redirect the shot with Hierarch’s Stand, then you may be helping him rather than hurting him.
+
+Either:
+
+    shoot Artanis directly,
+
+    shoot something he cannot bodyguard well,
+
+    or accept that the Roach shot is bait.
+
+Do not split your damage
+
+If you nibble all five Protoss units, you lose.
+
+This Protoss list loves partial pressure:
+
+    damage reduction,
+
+    recall,
+
+    shielded elites,
+
+    defensive positioning.
+
+You need one real dead unit, preferably the Sentry or the marker piece holding his structure together.
+Do not assume your alpha wins on contact
+
+This is the emotional trap.
+
+Your list looks like an alpha list, but his is specifically designed to make alpha turns awkward. If your first swing is mediocre, do not panic and throw the second wave into the same bad lane. Reset, take space, and look for the next real break point.
+My blunt matchup summary
+
+If you play this like:
+“Zerg is fast, I run straight in,”
+you probably lose.
+
+If you play this like:
+“Roach takes space, I bait one reaction, I avoid the Force Field lane, then I collapse one side with Kerrigan + one melee brick,”
+you have a very real shot.
+The simplest game plan
+
+Round 1:
+
+    let him show where the shell is going,
+
+    deploy Roach first or a secondary pressure piece,
+
+    do not expose Kerrigan early,
+
+    set up creep and future angles.
+
+Round 2:
+
+    identify whether Sentry is reachable,
+
+    bait Dae’Uhl with something lower value,
+
+    then send your real hit.
+
+Your win condition is not “table him fast.”
+Your win condition is break one side of the Protoss structure, then let sticky control and supply math work for you.
+
+The next useful thing would be me giving you a literal first two rounds script for this exact matchup: what I would deploy first, second, third, and what I would try to charge.
+
+What buffs do the zerglings get when on creep? 
+
+I’m checking the exact “on creep” interactions for Zerglings, because the answer depends on which Zergling variant you mean and which faction/creep card is supporting them.
+
+For regular Zerglings by themselves, “on creep” does not automatically give them a built-in stat buff.
+What ON CREEP does is turn on other rules that say “if this unit is ON CREEP…” A Ground Zerg unit counts as ON CREEP while it is within 6" of a Creep Tumor or a Source of Creep.
+
+So for your Zergling-family units, the buffs come from the faction/card support around them:
+
+    With Malignant Creep: if the active friendly Zerg unit declares a Charge while ON CREEP, it gets +1 modifier to IMPACT hit rolls. That applies to Zerglings, Raptors, Swarmlings, and similar Ground Zerg units.
+
+    With Kerrigan’s Swarm: the faction’s Wild Mutation gives an active unit that is ON CREEP +1 Speed and PRECISION (1) on its first weapon. That is one of the main reasons Zergling/Raptor units get scary in that faction.
+
+    For Swarmlings specifically: their Zergling Reconstitution improves from RESPAWN (2) to RESPAWN (3) if the unit is ON CREEP.
+
+So the clean version is:
+
+Regular Zerglings do not get a universal built-in “creep bonus.”
+They get stronger because your faction card or creep card rewards them for being on creep.
+
+For your kind of list, that usually means:
+
+    more Speed / better first attack in Kerrigan’s Swarm, and
+
+    better charge impact with Malignant Creep.
+
+If you want, I can break this down one step further as:
+“what exactly happens to Zerglings on a charge turn if they start ON CREEP?”
+
+How does +1 modifyer to impact hit rolls work? 
+
+I’m checking the exact IMPACT and modifier rules text, because this is one of those mechanics that is simple once you see the roll sequence in order.
+
+It means:
+
+you lower the number you need on each IMPACT die by 1.
+
+In this game, a +X Modifier makes a roll easier by reducing the Target Number by X before you roll. The rules also say modifiers from different named sources are cumulative, and a natural 6 always succeeds while a natural 1 always fails.
+
+For IMPACT, the rule is:
+
+    after a successful Charge
+
+    you generate the listed number of Impact Dice
+
+    and each die that rolls the listed number or higher becomes a hit in the target’s Armour Pool
+
+    those hits do not generate Surge and count as Damage 1.
+
+So if something gives “+1 Modifier to IMPACT Hit Rolls”, you do this:
+
+    IMPACT (2) 5+ becomes IMPACT (2) 4+
+
+    IMPACT (3) 4+ becomes IMPACT (3) 3+
+
+It does not give you more impact dice.
+It does not increase damage.
+It just makes each IMPACT die more likely to hit.
+Simple example
+
+Your Raptor has Devastating Charge: IMPACT (2) 5+. If it gets Malevolent Matriarch from Malignant Creep while charging on creep, that gives +1 Modifier to IMPACT Hit Rolls, so those impact dice now hit on 4+ instead of 5+.
+Another example
+
+A Roach with Devastating Charge: IMPACT (3) 4+ uses Extended Claws from Evolution Chamber, which gives +1 Modifier to all IMPACT Hit Rolls. Now its IMPACT hits on 3+ instead of 4+.
+If you stack two different +1s
+
+Because modifiers from different named sources are cumulative, two separate +1 Modifier effects would usually improve the Target Number by 2 total. So:
+
+    5+ would become 3+
+
+    4+ would become 2+
+
+But a natural 1 still fails, no matter what.
+
+So the clean version to remember is:
+
++1 Modifier to IMPACT Hit Rolls = each IMPACT die needs 1 less to succeed.
+
+If you want, I can do a full worked example with your 12-model Raptor unit and show exactly how many IMPACT dice it might roll on a charge.
+
+Devastating Charge
+Assault Phase - Passive
+Immediately after this Unit completes a successful Charge, resolve the IMPACT (1) 5+ effect.
+
+
+Okay so that plus on creep means it gets 4+ 
+
+IMPACT
+Combat
+After a successful Charge, each eligible model generates X extra dice. Rolls of Y or higher become automatic hits placed in the Armour Pool.
+
+And that means each model gets an extra hit at that 4+ that go right to the armour pool
+
+I’m checking the exact wording on IMPACT and the model-by-model part, because your reading is very close, but there are two important limits: which models are eligible, and the hits are not literally “extra weapon hits.”
+
+Yes, mostly — with one important correction.
+What you got right
+
+For that Zergling profile:
+
+    Devastating Charge gives IMPACT (1) 5+ after a successful Charge.
+
+    If it also has +1 Modifier to IMPACT Hit Rolls, then the 5+ becomes 4+.
+
+    So each qualifying IMPACT die now succeeds on a 4, 5, or 6.
+
+The important correction
+
+It is not “each model in the whole unit gets an automatic extra hit on 4+.”
+
+It is:
+
+    after the successful charge,
+
+    check every eligible model in the Fighting Rank or Supporting Rank,
+
+    and for each eligible model, generate X Impact Dice.
+
+So with IMPACT (1):
+
+    each eligible model generates 1 Impact die
+
+    not every model in the unit
+
+    only the ones actually in the right ranks after the charge.
+
+Then:
+
+    roll those dice
+
+    each result of Y or higher becomes 1 die set into the target’s Armour Pool
+
+    then you proceed immediately to Armour Rolls.
+
+So the clean version is
+
+For your Zerglings with IMPACT (1) 5+ and a +1 modifier:
+
+    each eligible model gets 1 extra IMPACT die
+
+    that die hits on 4+
+
+    each success places 1 hit into the enemy’s Armour Pool
+
+    then the enemy still gets its Armour Rolls against those hits
+
+    those IMPACT hits do not generate Surge and count as Damage 1.
+
+The one sentence version
+
+Yes: on a successful charge, each eligible Zergling gets 1 extra IMPACT die, and with the +1 modifier that die hits on 4+, placing 1 hit into the target’s Armour Pool.
+
+Not “straight to damage pool.”
+Straight to the Armour Pool.
+Tiny example
+
+If 5 Zerglings are actually eligible after the charge:
+
+    you roll 5 IMPACT dice
+
+    with the modifier, each succeeds on 4+
+
+    if you roll 4, 4, 5, 2, 6, that is 4 hits
+
+    those 4 hits go into the target’s Armour Pool
+
+    then the defender rolls armour against them.
+
+I can do the same worked example for your 12-model Raptor unit next, since that is probably the version you will use most.
+
+Okay so add shredding claws and adrenal glands to that, what does the roll of 5 zerglings look like now. 
+
+I’m checking the exact Zergling upgrade text before I walk the dice through, because the key is whether those upgrades change the IMPACT roll, the melee weapon roll, or both.
+
+Yes — and this is where the attack splits into two separate parts:
+
+    the charge impact roll
+
+    the actual melee attack roll
+
+Adding Shredding Claws and Adrenal Glands does not change the IMPACT roll itself. Those upgrades change the close combat weapon that you use after the charge. For a Zergling, Devastating Charge is still IMPACT (1) 5+, Shredding Claws replaces Claws with a weapon that has Surge: Light, Armoured (D3), and Adrenal Glands gives PRECISION (2) to Claws and Shredding Claws.
+
+So if your 5 eligible Zerglings charge and they have the +1 modifier to IMPACT from your creep/faction support, the sequence looks like this:
+Step 1: IMPACT from the charge
+
+Each eligible Zergling generates 1 IMPACT die because the unit has IMPACT (1) 5+ after a successful charge.
+With the +1 modifier, those dice now hit on 4+ instead of 5+.
+
+So for 5 eligible Zerglings, you roll 5 IMPACT dice.
+
+Example:
+
+    IMPACT dice: 6, 4, 4, 2, 1
+
+That gives:
+
+    3 IMPACT hits
+
+Those 3 hits go straight into the enemy’s Armour Pool. They are Damage 1 hits and do not generate Surge.
+Step 2: the melee attack with Shredding Claws
+
+Now those same 5 Zerglings make their actual close combat attacks.
+
+Shredding Claws has:
+
+    RoA 2
+
+    Hit 4+
+
+    Surge: Light, Armoured
+
+    S.Die D3
+
+    Damage 1
+
+With 5 Zerglings, that means:
+
+    5 models × 2 attacks each = 10 attack dice
+
+Because of Adrenal Glands, that weapon also has PRECISION (2). Precision means that after rolling to hit, you can move up to 2 failed attack dice directly into the Armour Pool as successful hits, and they still count as hits for surge.
+
+Example melee roll:
+
+    attack dice: 6, 5, 5, 4, 4, 3, 2, 2, 1, 1
+
+At Hit 4+, that is:
+
+    5 normal hits from the 6, 5, 5, 4, 4
+
+    5 misses from the 3, 2, 2, 1, 1
+
+Then PRECISION (2) lets you turn 2 of those misses into hits.
+
+So now you have:
+
+    7 total melee hits
+
+Those 7 hits go into the Armour Pool.
+Step 3: Surge from Shredding Claws
+
+Because Shredding Claws has Surge: Light, Armoured, those melee hits can also generate surge if the target qualifies:
+
+    against a Light target, they can surge
+
+    against an Armoured target, they can also surge
+
+    against a target with neither tag, they do not get that surge benefit
+
+And because Precision-added hits count as successful hits for all purposes, including Surge, those converted hits can also contribute to that surge.
+So the full picture for 5 Zerglings
+
+With:
+
+    successful charge
+
+    +1 IMPACT modifier
+
+    Shredding Claws
+
+    Adrenal Glands
+
+you get roughly:
+
+Charge step
+
+    5 IMPACT dice
+
+    hitting on 4+
+
+    successes go into Armour Pool
+
+    no surge on those impact hits
+
+Combat step
+
+    10 Shredding Claws attack dice
+
+    hitting on 4+
+
+    PRECISION (2) turns up to 2 misses into hits
+
+    those hits can surge against Light or Armoured targets
+
+The shortest version
+
+For 5 eligible Zerglings:
+
+    Impact: roll 5 dice, hit on 4+
+
+    Melee: roll 10 dice, hit on 4+
+
+    then convert up to 2 misses into hits because of Adrenal Glands / PRECISION (2)
+
+    melee hits can surge on Light or Armoured because of Shredding Claws
+
+So yes, the unit gets meaningfully scarier — but the main thing to remember is:
+
+the +1 modifies the IMPACT roll
+Shredding Claws + Adrenal Glands modify the actual melee weapon roll after the charge
+
+They are helping different parts of the attack.
+
+I can do the exact same worked example next for your 12-model Raptor unit, which is probably the more important one in your list.
+
+What army should I bring to counter his protoss
+
+I’m treating this as “best counter-list from what you actually own against that exact Daelaam build,” not just a generic anti-Protoss theory answer. The key question is whether you beat him by speed, board clog, or by bringing more ranged pressure than his list wants to handle.
+
+From the models you own, I would bring Kerrigan’s Swarm, and I would tune it to beat his control shell, not just to “alpha harder.”
+Bring this
+
+Faction: Kerrigan’s Swarm
+Kerrigan’s Swarm gives you Wild Mutation for extra speed/accuracy while ON CREEP, plus Omega Network for the Omega Worm placement game. It also starts with 1 Hero, 2 Elite, 3 Core slots, which fits this shell cleanly.
+
+Tactical cards
+
+    Accelerating Creep — 0 Gas
+
+    Evolution Chamber — 30 Gas
+
+    Hatchery — 30 Gas
+
+    Spawning Pool — 25 Gas
+
+That is 85 Vespene, which is legal at 1,000-point Skirmish because Skirmish is up to 1,000 Minerals and 10% Vespene.
+
+Units
+
+    Kerrigan — 250
+
+    Raptor (12) + Adrenal Glands + Burrow Ambush — 290
+
+    Zergling (12) + Adrenal Glands + Burrow Ambush + Shredding Claws — 250
+
+    Roach (3) + Glial Reconstitution + Hydriodic Bile + Tunneling Claws — 210
+
+That lands at 1,000 Minerals exactly. The 12-model Zergling unit is 180 / Supply 1, the 12-model Raptor unit is 240 / Supply 1, and the 3-model Roach unit is 170 / Supply 1; the listed upgrades add the rest.
+Why this is the right counter
+
+His Daelaam list is built to make one obvious melee hit feel bad. Dae’Uhl reduces incoming damage, Mass Recall can pull his cluster off the table, Force Field blocks Size 2 or lower units from crossing, Guardian Shield trims ranged dice, and Artanis can redirect ranged attacks with Hierarch’s Stand. That is a classic “blunt the first punch” shell.
+
+So you do not beat him by bringing a slower, fairer list. You beat him by bringing:
+
+    a real finisher in Kerrigan
+
+    two separate fast melee threats
+
+    one durable midfield piece
+
+    and enough board access that his Sentry cannot solve the whole matchup with one Force Field.
+
+Why I prefer this over a Queen/Hydra list
+
+A Queen/Hydra control list is more forgiving, but I do not think it is the best counter to this specific Protoss build.
+
+His list is only five units and wants to win by tight positioning, reactions, and protection. If you give him a slower ranged game, you let his shell do its job. A Kerrigan list forces him to answer multiple angles and multiple timing spikes instead. Also, because all units start in Reserves and arrive as Supply allows, compact 1-supply threats are especially valuable in Skirmish.
+Why these tactics, specifically
+
+I would use Accelerating Creep here, not Malignant Creep, because against Force Field Protoss the first problem is often reaching the right fight, not squeezing one more point of impact math out of a charge. Accelerating Creep gives your active Zerg unit +1 Speed while ON CREEP. Evolution Chamber gives +1 to IMPACT hit rolls on the active unit. Hatchery gives you Creep Spread and Lie in Wait, and Spawning Pool gives your first close-combat weapon PRECISION (2).
+
+That package is doing three jobs:
+
+    helping you get there
+
+    helping your charge land
+
+    and helping your melee dice actually convert
+
+What this list is trying to do
+
+The Roach is your job piece. It takes ugly central space, threatens chip, and makes the board less comfortable. The Raptor block is your best flank pressure unit. The Zergling block is your follow-through unit. Kerrigan is the answer piece: she should not be your opening statement unless the board hands you a free kill. Her biggest anti-Protoss tool here is Crushing Grip in Movement; if you can tag the Sentry before it activates, you can shut off that turn’s Force Field/Guardian Shield decision tree.
+The real target priority
+
+Your first real target is still the Sentry.
+
+If the Sentry lives comfortably, his whole Protoss shell gets more annoying. If the Sentry dies, the list becomes much more honest. After that, kill whichever of Zealot or Adept is holding the important lane or marker. Artanis is dangerous, but he is often a trap target too early.
+What to avoid
+
+Do not run straight up the middle into the obvious Force Field lane.
+Do not expose Kerrigan first.
+Do not spend your best charge into a turn where you have not already thought about Recall.
+Do not forget that marker control is by current Supply, not model count, and that control is sticky once taken.
+
+My blunt answer is:
+
+Bring Kerrigan’s Swarm.
+Bring the 1,000-point list above.
+Use it as a side-collapse army, not a straight-line rush army.
+
+If you want, I’ll turn this into a clean roster sheet and then give you the exact Round 1 and Round 2 script for this matchup.
+
+Explain PLACE to me, I don't get it 
+
+I’m pulling the exact PLACE rule and the related “move / deploy / charge” distinctions, because PLACE only makes sense once you see what it is not doing.
+
+Yes. The cleanest way to think about PLACE is:
+
+PLACE is teleport-style repositioning.
+You do not trace a path, you do not care about gap clearance, terrain climbing, or elevation requirements on the way there. Instead, you pick the unit’s leading model, remove it, and set it back down wholly within X" of where it started. Then you remove and replace the rest of the unit around it, keeping coherency.
+What that means in plain English
+
+If a rule says PLACE (6), it means:
+
+    Pick one model in the unit as the leading model.
+
+    Lift it up.
+
+    Put it back down anywhere legal within 6" of where it started.
+
+    Then rebuild the rest of the unit around it in coherency.
+
+So it is not normal movement.
+
+With normal movement, the leading model actually moves along a path and has to care about the route. With PLACE, there is no route. You just remove and set the model directly.
+What PLACE ignores
+
+PLACE ignores:
+
+    gap clearance
+
+    terrain restrictions
+
+    elevation requirements
+
+That is why it feels like a blink, teleport, jump, or warp effect.
+What PLACE does not ignore
+
+The model still has to end in a legal final position.
+So PLACE is not “go anywhere no matter what.” It ignores the path, but the destination still has to be legal.
+
+Also, after the effect is done, the unit still has to be in coherency, because coherency is checked after PLACE just like after Move, Deploy, Charge, Run, and the other reposition effects.
+Can PLACE put you into combat?
+
+Usually, yes.
+
+The glossary says models set by PLACE may be set within Engagement Range of enemy models, and if that happens, the unit becomes Engaged — unless the specific rule says otherwise.
+
+That “unless stated otherwise” part matters a lot.
+Example: Kerrigan
+
+Kerrigan’s Leaping Strike says: if unengaged, resolve PLACE (6). Since that ability does not add a restriction, the normal PLACE rule applies, so you can use it to land into engagement if the final position is legal.
+Example: Stalker Blink
+
+Blink says resolve PLACE (6), but models set by this effect cannot be set within Engagement Range of any enemy unit. So Blink uses PLACE, but with an added no-engagement restriction.
+
+That is the core pattern:
+
+    PLACE by default can enter engagement
+
+    unless the ability using PLACE says it cannot
+
+Why this matters on the table
+
+PLACE is good for:
+
+    jumping over awkward terrain
+
+    ignoring chokepoints
+
+    changing elevation without using access points
+
+    getting around movement restrictions
+
+    sometimes entering combat from weird angles
+
+That is why Kerrigan’s Leaping Strike is scary. It is not just “move 6.” It is “pick Kerrigan up and set her somewhere legal within 6,” which is much stronger than walking.
+One thing that confuses people: “place” vs PLACE
+
+There are really two different uses of the word:
+PLACE (X) in caps
+
+This is the keyword we are talking about. It repositions a unit by removing and resetting its models.
+“Place a token / indicator / structure”
+
+Sometimes cards say things like:
+
+    place a Faction Indicator
+
+    place a Creep Tumor
+
+    place a Pylon
+
+    place an Omega Worm
+
+Those are not the same as PLACE (X).
+That is just putting a token, indicator, or special unit onto the battlefield according to that card’s instructions.
+
+So:
+
+    PLACE (6) = teleport-style reposition
+
+    place a Creep Tumor = put that token on the board
+
+    place a Faction Indicator = put that marker on the board
+
+The shortest possible version
+
+PLACE (X) = remove the leading model and set it wholly within X" of where it started, then rebuild the unit in coherency. It ignores the route, but the landing spot still has to be legal. By default it can land in engagement unless the ability says it cannot.
+Tiny example with Kerrigan
+
+If Kerrigan uses Leaping Strike:
+
+    pick Kerrigan up
+
+    put her anywhere legal within 6"
+
+    because it is PLACE, she ignores pathing problems on the way
+
+    if you set her within Engagement Range of an enemy, she becomes engaged, because Leaping Strike does not forbid that
+
+If you want, I can do three concrete examples next:
+Kerrigan PLACE, Stalker Blink, and Artanis Phase Prism, side by side.
+
+So place 18 means I can deploy the unit 18 inches from the deployment zone? 
+
+I’m checking the exact deployment and PLACE text together, because the answer depends on whether the rule is telling you to deploy a unit or to reposition a unit that is already on the battlefield.
+
+Yes — for Burrow Ambush, that is basically what it means, but the precise term is Entry Edge, not “deployment zone.”
+
+Here is the exact logic:
+
+    PLACE (X) means you choose a Leading Model, remove it, and set it wholly within X" of its starting position, then place the rest of the unit in coherency.
+
+    Burrow Ambush says that when the unit is nominated to deploy from Reserves, it may resolve PLACE (18) from the controlling player’s Entry Edge. It also says no model may be set within 10" of any enemy model, and the unit’s activation ends.
+
+    Normal Deploy is different: normally you set the Leading Model in contact with your Entry Edge and then move it up to the unit’s Speed.
+
+So, in plain English:
+
+Burrow Ambush lets you skip the normal “start on the edge and move Speed” deployment and instead teleport the unit’s leading model to anywhere legal within 18" of your Entry Edge.
+
+A few important limits:
+
+    It is from your Entry Edge, not from just anywhere in your deployment zone.
+
+    The landing spot still has to be a legal position.
+
+    No model in the unit can be set within 10" of an enemy model.
+
+    After that, the rest of the unit still has to be placed in coherency.
+
+So the clean answer is:
+
+Yes, effectively you can deploy that unit up to 18" out from your Entry Edge instead of using its normal deployment move — but you still have to obey the 10" enemy restriction and coherency.
+
+A tiny comparison:
+
+    Normal deploy: edge + move up to Speed
+
+    Burrow Ambush deploy: edge-based PLACE (18) instead
+
+If you want, I can draw a simple text example like:
+“entry edge here, enemy here, legal Burrow Ambush spots here / illegal spots here.”
+
+Can the omega worm let you in deploy and then you can redeploy from any board edge? 
+
+I’m checking the exact wording on Omega Worm deployment, reserves, and the edge-based Zerg deployment tricks together, because this depends on whether those rules replace the same deployment event or happen at different times.
+
+Not in one step.
+
+The Omega Worm only gives you an alternate Entry Edge. Its base “counts as an Entry Edge,” and each round friendly units with combined Supply 2 or less may be deployed via this Entry Edge. That is still just a normal Deploy from Reserves, only from the Worm’s base instead of your usual edge.
+
+So you cannot do:
+
+    deploy from the Omega Worm, and then
+
+    in that same deployment, also switch to “any board edge.”
+
+Those are different ways of resolving a deployment, not a chain you stack together. Normal deployment is a single event where a unit comes in from Reserves to the battlefield.
+The clean way to think about it
+
+You have to choose which deployment rule is bringing the unit onto the table:
+
+    Omega Worm: deploy via the Worm because its base counts as an Entry Edge.
+
+    Timing Push / Warp In / similar effects: deploy from any table edge that is not a player’s Entry Edge.
+
+You do one or the other for that deploy.
+If you mean “later, after going back into reserves”
+
+Then yes, later you can.
+
+The Omega Worm can return a unit to Reserves if its leading model finishes a Move, Run, or Disengage in base contact with the Worm. A unit returned to Reserves keeps its equipment and damage, and when it is redeployed, its abilities resume again.
+
+So the sequence can be:
+
+    Round A: deploy via the Omega Worm.
+
+    Later: move back into the Worm and get returned to Reserves.
+
+    On a later deployment: use some other valid deployment rule, like Timing Push, to deploy from any table edge that is not a player’s Entry Edge.
+
+That works as two separate deployments across time, not one chained deployment.
+One more important distinction
+
+The Omega Worm is not a table edge. It counts as an Entry Edge. Timing Push says “any table edge that is not a Player’s Entry Edge.” So even by wording, the Worm is not the same thing as “any board edge.”
+Bottom line
+
+No, you do not deploy from the Omega Worm and then immediately redeploy from any board edge as part of the same arrival.
+Yes, a unit can later go back to Reserves through the Worm and then, on a future deployment, use a different legal deployment rule.
+
+If you want, I can write out a concrete Zerg example with Omega Worm + Timing Push turn by turn.
+
+Can the zerglings do that though? Go into the worm and then on the next turn come in from an edge? 
+
+I’m checking the exact interaction between Zergling upgrades, the Worm’s “return to reserves” rule, and the alternate edge-deploy rule. The key issue is whether the unit still qualifies after coming back out, not whether the Worm itself blocks it.
+
+Yes — Zerglings can do that, but the exact answer depends on which “from an edge” rule you mean.
+The short answer
+
+A Zergling unit can:
+
+    move into base contact with the Omega Worm and go back to Reserves, then
+
+    on a later turn, redeploy from Reserves using a legal deployment rule.
+
+That part is allowed.
+Why it works
+
+The Omega Worm says that if a friendly unit’s leading model finishes a Move, Disengage, or Run in base-to-base contact with the Worm, you may remove that unit from the battlefield and return it to Reserves.
+
+Then the core rules say that when a unit is returned to Reserves:
+
+    it keeps its upgrades and damage,
+
+    its abilities do not function while it is in Reserves,
+
+    but when it redeploys, all its abilities resume immediately unless something says otherwise.
+
+So yes, a Zergling unit can go:
+battlefield → Worm → Reserves → redeploy later.
+If you mean Burrow Ambush
+
+Then yes, also yes.
+
+Zerglings can buy Burrow Ambush.
+Burrow Ambush says:
+
+    when this unit is nominated to deploy from Reserves, it may resolve PLACE (18) from the controlling player’s Entry Edge; no model may be set within 10" of any enemy model.
+
+So the sequence is:
+
+    turn 1 or 2: Zerglings go into the Worm
+
+    later turn: they are nominated to deploy from Reserves
+
+    because they still have Burrow Ambush, they can use PLACE (18) from your Entry Edge
+
+That works.
+Important correction
+
+Burrow Ambush is not “any board edge.”
+It is from your Entry Edge only.
+If you mean any table edge
+
+That is a different rule.
+
+A true “any table edge that is not a player’s Entry Edge” effect exists on cards like Warp In for Protoss, and the Zerg equivalent you were asking about earlier is Timing Push on Spawning Pool (Six Pool). That is a separate deployment method, not part of the Worm itself.
+
+So if your Zerglings:
+
+    went back into Reserves through the Worm, and
+
+    later had access to Timing Push,
+
+then yes, on that later deployment they could come in from that alternate edge rule instead of your normal Entry Edge.
+
+But that is:
+
+    not from the Worm, and
+
+    not chained in the same deployment.
+
+It is a future redeploy using a different legal deployment rule.
+One more useful detail
+
+Your 12-model Zerglings are Supply 1, and 18-model Zerglings are Supply 2.
+
+That matters because the Worm lets friendly units with a combined Supply cost of 2 or less deploy via the Worm each round. So:
+
+    one 12-model Zergling unit can deploy through it
+
+    one 18-model Zergling unit can also deploy through it
+
+    or two separate 1-supply units could, if their combined supply stays at 2 or less
+
+Cleanest version to remember
+
+Yes: Zerglings can go into the Worm, return to Reserves, and on a later turn redeploy using whatever legal deployment rule applies to them.
+Burrow Ambush = from your Entry Edge.
+“Any table edge” requires a different card effect, not the Worm by itself.
+
+If you want, I can map out the strongest actual Zerg trick chains you can do with Omega Worm + Burrow Ambush + your current list.
+
+So if the average is a corner, does that mean they can pick either corner or does it have to be the deployment zone edge like the space that's appointment zone and only from the up to the board
+
+I’m checking the exact “Entry Edge” wording against the deployment setup language, because the important distinction here is “your assigned edge” versus “any corner area.”
+
+It has to be your assigned Entry Edge, not whichever corner you want.
+
+The rules define Entry Edge as the table edge assigned to a player by the Deployment Card. Units enter from that edge when deploying from reserves.
+
+So if the deployment layout is a corner-style deployment, that does not mean:
+
+    “pick either corner,” or
+
+    “pick any spot in the whole deployment zone.”
+
+It means:
+
+    look at the Deployment Card
+
+    find your specific assigned edge/segment
+
+    deploy from that specific edge area only.
+
+The rules even call out that sometimes the Entry Edge does not run the full length of a table edge. In those cases, you mark the corners of that Entry Edge with Zone of Influence markers, exactly as shown on the Deployment Card. That tells you the exact span of the usable edge.
+
+So for Burrow Ambush or normal deployment from your Entry Edge:
+
+    you measure from your assigned edge segment
+
+    not from either corner of the board
+
+    not from anywhere inside the whole corner deployment zone
+
+A clean way to picture it:
+
+    Normal deployment / Burrow Ambush from your Entry Edge = from your specific edge segment
+
+    “Any table edge that is not a player’s Entry Edge” = that is a special rule like Warp In, and that really does mean other table edges, not your assigned one.
+
+So the blunt answer is:
+
+No, you do not get to choose either corner unless the Deployment Card or a special rule explicitly says so. You use the exact Entry Edge assigned to you by the Deployment Card.
+
+If you want, I can draw a simple fake board with a corner deployment and show exactly where Burrow Ambush can and cannot land.
+
+Out of curiosity how can you be so sure on what? How to win when games not even out yet
+
+I’m not sure in the absolute sense, and I shouldn’t present it like I am. I’m checking the exact rules fragments I’ve been leaning on so I can answer you cleanly: what is solid, what is inference, and what is still just theorycraft.
+
+Fair question.
+
+I’m not sure in the absolute sense, and I should be more explicit about that.
+
+What I can be sure about is the part that comes straight from the written rules and card text:
+
+    Skirmish is up to 1,000 Minerals, 10% Vespene, on a 36" × 36" board.
+
+    All units begin the game in Reserves.
+
+    Kerrigan’s Swarm really does get Wild Mutation and Omega Network.
+
+    Daelaam really does get Dae’Uhl and Mass Recall.
+
+    Sentry really does have Force Field and Guardian Shield.
+
+That part is not guesswork. That is just reading the documents.
+
+Where the uncertainty starts is the leap from:
+“these rules exist”
+to
+“therefore this list is strongest in real play.”
+
+That second part is theorycraft.
+What I’m actually doing
+
+I’m using three things:
+
+1. Hard rules text
+What the cards literally say.
+
+2. Structural game logic
+Some mechanics are predictable before release:
+
+    damage reduction makes alpha strikes worse,
+
+    movement denial makes melee lanes worse,
+
+    alternate deployment makes screening harder,
+
+    small-board games amplify speed and activation pressure.
+
+Those are general design consequences, not hidden magic.
+
+3. Comparative inference
+If one list has:
+
+    better movement tricks,
+
+    better target access,
+
+    and a clearer win condition,
+
+then I can say it looks stronger on paper.
+
+That is different from saying:
+“I know it wins in practice.”
+What I do not know yet
+
+I do not know:
+
+    the real live metagame,
+
+    what missions people will actually play most,
+
+    how dense terrain usually ends up,
+
+    whether some card is secretly undercosted in practice,
+
+    whether some interaction is stronger or weaker once people start making mistakes under pressure,
+
+    or whether some rules wording gets FAQ’d before release.
+
+Those things can absolutely change what the “best list” is.
+So why give matchup advice at all?
+
+Because even before a game releases, you can often identify pressure points.
+
+For example, if one faction has:
+
+    damage reduction,
+
+    recall,
+
+    and force fields,
+
+then it is reasonable to say:
+“this army is good at blunting a straight-line alpha strike.”
+
+That does not mean I know the exact tournament win rate.
+It means the rules strongly suggest a certain kind of battlefield behavior.
+
+Likewise, if a faction has:
+
+    extra speed on creep,
+
+    precision on first weapon,
+
+    and a forward Omega Worm placement effect,
+
+then it is reasonable to say:
+“this army is built to create tempo spikes and attack from unusual positions.”
+
+That is strong inference, not prophecy.
+The honest confidence scale
+
+This is how I’d phrase it more accurately:
+
+Very high confidence
+
+    legality checks
+
+    exact card interactions
+
+    what a rule allows or forbids
+
+Medium confidence
+
+    what a faction is trying to do
+
+    what kind of lists are likely efficient
+
+    which matchups look favorable on paper
+
+Low confidence until real games happen
+
+    “best army in the game”
+
+    exact tier list
+
+    exact matchup percentages
+
+    hidden broken combos or underperformers
+
+The blunt answer
+
+I’m not “so sure” because I know the future.
+
+I’m confident about:
+
+    the rules text
+
+    and the directional logic that follows from it.
+
+I’m not confident in the stronger claim:
+“this is proven best in the real meta.”
+
+The more honest wording would have been:
+“Based on the current rules packet and faction files, this is my best on-paper read.”
+
+That is the real answer.
+
+If you want, I can go one step further and label my recommendations as:
+rules-certain, strong inference, and speculative, so you can see exactly which parts are solid and which parts are still theory.
+
+can you reevaluate your thinking in the pre made packages for armies? maybe bring in some 2nd, 3rd and 4th opininons on what lists are going ot be effective, not jsut on their own but against other builds. and dont forget to include builds of zerg vs zerg, protoss vs protoss and terran vs terran
+
+I’m re-running this from scratch instead of just defending the earlier lists. I’m checking the full faction files and the core game structure again, then I’ll score the packages through four separate lenses: tempo, attrition, scoring, and mirror stability.
+
+I’ve confirmed two things that really matter for this reset. First, the core system rewards tempo and slot efficiency more than “best individual datasheet” theory, because everything starts in reserves and markers are controlled by current supply, not bodies. Second, the mirror matchups are not side cases here — they matter, because the factions are built around very different denial and deployment engines.
+
+Yes. I did a hard reset on it.
+
+I cannot bring in real outside playtesters from a game that is not out yet, so I did the next-best thing: I re-ran the army packages through four separate evaluation lenses instead of relying on the first-pass “this looks strong” read. The key thing I changed is this: the best package here is not just the one with the nastiest datasheet. It is the one that handles the game’s actual structure best — reserves-based arrival, supply-limited deployment, pass/initiative swings, sticky supply-based marker control, and once-per-round card exhaustion. Those systems are where faction and tactical cards really matter.
+The four passes I used
+
+Pass 1: ceiling.
+Which package creates the strongest spike turn if everything lines up? This favors Kerrigan’s Swarm, Khalai, and Raynor’s Raiders, because Wild Mutation + Omega Network, Bound by the Khala + forward Pylon, and Raiders’ placement pressure all create explosive turns.
+
+Pass 2: scoring stability.
+Which package still wins when the game becomes about markers and supply instead of a perfect alpha? This favors Terran Armed Forces, Khalai, and Zerg Swarm, because the system scores markers by eligible current supply, not body count, and control stays with the current owner until the opponent takes it back with higher supply.
+
+Pass 3: counter-meta value.
+Which package is best at making other strong packages awkward? This favors Daelaam, Terran Armed Forces, and Zerg Swarm. Dae’Uhl and Mass Recall are the cleanest anti-spike tools in the game right now; Tactical Retreat and Terran Tenacity are strong anti-commitment tools; and Rapid Burrowing plus Brood Instinct are very good at blunting overextension.
+
+Pass 4: mirror stability.
+Which package gets better, not worse, when both players know the same faction tricks? This favors Khalai, Terran Armed Forces, and Zerg Swarm. The proactive tempo package for Protoss, the stable attrition package for Terran, and the marker/burrow package for Zerg all hold up better in mirrors than the more all-in pressure shells.
+Revised consensus ranking of the six main packages
+1. Khalai
+
+This is now my best blind package overall.
+
+Why it moved up: I think I undervalued how strong Pylon Warp-In plus Bound by the Khala is in a game where everything begins in reserves and alternate entry geometry matters. Khalai gets a forward Pylon more than 10" from enemies, then uses that framework plus chained activations to create the decisive local fight. That is better than “good Protoss stuff”; it is the best blend of pressure, reach, and reliability.
+2. Terran Armed Forces
+
+This is now my best blind Terran package and my best Terran mirror package.
+
+Why it moved up: the first pass overrated surprise. After re-checking the rules flow, I think stability matters more. Tactical Retreat lets an active unit ignore the disengage penalty for the round, and Terran Tenacity can seize the First Player Marker once per game. In a game where the first player to pass can swing the next phase and where markers are sticky, that kind of control ages very well.
+3. Kerrigan’s Swarm
+
+This is still the highest-ceiling Zerg package, but I am less willing to call it the best blind Zerg package than I was before.
+
+Why it moved slightly down: its spike is real — Wild Mutation and Omega Network are still excellent — but it is more volatile into prepared fields and mirrors than I first gave credit for. It wins big when it gets to dictate the first real combat, but it is less forgiving if the opponent is built to blunt the first hit.
+4. Daelaam
+
+This moved up the most as a counter-meta package.
+
+Why: Dae’Uhl is the cleanest anti-burst reaction in the current faction set, and Mass Recall lets a Protoss player pull the whole cluster back into reserves once per game. Into Kerrigan pressure, Raiders tempo, or greedy Khalai forward play, that is extremely relevant. I still think Daelaam is a little less proactive than Khalai, but it is much better than my first-pass read in a field full of alpha packages.
+5. Zerg Swarm
+
+This moved up specifically in mirror and mission-heavy environments.
+
+Why: Brood Instinct and Rapid Burrowing are not flashy, but they are exactly the kind of “you don’t get a clean turn” tools that get better when both armies know the same Zerg lines. Zerg Swarm is the best Zerg package for forcing ugly, scoring-oriented games.
+6. Raynor’s Raiders
+
+This moved down the most.
+
+Why: I still think Raiders is dangerous. But once I re-weighted for mirrors, counterplay, and disciplined screening, I stopped liking it as a blind default. It is still excellent as a punishment package into players who leave angles open, but I no longer think it is one of the safest all-comers packages.
+What I would actually pre-build now
+Zerg
+
+Package A: Kerrigan’s Swarm
+Bring this if you want the highest ceiling and expect to play into slower or more static armies. Wild Mutation plus Omega Network is still the nastiest Zerg tempo engine.
+
+Package B: Zerg Swarm
+Bring this if you expect mirrors, marker-heavy games, or a field trying to blunt alpha turns. Brood Instinct and Rapid Burrowing make that plan much more annoying to crack.
+Protoss
+
+Package A: Khalai
+This is my new default Protoss tournament package. Forward Pylon plus chained activation is the most generally powerful Protoss framework.
+
+Package B: Daelaam
+Bring this as the anti-spike Protoss package. If you think the room is full of Kerrigan pressure, Raiders tricks, or high-commitment melee, Daelaam is the clean answer.
+Terran
+
+Package A: Terran Armed Forces
+This is my new default Terran tournament package. It is the most stable in scoring games, the safest in mirrors, and the least dependent on the opponent making mistakes.
+
+Package B: Raynor’s Raiders
+Bring this as the punish package. It is not the safest blind pick, but it is still the best Terran answer when you think people will under-screen, overcommit, or build too honestly.
+The mirror matchups
+Zerg vs Zerg
+
+My revised blind pick is Zerg Swarm, not Kerrigan’s Swarm.
+
+Why: Kerrigan’s Swarm still has the better blowout turns, but Zerg mirrors have a weird rule tension: the Omega Worm is a Source of Creep, and friendly or enemy Ground Zerg within 6" count as ON CREEP. That means Kerrigan’s Swarm can accidentally create usable creep state for the opposing Zerg too. On top of that, Zerg Swarm’s Brood Instinct and Rapid Burrowing are exactly the kind of “protect the piece that matters / overextend and hide” tools that play well into another melee- and marker-focused army.
+
+The catch is that burrowed units cannot contest or control markers, so Zerg Swarm has to time the burrow turn correctly. It is stronger in the mirror, but only if you use it as a denial tool and not as a permanent hide button.
+Protoss vs Protoss
+
+My revised blind pick is Khalai.
+
+Why: in the Protoss mirror, I think tempo beats insurance more often than it loses. Forward Pylon deployment geometry plus Bound by the Khala’s extra activation pressure is simply better at deciding where the important exchange happens. Daelaam is still the better “I think I’m about to get spiked” package, but Khalai is the package I would register if I expected a lot of Protoss.
+Terran vs Terran
+
+My revised blind pick is Terran Armed Forces.
+
+Why: the Terran mirror rewards steadiness, not cute lines. Tactical Retreat and Terran Tenacity both get better when the other side also has strong ranged pressure and wants to manipulate engagement and phase order. Raiders is still live, but it is the meta call, not the stable mirror call.
+The cross-faction counter read
+
+If you expect alpha melee / fast tempo, the best counter packages are Daelaam and Terran Armed Forces. Daelaam reduces incoming damage and can recall the cluster; Terran Armed Forces is better at disengage and phase control.
+
+If you expect slow control / marker play, the best pressure packages are Khalai and Kerrigan’s Swarm. Khalai changes entry geometry and activation flow; Kerrigan’s Swarm attacks from creep-tempo angles the slower armies do not like.
+
+If you expect a lot of mirrors, the safest packages are:
+
+    Zerg Swarm for Zerg,
+
+    Khalai for Protoss,
+
+    Terran Armed Forces for Terran.
+    That is my clearest revision from the earlier pass.
+
+The short version
+
+My revised package hierarchy is:
+
+    Khalai
+
+    Terran Armed Forces
+
+    Kerrigan’s Swarm
+
+    Daelaam
+
+    Zerg Swarm
+
+    Raynor’s Raiders
+
+And if I had to give one sentence for each mirror:
+
+    Zerg mirror: bring Zerg Swarm unless you specifically want the higher-variance Kerrigan knife fight.
+
+    Protoss mirror: bring Khalai unless you are explicitly counter-picking burst.
+
+    Terran mirror: bring Terran Armed Forces unless you think the opponent will mis-screen badly enough for Raiders to punish it.
+
+That is my better, less romantic, more tournament-minded read.
+
+The next step I would take is to turn this into a package matrix: six packages down the left, six across the top, with “favored / close / underdog” and one-sentence reasons for every pairing.
+
+

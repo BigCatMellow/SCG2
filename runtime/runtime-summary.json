@@ -1,0 +1,29 @@
+{
+  "factions": {
+    "zerg": {
+      "factionCards": 2,
+      "units": 12,
+      "weapons": 0,
+      "abilities": 0,
+      "tacticalCards": 11,
+      "upgrades": 25
+    },
+    "protoss": {
+      "factionCards": 2,
+      "units": 7,
+      "weapons": 0,
+      "abilities": 0,
+      "tacticalCards": 10,
+      "upgrades": 11
+    },
+    "terran": {
+      "factionCards": 2,
+      "units": 7,
+      "weapons": 0,
+      "abilities": 0,
+      "tacticalCards": 10,
+      "upgrades": 16
+    }
+  },
+  "note": "Counts reflect the generated rules-backed runtime coverage. Tactical cards, faction cards, units, and upgrade rosters are rebuilt from the extracted rules references; weapons and abilities remain partially hand-authored."
+}

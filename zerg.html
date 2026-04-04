@@ -1,0 +1,3066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Zerg Army Builder - StarCraft TMG</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --bg: #1a1a1a;
+      --panel: #242424;
+      --panel-2: #2a2a2a;
+      --panel-3: #303030;
+      --text: #f0eee8;
+      --muted: #a8a299;
+      --border: #3a3a3a;
+      --accent: #9333ea;
+      --accent-rgb: 147, 51, 234;
+      --menu-rgb: 147, 51, 234;
+      --success: #22c55e;
+      --warning: #fbbf24;
+      --error: #ef4444;
+      --gas: #22d3ee;
+      --role-hero: #f59e0b;
+      --role-elite: #a855f7;
+      --role-core: #3b82f6;
+      --role-support: #22c55e;
+      --role-other: #6b7280;
+      --tactical: #06b6d4;
+      --glossary: #ec4899;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      padding-bottom: 65px;
+    }
+    
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 96px 12px 12px;
+    }
+    
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 16px 64px 20px;
+      margin-bottom: 12px;
+      border-bottom: 2px solid var(--accent);
+    }
+    .header h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .header h1 span { color: var(--accent); }
+    
+    /* Sticky Header */
+    .sticky-header {
+      position: sticky;
+      top: 0;
+      z-index: 250;
+      background: rgba(26,26,26,0.98);
+      backdrop-filter: blur(10px);
+      margin: 0 -12px;
+      padding: 12px 12px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    /* Battle Size - only shown in Factions tab */
+    .battle-size-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .battle-size-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+    .battle-size-options {
+      display: flex;
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .battle-size-option {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .battle-size-option.active {
+      color: var(--text);
+      background: var(--accent);
+    }
+    .battle-size-option:not(.active):hover {
+      color: var(--text);
+      background: var(--panel-2);
+    }
+
+    .resource-stats {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
+      padding: 10px 0 6px;
+      transition: all 0.25s ease;
+    }
+    .resource-stat {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.25s ease;
+    }
+    .resource-stat-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 600;
+      transition: all 0.25s ease;
+    }
+    .resource-stat-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      transition: all 0.25s ease;
+    }
+    .resource-stat-value.minerals { color: var(--warning); }
+    .resource-stat-value.gas { color: var(--gas); }
+    .resource-stat-value.supply { color: var(--accent); }
+    .resource-stat-value.over { color: var(--error); }
+    
+    .sticky-header.compact .resource-stats {
+      gap: 20px;
+      padding: 0;
+      margin-bottom: 8px;
+    }
+    .sticky-header.compact .resource-stat {
+      gap: 6px;
+    }
+    .sticky-header.compact .resource-stat-label {
+      font-size: 0.65rem;
+    }
+    .sticky-header.compact .resource-stat-value {
+      font-size: 1rem;
+    }
+    
+    /* Slots row */
+    .slots-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+      justify-content: center;
+    }
+    .slot-badge {
+      font-size: 0.7rem;
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-weight: 600;
+    }
+    .slot-badge.ok { background: rgba(34,197,94,0.15); color: var(--success); }
+    .slot-badge.over { background: rgba(239,68,68,0.15); color: var(--error); }
+    
+    /* Slots in header */
+    .slots-compact {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+    .slots-compact .slot-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .slots-compact .slot-label {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    .slots-compact .slot-value {
+      font-weight: 700;
+    }
+    .slots-compact .slot-value.ok { color: var(--success); }
+    .slots-compact .slot-value.over { color: var(--error); }
+    .slots-compact .slot-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .slots-compact .slot-dot.hero { background: var(--role-hero); }
+    .slots-compact .slot-dot.elite { background: var(--role-elite); }
+    .slots-compact .slot-dot.core { background: var(--role-core); }
+    .slots-compact .slot-dot.support { background: var(--role-support); }
+    
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 12px 0 16px;
+    }
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .divider-text {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+    
+    /* Army Role Group */
+    .army-role-group {
+      margin-bottom: 16px;
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--border);
+    }
+    .army-role-group:last-child { margin-bottom: 0; }
+    .army-role-group.role-hero { border-left-color: var(--role-hero); }
+    .army-role-group.role-elite { border-left-color: var(--role-elite); }
+    .army-role-group.role-core { border-left-color: var(--role-core); }
+    .army-role-group.role-support { border-left-color: var(--role-support); }
+    .army-role-group.role-other { border-left-color: var(--role-other); }
+    
+    .army-role-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 0;
+      cursor: pointer;
+      user-select: none;
+    }
+    .army-role-group.expanded .army-role-header {
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .army-role-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .army-role-header.role-hero .army-role-dot { background: var(--role-hero); }
+    .army-role-header.role-elite .army-role-dot { background: var(--role-elite); }
+    .army-role-header.role-core .army-role-dot { background: var(--role-core); }
+    .army-role-header.role-support .army-role-dot { background: var(--role-support); }
+    .army-role-header.role-other .army-role-dot { background: var(--role-other); }
+    .army-role-name {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text);
+      flex: 1;
+    }
+    .army-role-count {
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: var(--panel-2);
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    /* Army Card - Expandable */
+    .army-card {
+      background: linear-gradient(135deg, rgba(var(--accent-rgb),0.10) 0%, var(--panel-2) 22%, var(--panel-2) 100%);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      overflow: hidden;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+    }
+    .army-card:last-child { margin-bottom: 0; }
+    .army-card.just-added {
+      animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes scaleIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    
+    .army-card-header {
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: background-color 0.16s ease;
+    }
+    .army-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 22px rgba(0,0,0,0.24);
+    }
+    .army-card-header:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    .army-card-info h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .army-card-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    .army-card-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .army-card-cost {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--warning);
+    }
+    .army-card-chevron {
+      color: var(--muted);
+      font-size: 14px;
+      transition: transform 0.2s;
+    }
+    .army-card.open .army-card-chevron {
+      transform: rotate(90deg);
+    }
+    
+    .army-card-body {
+      padding: 12px 14px 14px;
+      border-top: 1px solid var(--border);
+      animation: revealBlock 0.2s ease;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      margin: 12px 0;
+    }
+    .stat-chip {
+      background: var(--panel-3);
+      border-radius: 6px;
+      padding: 6px 4px;
+      text-align: center;
+    }
+    .stat-abbr {
+      display: block;
+      font-size: 0.55rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 2px;
+    }
+    .stat-value {
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    
+    /* Weapon Table */
+    .weapon-table {
+      background: var(--panel-3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .weapon-table:last-child { margin-bottom: 0; }
+    .weapon-table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+    .weapon-table-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .weapon-table-phase {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.05);
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .weapon-table-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .weapon-table-row.alt {
+      background: rgba(0,0,0,0.15);
+    }
+    .weapon-table-cell {
+      padding: 6px 8px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .weapon-table-cell:last-child { border-right: none; }
+    .weapon-table-cell span {
+      display: block;
+      font-size: 0.55rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 2px;
+    }
+    .weapon-table-cell strong {
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .weapon-table-keywords {
+      padding: 8px 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    
+    /* Ability Block */
+    .ability-block {
+      background: var(--panel-3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .ability-block:last-child { margin-bottom: 0; }
+    .ability-header {
+      padding: 10px 12px 4px;
+    }
+    .ability-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+    .ability-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .ability-body {
+      padding: 0 12px 10px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    
+    /* Keyword Highlight */
+    .keyword {
+      background: rgba(var(--accent-rgb),0.22);
+      color: color-mix(in srgb, white 55%, var(--accent) 45%);
+      padding: 1px 4px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .keyword:hover {
+      background: rgba(var(--accent-rgb),0.34);
+    }
+    
+    /* Section Block (collapsible) */
+    .section-block {
+      margin-top: 10px;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      cursor: pointer;
+      user-select: none;
+    }
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    .section-body {
+      padding-top: 8px;
+    }
+    .chevron {
+      color: var(--muted);
+      font-size: 14px;
+      transition: transform 0.2s;
+    }
+    .section-block.open .chevron {
+      transform: rotate(90deg);
+    }
+    .section-block.open .section-body {
+      animation: revealBlock 0.18s ease;
+      transform-origin: top center;
+    }
+    
+    /* Upgrade Toggle */
+    .upgrade-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .upgrade-card.selected {
+      border-color: var(--accent);
+      background: rgba(var(--accent-rgb),0.12);
+    }
+    .upgrade-card:last-child { margin-bottom: 0; }
+    .upgrade-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 10px 12px;
+    }
+    .upgrade-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .upgrade-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .upgrade-desc {
+      padding: 0 12px 10px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    .upgrade-toggle {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      border: 2px solid var(--border);
+      background: transparent;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .upgrade-toggle.active {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .upgrade-toggle.active::after {
+      content: '\\2713';
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    
+    /* Remove Button */
+    .btn-remove {
+      padding: 8px 16px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 8px;
+      color: var(--error);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 12px;
+      width: 100%;
+    }
+    .btn-remove:hover {
+      background: rgba(239,68,68,0.2);
+    }
+    
+    /* Army Actions */
+    .army-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .army-btn {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .army-btn:hover {
+      background: var(--panel-3);
+    }
+    .army-btn.scenario-clear-btn {
+      flex: 0 0 auto;
+      padding: 7px 10px;
+      font-size: 0.72rem;
+      border-radius: 8px;
+      background: rgba(249,115,22,0.10);
+      border-color: rgba(249,115,22,0.28);
+      color: #f97316;
+    }
+    .army-btn.scenario-clear-btn:hover {
+      background: rgba(249,115,22,0.16);
+      border-color: rgba(249,115,22,0.40);
+      color: var(--text);
+    }
+    .army-btn.danger:hover {
+      background: rgba(239,68,68,0.15);
+      border-color: var(--error);
+      color: var(--error);
+    }
+    
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 30px;
+      color: #555;
+      font-size: 0.85rem;
+    }
+    
+    /* Badge styles */
+    .unique-badge {
+      font-size: 0.55rem;
+      padding: 2px 5px;
+      border-radius: 3px;
+      background: rgba(245,158,11,0.2);
+      color: #f59e0b;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .psionic-badge {
+      font-size: 0.55rem;
+      padding: 2px 5px;
+      border-radius: 3px;
+      background: rgba(236,72,153,0.2);
+      color: #ec4899;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    /* ========================================
+       BOTTOM TAB BAR
+    ======================================== */
+    .tab-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 300;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 6px 4px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.6rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+    .tab-btn .tab-icon {
+      font-size: 1.1rem;
+    }
+    .tab-btn.active {
+      color: var(--accent);
+      background: rgba(var(--accent-rgb),0.14);
+      box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb),0.22);
+    }
+    .tab-btn:not(.active):hover {
+      color: var(--text);
+      background: var(--panel-2);
+    }
+    
+    /* Tab Content */
+    .tab-content {
+      display: none;
+      padding-bottom: 70px;
+    }
+    .tab-content.active {
+      display: block;
+      animation: tabFadeIn 0.18s ease;
+    }
+    .tab-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    
+    /* ========================================
+       LIBRARY CARDS (Units, Tactical, Factions)
+    ======================================== */
+    .library-section {
+      margin-bottom: 16px;
+    }
+    .library-section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 4px;
+      margin-bottom: 8px;
+    }
+    .library-section-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .library-section-dot.hero { background: var(--role-hero); }
+    .library-section-dot.elite { background: var(--role-elite); }
+    .library-section-dot.core { background: var(--role-core); }
+    .library-section-dot.support { background: var(--role-support); }
+    .library-section-dot.other { background: var(--role-other); }
+    .library-section-name {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    .unit-family-group {
+      margin-bottom: 14px;
+    }
+    .unit-family-group:last-child {
+      margin-bottom: 0;
+    }
+    .unit-family-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      padding: 2px 4px;
+      margin: 2px 0 8px;
+    }
+    .unit-family-group .unit-card:last-child {
+      margin-bottom: 0;
+    }
+    
+    /* Unit Card in Library */
+    .unit-card {
+      background: linear-gradient(180deg, rgba(var(--accent-rgb),0.06) 0%, var(--panel) 18%, var(--panel) 100%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      border-left: 3px solid var(--border);
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+    }
+    .unit-card.role-hero { border-left-color: var(--role-hero); }
+    .unit-card.role-elite { border-left-color: var(--role-elite); }
+    .unit-card.role-core { border-left-color: var(--role-core); }
+    .unit-card.role-support { border-left-color: var(--role-support); }
+    .unit-card.role-other { border-left-color: var(--role-other); }
+    .unit-card.in-army {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(var(--accent-rgb),0.16);
+    }
+    
+    .unit-card-header {
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.16s ease;
+      min-height: 104px;
+      display: flex;
+      flex-direction: column;
+    }
+    .unit-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+    }
+    .unit-card-header:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    .unit-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .unit-name {
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .unit-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+      font-size: 0.7rem;
+      color: var(--muted);
+      min-height: 28px;
+      align-content: flex-start;
+    }
+    .unit-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 4px;
+      cursor: pointer;
+      line-height: 1.25;
+    }
+    .unit-tag:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    
+    .btn-add {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: transform 0.14s ease, box-shadow 0.14s ease, filter 0.14s ease;
+      flex-shrink: 0;
+    }
+    .btn-add:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 12px rgba(147,51,234,0.5);
+    }
+    .btn-add:active {
+      transform: scale(0.95);
+    }
+    
+    .unit-card-body {
+      padding: 12px 16px 16px;
+      border-top: 1px solid var(--border);
+      animation: revealBlock 0.2s ease;
+    }
+    
+    /* Tier Table */
+    .tier-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      margin: 12px 0;
+    }
+    .tier-table th {
+      text-align: center;
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tier-table td {
+      text-align: center;
+      padding: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tier-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    /* Tactical Card */
+    .tactical-card {
+      background: linear-gradient(180deg, rgba(var(--accent-rgb),0.05) 0%, var(--panel) 18%, var(--panel) 100%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      border-left: 3px solid var(--tactical);
+    }
+    .tactical-card.in-army {
+      border-color: var(--gas);
+    }
+    .tactical-header {
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none;
+      min-height: 104px;
+      display: flex;
+      flex-direction: column;
+    }
+    .tactical-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .tactical-name {
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tactical-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .tactical-cost {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--gas);
+    }
+    .tactical-summary {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
+      font-style: italic;
+      min-height: 1.2em;
+    }
+    .tactical-info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      min-height: 28px;
+      align-content: flex-start;
+    }
+    .tactical-pill {
+      font-size: 0.7rem;
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 9px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.03);
+      color: var(--muted);
+      line-height: 1.25;
+    }
+    .tactical-category-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 4px;
+      margin: 14px 0 10px;
+    }
+    .tactical-category-header:first-child {
+      margin-top: 0;
+    }
+    .tactical-category-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--tactical);
+      flex-shrink: 0;
+    }
+    .tactical-category-name {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .tactical-category-desc {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    .tactical-body {
+      padding: 12px 16px 16px;
+      border-top: 1px solid var(--border);
+    }
+    
+    /* Faction Card */
+    .faction-card {
+      background: linear-gradient(180deg, rgba(var(--accent-rgb),0.08) 0%, var(--panel) 22%, var(--panel) 100%);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faction-card:not(.selected) {
+      border-color: var(--border);
+      opacity: 0.8;
+    }
+    .faction-card-header {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+      min-height: 78px;
+    }
+    .faction-radio {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--muted);
+      background: transparent;
+      color: transparent;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .faction-radio.selected {
+      border-color: var(--success);
+      background: var(--success);
+      color: var(--bg);
+    }
+    .faction-radio:not(.selected):active {
+      border-color: var(--accent);
+    }
+    .faction-card-main {
+      flex: 1;
+      cursor: pointer;
+    }
+    .faction-card-top {
+      display: flex;
+      align-items: center;
+    }
+    .faction-card-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .faction-card-chevron {
+      color: var(--muted);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .faction-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .faction-card-resource {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: rgba(147,51,234,0.2);
+      color: var(--accent);
+    }
+    .faction-card-slots {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 19px 16px 10px;
+      background: var(--bg);
+      justify-content: center;
+      min-height: 52px;
+      align-content: flex-start;
+    }
+    .faction-slot-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 9px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    .faction-slot-badge.hero { background: rgba(245,158,11,0.15); color: #f59e0b; }
+    .faction-slot-badge.elite { background: rgba(168,85,247,0.15); color: #a855f7; }
+    .faction-slot-badge.core { background: rgba(59,130,246,0.15); color: #3b82f6; }
+    .faction-slot-badge.support { background: rgba(34,197,94,0.15); color: #22c55e; }
+    .faction-card-abilities {
+      padding: 12px 16px;
+    }
+    
+    /* Glossary */
+    .glossary-search {
+      margin-bottom: 16px;
+    }
+    .glossary-search-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .glossary-search-input:focus {
+      border-color: var(--accent);
+    }
+    .glossary-search-input::placeholder {
+      color: var(--muted);
+    }
+    .glossary-section-header {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      padding: 8px 4px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .glossary-entry {
+      border-left: 3px solid var(--glossary);
+    }
+    .glossary-entry.tag-entry {
+      border-left-color: var(--accent);
+    }
+    
+    /* ========================================
+       MODALS
+    ======================================== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: grid;
+      place-items: center;
+      z-index: 200;
+      padding: 20px;
+      animation: fadeIn 0.15s;
+      backdrop-filter: blur(3px);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .modal {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      max-width: 380px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      animation: slideUp 0.2s;
+      box-shadow: 0 22px 48px rgba(0,0,0,0.36);
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .modal-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    .modal-type {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 18px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: transform 0.14s ease, background-color 0.14s ease, color 0.14s ease;
+    }
+    .modal-close:hover {
+      transform: rotate(90deg) scale(1.04);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+    }
+    .modal-body {
+      padding: 16px;
+    }
+    @keyframes revealBlock {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes tabFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+    .tier-option {
+      padding: 14px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tier-option:hover {
+      border-color: var(--accent);
+    }
+    .tier-option-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .tier-option-models {
+      font-weight: 600;
+    }
+    .tier-option-cost {
+      color: var(--warning);
+      font-weight: 600;
+    }
+    .tier-option-supply {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    
+    .export-choice-btn {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+      margin-bottom: 10px;
+    }
+    .export-choice-btn:last-child { margin-bottom: 0; }
+    .export-choice-btn:hover {
+      border-color: var(--accent);
+      background: rgba(147,51,234,0.1);
+    }
+    .export-choice-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .export-choice-desc {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .package-section {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .package-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.03);
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .package-card + .package-card {
+      margin-top: 12px;
+    }
+    .package-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .package-card-title {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .package-card-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .package-card-summary {
+      font-size: 0.84rem;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .package-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .scenario-pick-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .scenario-card-note {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .package-chip {
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: rgba(99,102,241,0.12);
+      border: 1px solid rgba(99,102,241,0.24);
+      font-size: 0.72rem;
+      color: #d8deff;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .package-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+      display: grid;
+      gap: 4px;
+    }
+    .package-note-block {
+      border: 1px solid rgba(34,197,94,0.22);
+      background: rgba(34,197,94,0.08);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: grid;
+      gap: 8px;
+    }
+    .package-note-title {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #9ae6b4;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .package-note-text {
+      font-size: 0.83rem;
+      color: #ddfbe8;
+      line-height: 1.55;
+    }
+    .scenario-action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .scenario-summary-card {
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(15,23,42,0.38);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: grid;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .scenario-summary-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .scenario-summary-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    /* Check overlay animation */
+    .check-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100px;
+      height: 100px;
+      background: var(--success);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 50px;
+      color: white;
+      z-index: 300;
+      animation: checkPop 0.6s ease-out forwards;
+      box-shadow: 0 0 40px rgba(34,197,94,0.5);
+    }
+    @keyframes checkPop {
+      0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+      40% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+      60% { transform: translate(-50%, -50%) scale(1); }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+    }
+  </style>
+
+<style id="app-nav-menu-style">
+  .app-menu-btn{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;z-index:10000;width:44px;height:44px;border:none;border-radius:12px;background:rgba(36,36,36,.94);color:#f2f0e8;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.32), inset 0 0 0 1px rgba(255,255,255,.08);backdrop-filter:blur(8px);cursor:pointer;transition:left .2s ease, background .18s ease, transform .18s ease} 
+  .app-menu-btn:hover{background:rgba(48,48,48,.98)}
+  .app-menu-btn:active{transform:translateY(1px)}
+  .app-menu-btn .bars,.app-menu-btn .bars::before,.app-menu-btn .bars::after{display:block;width:18px;height:2px;background:currentColor;border-radius:2px;content:"";position:relative} 
+  .app-menu-btn .bars::before{position:absolute;top:-6px;left:0} 
+  .app-menu-btn .bars::after{position:absolute;top:6px;left:0} 
+  .app-menu-overlay{position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .18s ease} 
+  .app-menu-overlay.open{opacity:1;pointer-events:auto} 
+  .app-menu-panel{position:fixed;top:0;left:0;bottom:0;width:min(82vw,320px);background:linear-gradient(180deg, rgba(var(--menu-rgb),.28) 0%, rgba(36,24,44,.98) 22%, #17131d 100%);border-right:1px solid rgba(255,255,255,.08);box-shadow:18px 0 38px rgba(0,0,0,.4);z-index:9999;transform:translateX(-105%);transition:transform .2s ease;padding:calc(env(safe-area-inset-top,0px) + 24px) 14px calc(env(safe-area-inset-bottom,0px) + 18px);display:flex;flex-direction:column}
+  .app-menu-overlay.open .app-menu-panel{transform:translateX(0)}
+  .app-menu-head{padding:8px 4px 14px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:12px}
+  .app-menu-eyebrow{color:rgba(var(--menu-rgb),.72);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:4px}
+  .app-menu-title{color:#f2f0e8;font-size:1.05rem;font-weight:800}
+  .app-menu-list{display:flex;flex-direction:column;gap:8px} 
+  .app-menu-link{display:flex;align-items:center;gap:10px;padding:12px 12px;border-radius:12px;color:#f2f0e8;text-decoration:none;font-weight:700;border:1px solid transparent;background:rgba(255,255,255,.02)}
+  .app-menu-link:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.06)}
+  .app-menu-icon{width:18px;text-align:center;opacity:.9}
+  .app-menu-link.current{color:#fff}
+  .app-menu-link.current[data-accent="zerg"]{background:rgba(110,58,165,.2);box-shadow:inset 0 0 0 1px rgba(110,58,165,.75)}
+  .app-menu-link.current[data-accent="protoss"]{background:rgba(212,175,55,.18);box-shadow:inset 0 0 0 1px rgba(212,175,55,.78)}
+  .app-menu-link.current[data-accent="terran"]{background:rgba(47,109,179,.2);box-shadow:inset 0 0 0 1px rgba(47,109,179,.78)}
+  .app-menu-link.current[data-accent="rules"]{background:rgba(236,72,153,.16);box-shadow:inset 0 0 0 1px rgba(236,72,153,.72)}
+  .app-menu-link.current[data-accent="missions"]{background:rgba(249,115,22,.16);box-shadow:inset 0 0 0 1px rgba(249,115,22,.72)}
+  .app-menu-link.current[data-accent="home"]{background:rgba(234,179,8,.16);box-shadow:inset 0 0 0 1px rgba(234,179,8,.72)}
+  body.app-menu-open .app-menu-btn{left:calc(min(82vw, 320px) - 56px);background:rgba(255,255,255,.08)}
+  body.app-menu-open{overflow:hidden} 
+  @media (min-width: 768px){ .app-menu-btn{left:16px;top:16px} }
+</style>
+</head>
+<body>
+  <div class="app" id="app"></div>
+  
+  <!-- Tab Bar -->
+  <div class="tab-bar" id="tabBar"></div>
+
+  <script src="./runtime/payloads/unit-upgrade-cost-overrides.js"></script>
+  <script src="./runtime/payloads/advice-packages.js"></script>
+  <script src="./runtime/payloads/mission-setup.js"></script>
+  <script src="./runtime/payloads/army-sheet-export.js"></script>
+  <script src="./runtime/payloads/zerg.js"></script>
+
+  <script>
+    // ============================================================================
+    // DATA: Keywords Glossary
+    // ============================================================================
+    const KEYWORDS = {
+      'ANTI-EVADE': { type: 'Combat', description: 'The target suffers -X to its Evade Rolls for this attack.' },
+      'BUFF': { type: 'Effect', description: 'The Unit gains a bonus of X to the specified Characteristic until End of the Round.' },
+      'BURROWED': { type: 'Status', description: 'The unit becomes HIDDEN and counts as Size 0. For Disengage checks it counts as Supply 0. It cannot contest or control Mission Markers. It gets an Evade Roll against every attack.' },
+      'CRITICAL HIT': { type: 'Combat', description: 'Move X dice directly from the Armour Pool to the Damage Pool, bypassing armour.' },
+      'DEBUFF': { type: 'Effect', description: 'The Unit suffers a penalty of X to the specified Characteristic until End of the Round.' },
+      'DISPLACEMENT': { type: 'Movement', description: 'This model/token can be moved through by other models and does not block movement.' },
+      'FLYING': { type: 'Status', description: 'Flying units ignore terrain when moving, are never Engaged, cannot Charge or be Charged, and cannot contest or control Mission Markers.' },
+      'HEAL': { type: 'Effect', description: 'Remove X points of accumulated Damage from the Unit. HEAL cannot return Destroyed models.' },
+      'HIDDEN': { type: 'Status', description: 'Enemies more than 4" away cannot target this unit with ranged attacks or Line of Sight abilities. The unit is immune to IMPACT and gets an Evade Roll against every attack.' },
+      'IMPACT': { type: 'Combat', description: 'After a successful Charge, each eligible model generates X extra dice. Rolls of Y or higher become automatic hits placed in the Armour Pool.' },
+      'INSTANT': { type: 'Weapon', description: 'This weapon resolves immediately, typically granting the INSTANT keyword to close combat weapons for the active unit.' },
+      'LONG RANGE': { type: 'Weapon', description: "The weapon's maximum range extends to X inches, but shots beyond the normal listed range suffer a -1 Hit penalty." },
+      'ON CREEP': { type: 'Zerg', description: 'A Ground Zerg Unit is ON CREEP while Within 6" of any Creep Tumor Token or Source of Creep (like Omega Worm).' },
+      'PLACE': { type: 'Movement', description: 'Remove the Leading Model and set it Wholly Within X inches of its starting point. PLACE ignores normal pathing, gap clearance, terrain restrictions, and elevation requirements, then the unit is rebuilt in Coherency.' },
+      'PRECISION': { type: 'Combat', description: 'After rolling to hit, move up to X missed dice into the Armour Pool. They still need to survive armour.' },
+      'RESPAWN': { type: 'Effect', description: 'Return up to X Destroyed models to the Unit. Cannot increase the Unit into a higher Supply bracket.' },
+      'SHIELDED': { type: 'Status', description: 'The first model in the unit gets extra Hit Points equal to its Shield value. The status ends when that shield is broken or the first model is removed.' },
+      'STATIONARY': { type: 'Status', description: 'All units start each round Stationary. The status is lost the moment the unit moves, is moved, or is placed.' },
+      'STAY IN PLAY': { type: 'Other', description: 'This token or marker persists through cleanup instead of being removed at the end of the round.' },
+      'SUMMON': { type: 'Movement', description: 'Create the named unit adjacent to the parent unit. It must be placed legally, with enough Available Supply, and usually gains an Activation Marker.' },
+      'TOUGH': { type: 'Combat', description: 'When making Armour Rolls, convert up to X failed results into successes.' },
+    };
+
+    const TAGS = {
+      'Armoured': { type: 'Combat Tag', description: 'Used for targeting and surge interactions. Weapons with Surge Type: Armoured deal bonus damage that bypasses armour when attacking this unit.' },
+      'Biological': { type: 'Combat Tag', description: 'Used for targeting and surge interactions. Weapons with Surge Type: Biological deal bonus damage that bypasses armour when attacking this unit.' },
+      'Flying': { type: 'Combat Tag', description: 'Flying units are never Engaged and cannot Engage. They cannot Charge or be Charged. They ignore terrain and Gap Clearance during movement. They do not participate in the Combat Phase. They cannot Contest or Control Mission Markers. They never benefit from High Ground Cover. Must end movement at least 1" from enemy Flying units.' },
+      'Ground': { type: 'Combat Tag', description: 'Ground units can Engage other Ground units when Within 1". Weapons with Target: Ground can only hit units with this tag. Ground units participate in the Combat Phase when Engaged.' },
+      'Light': { type: 'Combat Tag', description: 'Used for targeting and surge interactions. Weapons with Surge Type: Light deal bonus damage that bypasses armour when attacking this unit.' },
+      'Mechanical': { type: 'Combat Tag', description: 'Used for targeting and surge interactions. Weapons with Surge Type: Mechanical deal bonus damage that bypasses armour when attacking this unit.' },
+      'Psionic': { type: 'Special Tag', description: 'This unit has psychic abilities. Used as a marker for ability targeting - certain abilities specifically affect or reference Psionic units. Does not affect Surge damage.' },
+      'Unique': { type: 'Special Tag', description: 'Only one of this unit may be included in your army list.' },
+    };
+
+    const SURGE_TAGS = ['Armoured', 'Biological', 'Light', 'Mechanical'];
+    const TYPE_TAGS = ['Ground', 'Flying'];
+
+    // ============================================================================
+    // DATA: Engagement Scales
+    // ============================================================================
+    const ENGAGEMENT_SCALES = [
+      { id: 'skirmish', name: 'Skirmish', minerals: 1000, gas: 100, table: '36" x 36"' },
+      { id: 'standard', name: 'Standard', minerals: 2000, gas: 200, table: '36" x 54"' },
+      { id: 'grand', name: 'Grand', minerals: 9999, gas: 999, table: '36" x 72"' },
+    ];
+
+    const runtimePayload = window.__starcraftTMGRuntimePayload;
+    const UPGRADE_COST_OVERRIDES = window.__unitUpgradeCostOverrides || {};
+    const ADVICE_PACKAGE_DATA = window.__armyBuilderAdviceData || { factionNotes: [], packages: [] };
+    const MISSION_SETUP_DATA = window.__missionSetupData || { missions: [], maps: [] };
+    const ARMY_SHEET_EXPORT = window.__armySheetExport || null;
+    const ZERG_FACTION_CARDS = Array.isArray(runtimePayload?.factionCards) ? runtimePayload.factionCards : [];
+    const ZERG_UNITS = Array.isArray(runtimePayload?.units) ? runtimePayload.units : [];
+    const ZERG_TACTICAL_CARDS = Array.isArray(runtimePayload?.tacticalCards) ? runtimePayload.tacticalCards : [];
+    window.__starcraftTMGRuntimeStatus = runtimePayload?.status || 'missing-runtime-payload';
+
+    // ============================================================================
+    // STATE
+    // ============================================================================
+    let state = {
+      selectedScale: ENGAGEMENT_SCALES[1],
+      selectedFaction: ZERG_FACTION_CARDS[0],
+      armyUnits: [],
+      armyTactical: [],
+      activeTab: 'factions', // 'factions', 'units', 'tactical', 'army', 'glossary'
+      expandedArmyCards: {},
+      expandedRoleGroups: {}, // Track which role groups are expanded
+      expandedLibraryCards: {},
+      openSections: {},
+      keywordModal: null,
+      tierPicker: null,
+      showExportChoice: false,
+      showClearConfirm: false,
+      exportText: null,
+      justAddedId: null,
+      glossarySearch: '',
+      selectedMissionId: null,
+      selectedMapId: null,
+    };
+
+    // ============================================================================
+    // HELPERS
+    // ============================================================================
+    function highlightKeywords(text) {
+      const patterns = Object.keys(KEYWORDS).map(k => ({ keyword: k, pattern: new RegExp('\\b' + k.replace(/[()]/g, '\\$&') + '(?:\\s*\\([^)]+\\))?', 'gi') }));
+      let result = text;
+      patterns.forEach(({ keyword, pattern }) => {
+        result = result.replace(pattern, (match) => '<span class="keyword" onclick="showKeyword(\'' + keyword + '\')">' + match + '</span>');
+      });
+      return result;
+    }
+
+    function normalizeLookupKey(value) {
+      return String(value || '')
+        .normalize('NFKD')
+        .replace(/[\u2018\u2019]/g, "'")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '');
+    }
+
+    function getPaidTiers(unit) {
+      return (unit?.tiers || [])
+        .filter(tier => tier && tier.cost !== null)
+        .sort((a, b) => (Number(a.supply) || 0) - (Number(b.supply) || 0));
+    }
+
+    function getTierSizeLabel(unit, tier) {
+      const paidTiers = getPaidTiers(unit);
+      if (paidTiers.length === 0 || !tier) return null;
+      if (paidTiers.length === 1) return 'small';
+
+      const index = paidTiers.findIndex(candidate =>
+        candidate.tier === tier.tier
+        && String(candidate.models) === String(tier.models)
+        && Number(candidate.supply) === Number(tier.supply)
+      );
+
+      if (index === -1) return null;
+      if (paidTiers.length === 2) return index === 0 ? 'small' : 'large';
+      if (index === 0) return 'small';
+      if (index === paidTiers.length - 1) return 'large';
+      return 'medium';
+    }
+
+    function getUpgradeOverride(unit, tier, upgrade) {
+      const unitKey = normalizeLookupKey(unit?.name);
+      const sizeKey = getTierSizeLabel(unit, tier);
+      const upgradeKey = normalizeLookupKey(upgrade?.name);
+      return sizeKey ? UPGRADE_COST_OVERRIDES[unitKey]?.sizes?.[sizeKey]?.upgrades?.[upgradeKey] || null : null;
+    }
+
+    function getResolvedUpgradeCostValue(unit, tier, upgrade) {
+      const override = getUpgradeOverride(unit, tier, upgrade);
+      if (override?.cost != null) return override.cost;
+
+      const rawCost = upgrade?.cost;
+      if (typeof rawCost === 'number') return rawCost;
+      if (typeof rawCost === 'string' && rawCost.includes('/')) {
+        const values = rawCost.split('/').map(value => parseInt(value, 10)).filter(Number.isFinite);
+        if (values.length === 0) return 0;
+        const sizeKey = getTierSizeLabel(unit, tier);
+        return sizeKey === 'large' && values.length > 1 ? values[values.length - 1] : values[0];
+      }
+
+      const parsed = parseInt(rawCost, 10);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function getResolvedUpgradeCostLabel(unit, tier, upgrade) {
+      const override = getUpgradeOverride(unit, tier, upgrade);
+      if (override?.cost != null) return String(override.cost);
+
+      const rawCost = upgrade?.cost;
+      if (typeof rawCost === 'string' && rawCost.includes('/')) return String(getResolvedUpgradeCostValue(unit, tier, upgrade));
+      return String(rawCost ?? 0);
+    }
+
+    function getLibraryUpgradeCostLabel(unit, upgrade) {
+      const unitKey = normalizeLookupKey(unit?.name);
+      const upgradeKey = normalizeLookupKey(upgrade?.name);
+      const unitOverrides = UPGRADE_COST_OVERRIDES[unitKey]?.sizes || null;
+
+      if (unitOverrides) {
+        const sizeCosts = ['small', 'large']
+          .map(sizeKey => unitOverrides[sizeKey]?.upgrades?.[upgradeKey]?.cost)
+          .filter(cost => cost != null);
+
+        if (sizeCosts.length === 1) return String(sizeCosts[0]);
+        if (sizeCosts.length > 1) {
+          const uniqueCosts = [...new Set(sizeCosts.map(cost => String(cost)))];
+          return uniqueCosts.length === 1 ? uniqueCosts[0] : uniqueCosts.join('/');
+        }
+      }
+
+      return getResolvedUpgradeCostLabel(unit, null, upgrade);
+    }
+
+    function findByNormalizedName(collection, name) {
+      const target = normalizeLookupKey(name);
+      return (collection || []).find(item => normalizeLookupKey(item?.name) === target) || null;
+    }
+
+    function getFlattenedUnitUpgrades(unit) {
+      return (unit?.upgrades || []).flatMap(group => Array.isArray(group?.options) ? group.options : []);
+    }
+
+    function getAdvicePackagesForCurrentSelection() {
+      const factionName = state.selectedFaction?.name;
+      const scaleId = state.selectedScale?.id;
+      return (ADVICE_PACKAGE_DATA.packages || []).filter(pkg =>
+        pkg.factionName === factionName && pkg.scaleId === scaleId
+      );
+    }
+
+    function getFactionAdviceNotes() {
+      const factionName = state.selectedFaction?.name;
+      return (ADVICE_PACKAGE_DATA.factionNotes || []).filter(note => note.factionName === factionName);
+    }
+
+    function flattenPhaseAbilities(phaseAbilities) {
+      if (!phaseAbilities) return [];
+      if (Array.isArray(phaseAbilities)) return phaseAbilities;
+      return Object.entries(phaseAbilities).flatMap(([phase, abilities]) =>
+        (abilities || []).map(ability => ({ ...ability, phase: ability.phase || phase }))
+      );
+    }
+
+    function getScenarioScaleType() {
+      return state.selectedScale?.id === 'skirmish' ? 'Skirmish' : 'Standard';
+    }
+
+    function getActiveMissions() {
+      const type = getScenarioScaleType();
+      return (MISSION_SETUP_DATA.missions || []).filter(mission => mission.type === type);
+    }
+
+    function getActiveMaps() {
+      const type = getScenarioScaleType();
+      return (MISSION_SETUP_DATA.maps || []).filter(map => map.type === type);
+    }
+
+    function getSelectedMission() {
+      return getActiveMissions().find(mission => mission.id === state.selectedMissionId) || null;
+    }
+
+    function getSelectedMap() {
+      return getActiveMaps().find(map => map.id === state.selectedMapId) || null;
+    }
+
+    function getTotals() {
+      const minerals = state.armyUnits.reduce((sum, u) => {
+        const upgCost = (u.selectedUpgrades || []).reduce((us, upg) => us + getResolvedUpgradeCostValue(u.unit, u.tier, upg), 0);
+        return sum + u.cost + upgCost;
+      }, 0);
+      const gas = state.armyTactical.reduce((sum, t) => sum + t.cost, 0);
+      const supply = state.armyUnits.reduce((sum, u) => sum + u.tier.supply, 0);
+      const scale = state.selectedScale;
+      return {
+        minerals,
+        gas,
+        supply,
+        mineralsLeft: scale.id === 'grand' ? 'inf' : scale.minerals - minerals,
+        gasLeft: scale.id === 'grand' ? 'inf' : scale.gas - gas,
+        mineralsOver: scale.id !== 'grand' && minerals > scale.minerals,
+        gasOver: scale.id !== 'grand' && gas > scale.gas
+      };
+    }
+
+    function getSlots() {
+      const baseSlots = state.selectedFaction?.slots || {};
+      const tacticalSlots = state.armyTactical.reduce((acc, t) => {
+        Object.entries(t.slots || {}).forEach(([slot, count]) => {
+          acc[slot] = (acc[slot] || 0) + count;
+        });
+        return acc;
+      }, {});
+      // Start with base slots from faction, then add tactical slots
+      const totalSlots = { ...baseSlots };
+      Object.entries(tacticalSlots).forEach(([slot, count]) => {
+        totalSlots[slot] = (totalSlots[slot] || 0) + count;
+      });
+      // Calculate used slots
+      const used = { hero: 0, elite: 0, core: 0, support: 0 };
+      state.armyUnits.forEach(u => {
+        const role = u.unit.role.toLowerCase();
+        if (used[role] !== undefined) used[role] += u.tier.supply || 1;
+      });
+      return { total: totalSlots, used };
+    }
+
+    function save() {
+      try {
+        const toSave = {
+          units: state.armyUnits.map(entry => ({
+            unitId: entry.unit.id,
+            tier: entry.tier,
+            cost: entry.cost,
+            selectedUpgrades: entry.selectedUpgrades || []
+          })),
+          tactical: state.armyTactical.map(t => t.id),
+          factionId: state.selectedFaction?.id,
+          scaleId: state.selectedScale?.id,
+          missionId: state.selectedMissionId,
+          mapId: state.selectedMapId
+        };
+        localStorage.setItem('sc-tmg-zerg-v4', JSON.stringify(toSave));
+      } catch (e) { console.error(e); }
+    }
+
+    function load() {
+      try {
+        const saved = localStorage.getItem('sc-tmg-zerg-v4');
+        if (saved) {
+          const { units, tactical, factionId, scaleId, missionId, mapId } = JSON.parse(saved);
+          const rehydratedUnits = (units || []).map(entry => {
+            const unit = ZERG_UNITS.find(u => u.id === entry.unitId);
+            if (!unit) return null;
+            return { unit, tier: entry.tier, cost: entry.cost, selectedUpgrades: entry.selectedUpgrades || [] };
+          }).filter(Boolean);
+          const rehydratedTactical = (tactical || []).map(id => ZERG_TACTICAL_CARDS.find(t => t.id === id)).filter(Boolean);
+          state.armyUnits = rehydratedUnits;
+          state.armyTactical = rehydratedTactical;
+          const faction = ZERG_FACTION_CARDS.find(f => f.id === factionId);
+          if (faction) state.selectedFaction = faction;
+          const scale = ENGAGEMENT_SCALES.find(s => s.id === scaleId);
+          if (scale) state.selectedScale = scale;
+          state.selectedMissionId = missionId || null;
+          state.selectedMapId = mapId || null;
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    // ============================================================================
+    // ACTIONS
+    // ============================================================================
+    function selectScale(scaleId) {
+      state.selectedScale = ENGAGEMENT_SCALES.find(s => s.id === scaleId);
+      if (!getActiveMissions().some(mission => mission.id === state.selectedMissionId)) {
+        state.selectedMissionId = null;
+      }
+      if (!getActiveMaps().some(map => map.id === state.selectedMapId)) {
+        state.selectedMapId = null;
+      }
+      save();
+      render();
+    }
+
+    function selectFaction(factionId) {
+      state.selectedFaction = ZERG_FACTION_CARDS.find(f => f.id === factionId);
+      save();
+      render();
+    }
+
+    function loadAdvicePackage(packageId) {
+      const pkg = (ADVICE_PACKAGE_DATA.packages || []).find(candidate => candidate.id === packageId);
+      if (!pkg) return;
+
+      if ((state.armyUnits.length > 0 || state.armyTactical.length > 0) && !window.confirm('Replace the current roster with this package?')) {
+        return;
+      }
+
+      const faction = findByNormalizedName(ZERG_FACTION_CARDS, pkg.factionName);
+      if (faction) state.selectedFaction = faction;
+
+      const scale = ENGAGEMENT_SCALES.find(candidate => candidate.id === pkg.scaleId);
+      if (scale) state.selectedScale = scale;
+
+      const missing = [];
+      const loadedUnits = [];
+      const loadedTactical = [];
+
+      (pkg.tacticalCards || []).forEach(cardName => {
+        const card = findByNormalizedName(ZERG_TACTICAL_CARDS, cardName);
+        if (card) {
+          loadedTactical.push(card);
+        } else {
+          missing.push('Tactical: ' + cardName);
+        }
+      });
+
+      (pkg.units || []).forEach((unitConfig, index) => {
+        const unit = findByNormalizedName(ZERG_UNITS, unitConfig.name);
+        if (!unit) {
+          missing.push('Unit: ' + unitConfig.name);
+          return;
+        }
+
+        const tiers = [...(unit.tiers || [])].filter(tier => tier && tier.cost !== null);
+        let tier = null;
+        if (unitConfig.models != null) {
+          tier = tiers.find(candidate => String(candidate.models) === String(unitConfig.models)) || null;
+        }
+        if (!tier) {
+          tier = tiers[0] || null;
+        }
+        if (!tier) {
+          missing.push('Tier: ' + unitConfig.name);
+          return;
+        }
+
+        const selectedUpgrades = (unitConfig.upgrades || []).map(upgradeName => {
+          const option = findByNormalizedName(getFlattenedUnitUpgrades(unit), upgradeName);
+          if (!option) {
+            missing.push('Upgrade: ' + unitConfig.name + ' -> ' + upgradeName);
+          }
+          return option;
+        }).filter(Boolean);
+
+        loadedUnits.push({
+          unit,
+          tier,
+          cost: tier.cost,
+          selectedUpgrades,
+          entryId: Date.now() + index
+        });
+      });
+
+      state.armyUnits = loadedUnits;
+      state.armyTactical = loadedTactical;
+      state.activeTab = 'army';
+      save();
+      render();
+
+      if (missing.length > 0) {
+        window.alert('Package loaded with some missing items:\n\n' + missing.join('\n'));
+      }
+    }
+
+    function selectMission(missionId) {
+      state.selectedMissionId = missionId ? (state.selectedMissionId === missionId ? null : missionId) : null;
+      save();
+      render();
+    }
+
+    function selectMap(mapId) {
+      state.selectedMapId = mapId ? (state.selectedMapId === mapId ? null : mapId) : null;
+      save();
+      render();
+    }
+
+    function randomMission() {
+      const missions = getActiveMissions();
+      if (missions.length === 0) return;
+      const pool = missions.filter(mission => mission.id !== state.selectedMissionId);
+      const source = pool.length ? pool : missions;
+      const pick = source[Math.floor(Math.random() * source.length)];
+      state.selectedMissionId = pick?.id || null;
+      save();
+      render();
+    }
+
+    function randomMap() {
+      const maps = getActiveMaps();
+      if (maps.length === 0) return;
+      const pool = maps.filter(map => map.id !== state.selectedMapId);
+      const source = pool.length ? pool : maps;
+      const pick = source[Math.floor(Math.random() * source.length)];
+      state.selectedMapId = pick?.id || null;
+      save();
+      render();
+    }
+
+    function setTab(tab) {
+      state.activeTab = tab;
+      render();
+      // Scroll to top when switching tabs
+      window.scrollTo({ top: 0 });
+    }
+
+    function showTierPicker(unit) {
+      state.tierPicker = unit;
+      render();
+    }
+
+    function closeTierPicker() {
+      state.tierPicker = null;
+      render();
+    }
+
+    function selectTier(tier) {
+      const unit = state.tierPicker;
+      if (!unit || tier.cost === null) return;
+      const entryId = Date.now();
+      state.armyUnits.push({ unit, tier, cost: tier.cost, selectedUpgrades: [], entryId });
+      state.justAddedId = entryId;
+      state.tierPicker = null;
+      
+      // Show check animation
+      const checkEl = document.createElement('div');
+      checkEl.className = 'check-overlay';
+      checkEl.textContent = String.fromCharCode(10003);
+      document.body.appendChild(checkEl);
+      setTimeout(() => checkEl.remove(), 600);
+      
+      save();
+      render();
+      setTimeout(() => { state.justAddedId = null; render(); }, 350);
+    }
+
+    function removeUnit(entryId) {
+      state.armyUnits = state.armyUnits.filter(u => u.entryId !== entryId);
+      save();
+      render();
+    }
+
+    function toggleArmyCard(entryId) {
+      state.expandedArmyCards[entryId] = !state.expandedArmyCards[entryId];
+      render();
+    }
+
+    function toggleRoleGroup(role) {
+      state.expandedRoleGroups[role] = !state.expandedRoleGroups[role];
+      render();
+    }
+
+    function getUnitFamilyName(unitOrName) {
+      const family = typeof unitOrName === 'object' && unitOrName ? unitOrName.family : null;
+      if (family) return String(family).trim();
+      const name = typeof unitOrName === 'string' ? unitOrName : (unitOrName?.name || '');
+      const trimmedName = String(name).trim();
+      const match = trimmedName.match(/\(([^()]+)\)\s*$/);
+      return (match ? match[1] : trimmedName).trim();
+    }
+
+    function isBaseFamilyUnit(unit) {
+      if (Number.isFinite(Number(unit?.variantOrder))) return Number(unit.variantOrder) === 0;
+      return unit.name.trim().toLowerCase() === getUnitFamilyName(unit).toLowerCase();
+    }
+
+    function groupUnitsByFamily(units) {
+      const sortedUnits = [...units].sort((a, b) => {
+        const familyCompare = getUnitFamilyName(a).localeCompare(getUnitFamilyName(b));
+        if (familyCompare !== 0) return familyCompare;
+
+        const variantOrderA = Number.isFinite(Number(a?.variantOrder)) ? Number(a.variantOrder) : (isBaseFamilyUnit(a) ? 0 : 1);
+        const variantOrderB = Number.isFinite(Number(b?.variantOrder)) ? Number(b.variantOrder) : (isBaseFamilyUnit(b) ? 0 : 1);
+        if (variantOrderA !== variantOrderB) {
+          return variantOrderA - variantOrderB;
+        }
+
+        return a.name.localeCompare(b.name);
+      });
+
+      const groups = [];
+      sortedUnits.forEach(unit => {
+        const family = getUnitFamilyName(unit);
+        const lastGroup = groups[groups.length - 1];
+        if (!lastGroup || lastGroup.family !== family) {
+          groups.push({ family, units: [unit] });
+        } else {
+          lastGroup.units.push(unit);
+        }
+      });
+      return groups;
+    }
+
+    function toggleLibraryCard(cardId) {
+      state.expandedLibraryCards[cardId] = !state.expandedLibraryCards[cardId];
+      render();
+    }
+
+    function toggleSection(sectionId) {
+      state.openSections[sectionId] = !state.openSections[sectionId];
+      render();
+    }
+
+    function toggleUpgrade(entryId, upgrade) {
+      state.armyUnits = state.armyUnits.map(entry => {
+        if (entry.entryId !== entryId) return entry;
+        const isSelected = (entry.selectedUpgrades || []).some(u => u.name === upgrade.name);
+        return {
+          ...entry,
+          selectedUpgrades: isSelected
+            ? entry.selectedUpgrades.filter(u => u.name !== upgrade.name)
+            : [...(entry.selectedUpgrades || []), upgrade]
+        };
+      });
+      save();
+      render();
+    }
+
+    function addTactical(cardId) {
+      const card = ZERG_TACTICAL_CARDS.find(t => t.id === cardId);
+      if (!card) return;
+      if (card.unique && state.armyTactical.some(t => t.id === cardId)) return;
+      state.armyTactical.push(card);
+      save();
+      render();
+    }
+
+    function removeTactical(idx) {
+      state.armyTactical.splice(idx, 1);
+      save();
+      render();
+    }
+
+    function showKeyword(keyword) {
+      state.keywordModal = keyword;
+      render();
+    }
+
+    function closeKeywordModal() {
+      state.keywordModal = null;
+      render();
+    }
+
+    let glossarySearchTimeout = null;
+    function updateGlossarySearch(value) {
+      state.glossarySearch = value;
+      // Debounce: wait for user to stop typing before re-rendering
+      if (glossarySearchTimeout) clearTimeout(glossarySearchTimeout);
+      glossarySearchTimeout = setTimeout(() => {
+        const cursorPos = document.querySelector('.glossary-search-input')?.selectionStart || value.length;
+        render();
+        requestAnimationFrame(() => {
+          const input = document.querySelector('.glossary-search-input');
+          if (input) {
+            input.focus();
+            input.setSelectionRange(cursorPos, cursorPos);
+          }
+        });
+      }, 150);
+    }
+
+    function showExportChoice() {
+      state.showExportChoice = true;
+      render();
+    }
+
+    function closeExportChoice() {
+      state.showExportChoice = false;
+      render();
+    }
+
+    function showClearConfirm() {
+      state.showClearConfirm = true;
+      render();
+    }
+
+    function closeClearConfirm() {
+      state.showClearConfirm = false;
+      render();
+    }
+
+    function clearArmy() {
+      state.armyUnits = [];
+      state.armyTactical = [];
+      state.selectedMissionId = null;
+      state.selectedMapId = null;
+      state.showClearConfirm = false;
+      save();
+      render();
+    }
+
+    function slugifyFilenamePart(value) {
+      return String(value || 'army')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'army';
+    }
+
+    function triggerDownload(filename, content, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+
+    function buildExportText(mode) {
+      const lines = [];
+      const totals = getTotals();
+      const slots = getSlots();
+      const divider = '='.repeat(50);
+      const thinDivider = '-'.repeat(50);
+
+      lines.push(divider);
+      lines.push('  ' + (state.selectedFaction?.name?.toUpperCase() || 'ARMY') + ' - ' + state.selectedScale.name);
+      lines.push(divider);
+      lines.push('');
+
+      lines.push('FACTION: ' + state.selectedFaction?.name + ' (' + state.selectedFaction?.resource + ')');
+      const slotStr = Object.entries(state.selectedFaction?.slots || {}).map(([s, c]) => s.charAt(0).toUpperCase() + c).join(' / ');
+      lines.push('  Slots: ' + slotStr);
+      lines.push('');
+
+      if (state.armyTactical.length > 0) {
+        lines.push('TACTICAL CARDS');
+        lines.push(thinDivider);
+        state.armyTactical.forEach(t => {
+          lines.push(t.name + (t.unique ? ' [U]' : '') + ' - ' + t.cost + ' Gas');
+        });
+        lines.push('');
+      }
+
+      if (state.armyUnits.length > 0) {
+        lines.push('UNITS');
+        lines.push(thinDivider);
+        ['Hero', 'Elite', 'Core', 'Support', 'Other'].forEach(role => {
+          const unitsInRole = state.armyUnits.filter(e => e.unit.role === role);
+          if (unitsInRole.length === 0) return;
+          lines.push('> ' + role.toUpperCase());
+          unitsInRole.forEach(entry => {
+            const upgCost = (entry.selectedUpgrades || []).reduce((sum, u) => sum + getResolvedUpgradeCostValue(entry.unit, entry.tier, u), 0);
+            const total = entry.cost + upgCost;
+            lines.push('  ' + entry.unit.name + ' x' + entry.tier.models + ' - ' + total + ' pts (Supply ' + entry.tier.supply + ')');
+            (entry.selectedUpgrades || []).forEach(upg => {
+              lines.push('    + ' + upg.name + ' (+' + getResolvedUpgradeCostLabel(entry.unit, entry.tier, upg) + ')');
+            });
+            if (mode === 'full') {
+              if (entry.unit.tags && entry.unit.tags.length) lines.push('    Tags: ' + entry.unit.tags.join(', '));
+              if (entry.tier?.characteristics) {
+                const c = entry.tier.characteristics;
+                const stats = [
+                  ['M', c.move], ['EVA', c.evade], ['ARM', c.armor], ['HP', c.hp], ['SH', c.shields], ['SUP', c.supply]
+                ].filter(([,v]) => v !== undefined && v !== null && v !== '');
+                if (stats.length) lines.push('    Stats: ' + stats.map(([k,v]) => k + ' ' + v).join(' | '));
+              }
+              (entry.unit.weapons || []).forEach(w => {
+                const parts = [];
+                if (w.range) parts.push('Range ' + w.range);
+                if (w.attack) parts.push('Atk ' + w.attack);
+                if (w.hit) parts.push('Hit ' + w.hit);
+                if (w.damage) parts.push('Dmg ' + w.damage);
+                if (w.target) parts.push('Target ' + w.target);
+                if (w.special) parts.push(w.special);
+                lines.push('    Weapon: ' + w.name + (parts.length ? ' — ' + parts.join(', ') : ''));
+              });
+              (entry.unit.abilities || []).forEach(ab => {
+                const head = [ab.phase, ab.name, ab.type].filter(Boolean).join(' | ');
+                lines.push('    Ability: ' + head + (ab.text ? ' — ' + ab.text : ''));
+              });
+            }
+          });
+          lines.push('');
+        });
+      }
+
+      lines.push(divider);
+      lines.push('  ' + totals.minerals + '/' + state.selectedScale.minerals + ' Mins - ' + totals.gas + '/' + state.selectedScale.gas + ' Gas - Supply ' + totals.supply);
+      lines.push(divider);
+
+      return lines.join('\n');
+    }
+
+    function doExport(mode) {
+      state.exportText = buildExportText(mode);
+      state.showExportChoice = false;
+      render();
+    }
+
+    function downloadTextExport(mode) {
+      const factionName = state.selectedFaction?.name || 'army';
+      const scaleName = state.selectedScale?.name || 'list';
+      const filename = slugifyFilenamePart(factionName) + '-' + slugifyFilenamePart(scaleName) + '-' + mode + '-reference.txt';
+      triggerDownload(filename, buildExportText(mode), 'text/plain;charset=utf-8');
+      state.showExportChoice = false;
+      render();
+    }
+
+    function downloadJsonExport() {
+      const totals = getTotals();
+      const payload = {
+        savedAt: new Date().toISOString(),
+        faction: state.selectedFaction?.name || null,
+        scale: state.selectedScale?.name || null,
+        totals,
+        factionCard: state.selectedFaction ? {
+          id: state.selectedFaction.id,
+          name: state.selectedFaction.name,
+          resource: state.selectedFaction.resource,
+          slots: state.selectedFaction.slots || {}
+        } : null,
+        tacticalCards: (state.armyTactical || []).map(t => ({
+          id: t.id,
+          name: t.name,
+          cost: t.cost,
+          unique: !!t.unique,
+          phase: t.phase || null,
+          text: t.text || null
+        })),
+        units: (state.armyUnits || []).map(entry => ({
+          unitId: entry.unit?.id || null,
+          name: entry.unit?.name || null,
+          role: entry.unit?.role || null,
+          mineralCost: entry.cost,
+          tier: entry.tier ? {
+            level: entry.tier.level ?? null,
+            models: entry.tier.models ?? null,
+            supply: entry.tier.supply ?? null,
+            characteristics: entry.tier.characteristics || null
+          } : null,
+          selectedUpgrades: (entry.selectedUpgrades || []).map(upg => ({
+            id: upg.id || null,
+            name: upg.name,
+            cost: upg.cost,
+            text: upg.text || null
+          }))
+        }))
+      };
+      const filename = slugifyFilenamePart(state.selectedFaction?.name || 'army') + '-' + slugifyFilenamePart(state.selectedScale?.name || 'list') + '-save.json';
+      triggerDownload(filename, JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
+      state.showExportChoice = false;
+      render();
+    }
+
+    function buildArmySheetPayload() {
+      const totals = getTotals();
+      const slots = getSlots();
+      const roleOrder = { Hero: 0, Elite: 1, Core: 2, Support: 3, Other: 4 };
+      const armyUnits = [...(state.armyUnits || [])].sort((a, b) => {
+        const roleCompare = (roleOrder[a.unit?.role] ?? 99) - (roleOrder[b.unit?.role] ?? 99);
+        if (roleCompare !== 0) return roleCompare;
+        const familyCompare = getUnitFamilyName(a.unit).localeCompare(getUnitFamilyName(b.unit));
+        if (familyCompare !== 0) return familyCompare;
+        return String(a.unit?.name || '').localeCompare(String(b.unit?.name || ''));
+      });
+
+      const slotLabel = Object.entries(slots.total || {})
+        .map(([slot, count]) => slot.charAt(0).toUpperCase() + slot.slice(1) + ' x' + count)
+        .join('  |  ');
+      const selectedMission = getSelectedMission();
+      const selectedMap = getSelectedMap();
+
+      return {
+        title: 'Army Sheet',
+        factionName: state.selectedFaction?.name || 'Army',
+        scaleName: state.selectedScale?.name || '',
+        totalLabel: totals.minerals + ' / ' + state.selectedScale.minerals + ' Minerals   |   ' + totals.gas + ' / ' + state.selectedScale.gas + ' Gas   |   Supply ' + totals.supply,
+        slotLabel,
+        mission: selectedMission ? {
+          name: selectedMission.name,
+          summary: 'Supply ' + selectedMission.supply + ' with +' + selectedMission.perRound + ' per round for ' + selectedMission.gameLength + ' rounds.',
+          parameters: selectedMission.parameters || [],
+          scoring: selectedMission.scoring || [],
+          special: selectedMission.special || '',
+          additionalRules: selectedMission.additionalRules || []
+        } : null,
+        map: selectedMap ? {
+          name: selectedMap.name,
+          size: selectedMap.size,
+          width: selectedMap.width,
+          height: selectedMap.height,
+          blueZones: selectedMap.blueZones || [],
+          redZones: selectedMap.redZones || [],
+          markers: selectedMap.markers || [],
+          summary: selectedMap.notes || '',
+          markerSetup: selectedMap.markerSetup || [],
+          blueSetup: selectedMap.blueSetup || null,
+          redSetup: selectedMap.redSetup || null,
+          notes: selectedMap.notes || ''
+        } : null,
+        units: armyUnits.map(entry => {
+          const unit = entry.unit || {};
+          const tierStats = entry.tier?.characteristics || {};
+          const abilityList = [
+            ...(unit.abilities || []).map(ability => ({
+              name: ability.name,
+              phase: ability.phase || 'Any',
+              type: ability.type || '',
+              description: ability.text || ability.description || ''
+            })),
+            ...flattenPhaseAbilities(unit.phaseAbilities).map(ability => ({
+              name: ability.name,
+              phase: ability.phase || 'Any',
+              type: ability.type || '',
+              description: ability.text || ability.description || ''
+            }))
+          ];
+          return {
+            name: unit.name,
+            role: unit.role,
+            costLabel: entry.cost + ' Minerals',
+            costBreakdown: 'Selected Tier: ' + entry.tier.tier + '  |  Models ' + entry.tier.models + '  |  Supply ' + entry.tier.supply,
+            stats: {
+              speed: tierStats.move ?? '-',
+              evade: tierStats.evade ?? '-',
+              armour: tierStats.armor ?? '-',
+              hp: tierStats.hp ?? '-',
+              shield: tierStats.shields ?? '-',
+              size: tierStats.size ?? '-'
+            },
+            supplyBrackets: (unit.tiers || []).map(bracket => ({
+              models: bracket.models,
+              supply: bracket.supply,
+              isActive: bracket.tier === entry.tier.tier
+            })),
+            weapons: (unit.weapons || []).map(weapon => ({
+              name: weapon.name,
+              phase: weapon.phase || 'Any',
+              range: weapon.range ?? '-',
+              target: weapon.target ?? '-',
+              roa: weapon.attack ?? weapon.roa ?? '-',
+              hit: weapon.hit ?? '-',
+              surge: weapon.surge ?? '-',
+              sDie: weapon.specialDie ?? weapon.sDie ?? '-',
+              damage: weapon.damage ?? '-',
+              keywords: weapon.keywords || []
+            })),
+            abilities: abilityList,
+            upgrades: (entry.selectedUpgrades || []).map(upgrade => ({
+              name: upgrade.name,
+              costLabel: getResolvedUpgradeCostLabel(unit, entry.tier, upgrade) + ' Minerals',
+              type: upgrade.type || '',
+              description: upgrade.text || upgrade.description || ''
+            }))
+          };
+        }),
+        tacticalCards: (state.armyTactical || []).map(card => ({
+          name: card.name,
+          costLabel: (card.cost ?? 0) + ' Gas',
+          meta: [card.phase, card.category].filter(Boolean).join(' | '),
+          abilities: (card.abilities || []).map(ability => ({
+            name: ability.name,
+            phase: ability.phase || 'Any',
+            type: ability.type || '',
+            description: ability.text || ability.description || ''
+          }))
+        }))
+      };
+    }
+
+    function downloadPdfExport() {
+      if (!ARMY_SHEET_EXPORT || typeof ARMY_SHEET_EXPORT.buildArmySheetHtml !== 'function') {
+        window.alert('Army sheet export is not available yet.');
+        return;
+      }
+      const html = ARMY_SHEET_EXPORT.buildArmySheetHtml(buildArmySheetPayload());
+      ARMY_SHEET_EXPORT.openPrintWindow(html);
+      state.showExportChoice = false;
+      render();
+    }
+
+
+    function closeExportText() {
+      state.exportText = null;
+      render();
+    }
+
+    // ============================================================================
+    // RENDER
+    // ============================================================================
+    function render() {
+      const totals = getTotals();
+      const slots = getSlots();
+      const app = document.getElementById('app');
+      const tabBar = document.getElementById('tabBar');
+
+      // Group army units by role
+      const armyByRole = {};
+      ['Hero', 'Elite', 'Core', 'Support', 'Other'].forEach(role => {
+        armyByRole[role] = state.armyUnits.filter(u => u.unit.role === role);
+      });
+
+      // Group library units by role
+      const unitsByRole = {};
+      ['Hero', 'Elite', 'Core', 'Support', 'Other'].forEach(role => {
+        unitsByRole[role] = ZERG_UNITS.filter(u => u.role === role);
+      });
+
+      const unitIdsInArmy = state.armyUnits.map(u => u.unit.id);
+      const tacticalIdsInArmy = state.armyTactical.map(t => t.id);
+
+      let html = '';
+
+      // Sticky Header - always compact style
+      html += '<div class="sticky-header" id="stickyHeader">';
+      
+      // Resources
+      html += '<div class="resource-stats">';
+      html += '<div class="resource-stat"><div class="resource-stat-label">Minerals</div><div class="resource-stat-value minerals ' + (totals.mineralsOver ? 'over' : '') + '">' + (totals.mineralsLeft === 'inf' ? '&#8734;' : totals.mineralsLeft) + '</div></div>';
+      html += '<div class="resource-stat"><div class="resource-stat-label">Gas</div><div class="resource-stat-value gas ' + (totals.gasOver ? 'over' : '') + '">' + (totals.gasLeft === 'inf' ? '&#8734;' : totals.gasLeft) + '</div></div>';
+      html += '<div class="resource-stat"><div class="resource-stat-label">Supply</div><div class="resource-stat-value supply">' + totals.supply + '</div></div>';
+      html += '</div>';
+
+      // Slots row
+      html += '<div class="slots-compact">';
+      ['hero', 'elite', 'core', 'support'].forEach(slot => {
+        const limit = slots.total[slot] || 0;
+        const used = slots.used[slot] || 0;
+        if (limit === 0 && used === 0) return;
+        const isOver = used > limit;
+        html += '<div class="slot-item"><span class="slot-dot ' + slot + '"></span><span class="slot-label">' + slot.charAt(0).toUpperCase() + '</span><span class="slot-value ' + (isOver ? 'over' : 'ok') + '">' + used + '/' + limit + '</span></div>';
+      });
+      html += '</div>';
+      html += '</div>'; // end sticky header
+
+      // ========== ARMY TAB ==========
+      html += '<div class="tab-content ' + (state.activeTab === 'army' ? 'active' : '') + '">';
+      html += '<div class="tab-header"><div class="tab-title">Roster (' + state.armyUnits.length + ')</div></div>';
+      const packageNotes = getFactionAdviceNotes();
+      const packages = getAdvicePackagesForCurrentSelection();
+
+      // Slot badges
+      html += '<div class="slots-row">';
+      ['hero', 'elite', 'core', 'support'].forEach(slot => {
+        const limit = slots.total[slot] || 0;
+        const used = slots.used[slot] || 0;
+        if (limit === 0 && used === 0) return;
+        const isOver = used > limit;
+        html += '<span class="slot-badge ' + (isOver ? 'over' : 'ok') + '">' + slot.toUpperCase() + ': ' + used + '/' + limit + '</span>';
+      });
+      html += '</div>';
+
+      // Faction card in Your Army section
+      if (state.selectedFaction) {
+        const faction = state.selectedFaction;
+        const isFactionExpanded = state.expandedArmyCards['faction'];
+        html += '<div class="army-card ' + (isFactionExpanded ? 'open' : '') + '" style="border-left: 3px solid var(--accent); margin-bottom: 16px;">';
+        html += '<div class="army-card-header" onclick="toggleArmyCard(\'faction\')">';
+        html += '<div class="army-card-info"><h3>' + faction.name + '</h3><div class="army-card-meta">Faction Card - ' + faction.resource + '</div></div>';
+        html += '<div class="army-card-right"><span class="army-card-chevron">' + (isFactionExpanded ? '&#9662;' : '&#8250;') + '</span></div>';
+        html += '</div>';
+        if (isFactionExpanded) {
+          html += '<div class="army-card-body">';
+          // Faction slots summary
+          html += '<div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; margin-bottom: 12px;">';
+          Object.entries(faction.slots || {}).forEach(([s, c]) => {
+            html += '<span class="faction-slot-badge ' + s + '">' + s.toUpperCase() + ' x' + c + '</span>';
+          });
+          html += '</div>';
+          // Faction abilities
+          (faction.abilities || []).forEach(a => {
+            html += '<div class="ability-block"><div class="ability-header"><div class="ability-title">' + a.name + '</div><div class="ability-meta">' + a.phase + ' - ' + a.type + '</div></div><div class="ability-body">' + highlightKeywords(a.description) + '</div></div>';
+          });
+          html += '</div>';
+        }
+        html += '</div>';
+      }
+
+      // Army content
+      if (state.armyUnits.length === 0 && state.armyTactical.length === 0) {
+        html += '<div class="empty-state">Tap Units or Tactical tabs to add cards</div>';
+      } else {
+        // Tactical cards in army
+        if (state.armyTactical.length > 0) {
+          const isTacticalExpanded = state.expandedRoleGroups['tactical'];
+          html += '<div class="army-role-group ' + (isTacticalExpanded ? 'expanded' : '') + '" style="border-left-color: var(--tactical);">';
+          html += '<div class="army-role-header" style="cursor: pointer;" onclick="toggleRoleGroup(\'tactical\')"><span class="army-role-dot" style="background: var(--tactical);"></span><span class="army-role-name">Tactical</span><span class="army-role-count">' + state.armyTactical.length + '</span><span class="chevron" style="margin-left: auto;">' + (isTacticalExpanded ? '&#9662;' : '&#8250;') + '</span></div>';
+          if (isTacticalExpanded) {
+            state.armyTactical.forEach((card, idx) => {
+              html += '<div class="army-card" style="border-left: 3px solid var(--tactical);">';
+              html += '<div class="army-card-header" onclick="toggleArmyCard(\'tac-' + idx + '\')">';
+              html += '<div class="army-card-info"><h3>' + card.name + (card.unique ? ' <span class="unique-badge">Unique</span>' : '') + '</h3><div class="army-card-meta">' + (card.resource || 'Creep Card') + '</div></div>';
+              html += '<div class="army-card-right"><div class="army-card-cost" style="color: var(--gas);">' + card.cost + ' Gas</div><span class="army-card-chevron">' + (state.expandedArmyCards['tac-' + idx] ? '&#9662;' : '&#8250;') + '</span></div>';
+              html += '</div>';
+              if (state.expandedArmyCards['tac-' + idx]) {
+                html += '<div class="army-card-body">';
+                (card.abilities || []).forEach(a => {
+                  html += '<div class="ability-block"><div class="ability-header"><div class="ability-title">' + a.name + '</div><div class="ability-meta">' + a.phase + ' - ' + a.type + '</div></div><div class="ability-body">' + highlightKeywords(a.description) + '</div></div>';
+                });
+                html += '<button class="btn-remove" onclick="removeTactical(' + idx + ')">Remove Card</button>';
+                html += '</div>';
+              }
+              html += '</div>';
+            });
+          }
+          html += '</div>';
+        }
+
+        // Units in army by role
+        ['Hero', 'Elite', 'Core', 'Support', 'Other'].forEach(role => {
+          const unitsInRole = armyByRole[role];
+          if (unitsInRole.length === 0) return;
+          const roleKey = role.toLowerCase();
+          const isRoleExpanded = state.expandedRoleGroups[roleKey];
+          
+          // Calculate total points for this role
+          const rolePoints = unitsInRole.reduce((sum, entry) => {
+            const upgCost = (entry.selectedUpgrades || []).reduce((us, u) => {
+              const cost = u.cost;
+              if (typeof cost === 'string' && cost.includes('/')) return us + parseInt(cost.split('/')[0]);
+              return us + (parseInt(cost) || 0);
+            }, 0);
+            return sum + entry.cost + upgCost;
+          }, 0);
+          
+          html += '<div class="army-role-group ' + (isRoleExpanded ? 'expanded' : '') + ' role-' + roleKey + '">';
+          html += '<div class="army-role-header role-' + roleKey + '" style="cursor: pointer;" onclick="toggleRoleGroup(\'' + roleKey + '\')"><span class="army-role-dot"></span><span class="army-role-name">' + role + '</span><span class="army-role-count">' + unitsInRole.length + ' - ' + rolePoints + ' pts</span><span class="chevron" style="margin-left: auto;">' + (isRoleExpanded ? '&#9662;' : '&#8250;') + '</span></div>';
+          
+          if (isRoleExpanded) {
+            unitsInRole.forEach(entry => {
+              const { unit, tier, selectedUpgrades, entryId } = entry;
+              const isExpanded = state.expandedArmyCards[entryId];
+              const upgCost = (selectedUpgrades || []).reduce((sum, u) => sum + getResolvedUpgradeCostValue(unit, tier, u), 0);
+              const totalCost = entry.cost + upgCost;
+              const allUpgrades = Object.entries(unit.upgrades || {}).flatMap(([phase, upgs]) => upgs.map(u => ({ ...u, phase })));
+
+              html += '<div class="army-card ' + (entryId === state.justAddedId ? 'just-added' : '') + ' ' + (isExpanded ? 'open' : '') + '">';
+              html += '<div class="army-card-header" onclick="toggleArmyCard(' + entryId + ')">';
+              html += '<div class="army-card-info"><h3>' + unit.name + (unit.unique ? ' <span class="unique-badge">Unique</span>' : '') + '</h3><div class="army-card-meta">' + tier.models + ' models - Supply ' + tier.supply + '</div></div>';
+              html += '<div class="army-card-right"><div class="army-card-cost">' + totalCost + ' pts</div><span class="army-card-chevron">' + (isExpanded ? '&#9662;' : '&#8250;') + '</span></div>';
+              html += '</div>';
+
+              if (isExpanded) {
+                html += '<div class="army-card-body">';
+                // Stats
+                html += '<div class="stats-grid">';
+                html += '<div class="stat-chip"><span class="stat-abbr">SH</span><span class="stat-value">' + (unit.stats.shield || '-') + '</span></div>';
+                html += '<div class="stat-chip"><span class="stat-abbr">SP</span><span class="stat-value">' + unit.stats.speed + '</span></div>';
+                html += '<div class="stat-chip"><span class="stat-abbr">EV</span><span class="stat-value">' + (unit.stats.evade || '-') + '</span></div>';
+                html += '<div class="stat-chip"><span class="stat-abbr">AR</span><span class="stat-value">' + unit.stats.armour + '</span></div>';
+                html += '<div class="stat-chip"><span class="stat-abbr">HP</span><span class="stat-value">' + unit.stats.hp + '</span></div>';
+                html += '<div class="stat-chip"><span class="stat-abbr">SZ</span><span class="stat-value">' + unit.stats.size + '</span></div>';
+                html += '</div>';
+
+                // Weapons
+                if (unit.weapons.length > 0) {
+                  html += '<div class="section-block ' + (state.openSections['army-wpn-' + entryId] ? 'open' : '') + '">';
+                  html += '<div class="section-header" onclick="toggleSection(\'army-wpn-' + entryId + '\')"><span class="section-title">Weapons</span><span class="chevron">&#8250;</span></div>';
+                  if (state.openSections['army-wpn-' + entryId]) {
+                    html += '<div class="section-body">';
+                    unit.weapons.forEach(w => {
+                      html += '<div class="weapon-table">';
+                      html += '<div class="weapon-table-header"><span class="weapon-table-name">' + w.name + '</span><span class="weapon-table-phase">' + w.phase + '</span></div>';
+                      html += '<div class="weapon-table-row"><div class="weapon-table-cell"><span>RNG</span><strong>' + w.range + '</strong></div><div class="weapon-table-cell"><span>TGT</span><strong>' + w.target + '</strong></div><div class="weapon-table-cell"><span>RoA</span><strong>' + w.roa + '</strong></div><div class="weapon-table-cell"><span>Hit</span><strong>' + w.hit + '</strong></div></div>';
+                      html += '<div class="weapon-table-row alt"><div class="weapon-table-cell"><span>Surge</span><strong>' + (w.surge || '-') + '</strong></div><div class="weapon-table-cell"><span>S.Die</span><strong>' + (w.sDie || '-') + '</strong></div><div class="weapon-table-cell"><span>Dmg</span><strong>' + w.damage + '</strong></div><div class="weapon-table-cell"><span>Kwd</span><strong>' + (w.keywords?.length > 0 ? 'Y' : '-') + '</strong></div></div>';
+                      if (w.keywords?.length > 0) {
+                        html += '<div class="weapon-table-keywords">';
+                        w.keywords.forEach(kw => {
+                          html += '<span class="keyword" onclick="showKeyword(\'' + kw.split('(')[0].trim() + '\')">' + kw + '</span>';
+                        });
+                        html += '</div>';
+                      }
+                      html += '</div>';
+                    });
+                    html += '</div>';
+                  }
+                  html += '</div>';
+                }
+
+                // Abilities
+                const allAbilities = [...(unit.abilities || []), ...Object.entries(unit.phaseAbilities || {}).flatMap(([phase, abs]) => abs.map(a => ({ ...a, phase })))];
+                if (allAbilities.length > 0) {
+                  html += '<div class="section-block ' + (state.openSections['army-abl-' + entryId] ? 'open' : '') + '">';
+                  html += '<div class="section-header" onclick="toggleSection(\'army-abl-' + entryId + '\')"><span class="section-title">Abilities</span><span class="chevron">&#8250;</span></div>';
+                  if (state.openSections['army-abl-' + entryId]) {
+                    html += '<div class="section-body">';
+                    allAbilities.forEach(a => {
+                      html += '<div class="ability-block"><div class="ability-header"><div class="ability-title">' + a.name + '</div><div class="ability-meta">' + a.phase + ' - ' + a.type + '</div></div><div class="ability-body">' + highlightKeywords(a.description) + '</div></div>';
+                    });
+                    html += '</div>';
+                  }
+                  html += '</div>';
+                }
+
+                // Upgrades
+                if (allUpgrades.length > 0) {
+                  html += '<div class="section-block ' + (state.openSections['army-upg-' + entryId] ? 'open' : '') + '">';
+                  html += '<div class="section-header" onclick="toggleSection(\'army-upg-' + entryId + '\')"><span class="section-title">Upgrades</span><span class="chevron">&#8250;</span></div>';
+                  if (state.openSections['army-upg-' + entryId]) {
+                    html += '<div class="section-body">';
+                    allUpgrades.forEach(upg => {
+                      const isSelected = (selectedUpgrades || []).some(u => u.name === upg.name);
+                      html += '<div class="upgrade-card ' + (isSelected ? 'selected' : '') + '">';
+                      html += '<div class="upgrade-header"><div><div class="upgrade-name">' + upg.name + '</div><div class="upgrade-meta">' + upg.phase + ' - ' + getResolvedUpgradeCostLabel(unit, tier, upg) + ' pts - ' + upg.type + '</div></div><button class="upgrade-toggle ' + (isSelected ? 'active' : '') + '" onclick="toggleUpgrade(' + entryId + ', ' + JSON.stringify(upg).replace(/"/g, '&quot;') + ')"></button></div>';
+                      html += '<div class="upgrade-desc">' + highlightKeywords(upg.description) + '</div>';
+                      html += '</div>';
+                    });
+                    html += '</div>';
+                  }
+                  html += '</div>';
+                }
+
+                html += '<button class="btn-remove" onclick="removeUnit(' + entryId + ')">Remove Unit</button>';
+                html += '</div>';
+              }
+              html += '</div>';
+            });
+          }
+          html += '</div>';
+        });
+      }
+
+      // Army actions
+      if (state.armyUnits.length > 0 || state.armyTactical.length > 0) {
+        html += '<div class="army-actions">';
+        html += '<button class="army-btn" onclick="showExportChoice()">Export</button>';
+        html += '<button class="army-btn danger" onclick="showClearConfirm()">Clear</button>';
+        html += '</div>';
+      }
+
+      const selectedMission = getSelectedMission();
+      const selectedMap = getSelectedMap();
+      const scenarioSummary = (selectedMission ? selectedMission.name : 'No mission') + ' / ' + (selectedMap ? selectedMap.name : 'No map');
+      const showScenarioOpen = !!state.openSections['army-scenario'];
+      html += '<div class="section-block ' + (showScenarioOpen ? 'open' : '') + '">';
+      html += '<div class="section-header" onclick="toggleSection(\'army-scenario\')"><span class="section-title">Mission and Map</span><span class="section-title" style="text-transform:none; letter-spacing:0; font-weight:500; color:var(--muted); margin-left:auto; margin-right:8px;">' + scenarioSummary + '</span><span class="chevron">&#8250;</span></div>';
+      if (showScenarioOpen) {
+        html += '<div class="section-body">';
+        html += '<div class="package-card"><div class="package-card-head"><div><div class="package-card-title">Mission</div><div class="package-card-meta"><span>' + getScenarioScaleType() + '</span><span>' + (selectedMission ? selectedMission.name : 'No mission selected') + '</span></div></div>' + (selectedMission ? '<button class="army-btn scenario-clear-btn" onclick="selectMission(null)">Clear Mission</button>' : '') + '</div>';
+        html += '<div class="scenario-card-note">Choose the objective packet you want tied to this roster. The export sheet will carry the full mission details.</div>';
+        html += '<div class="scenario-pick-grid">';
+        getActiveMissions().forEach(mission => {
+          html += '<button class="battle-size-option ' + (state.selectedMissionId === mission.id ? 'active' : '') + '" onclick="selectMission(\'' + mission.id + '\')">' + mission.name + '</button>';
+        });
+        html += '</div></div>';
+        html += '<div class="package-card"><div class="package-card-head"><div><div class="package-card-title">Map</div><div class="package-card-meta"><span>' + getScenarioScaleType() + '</span><span>' + (selectedMap ? selectedMap.name : 'No map selected') + '</span></div></div>' + (selectedMap ? '<button class="army-btn scenario-clear-btn" onclick="selectMap(null)">Clear Map</button>' : '') + '</div>';
+        html += '<div class="scenario-card-note">Pick the battlefield layout that should print with this list, including deployment and marker positions.</div>';
+        html += '<div class="scenario-pick-grid">';
+        getActiveMaps().forEach(map => {
+          html += '<button class="battle-size-option ' + (state.selectedMapId === map.id ? 'active' : '') + '" onclick="selectMap(\'' + map.id + '\')">' + map.name + '</button>';
+        });
+        html += '</div></div>';
+        html += '</div>';
+      }
+      html += '</div>';
+      if (packages.length > 0 || packageNotes.length > 0) {
+        html += '<div class="section-block ' + (state.openSections['army-packages'] ? 'open' : '') + '">';
+        html += '<div class="section-header" onclick="toggleSection(\'army-packages\')"><span class="section-title">Prebuilt Packages and Advice</span><span class="chevron">&#8250;</span></div>';
+        if (state.openSections['army-packages']) {
+          html += '<div class="section-body"><div class="package-section">';
+          packages.forEach(pkg => {
+            html += '<div class="package-card">';
+            html += '<div class="package-card-head"><div><div class="package-card-title">' + pkg.title + '</div><div class="package-card-meta"><span>' + pkg.minerals + ' Minerals</span><span>' + pkg.gas + ' Gas</span><span>' + (pkg.scaleId || '').toUpperCase() + '</span></div></div><button class="army-btn" onclick="loadAdvicePackage(\'' + pkg.id + '\')">Load Package</button></div>';
+            html += '<div class="package-card-summary">' + pkg.summary + '</div>';
+            html += '<div class="package-chip-row"><span class="package-chip">' + (pkg.units || []).length + ' Units</span><span class="package-chip">' + (pkg.tacticalCards || []).length + ' Tactical</span></div>';
+            html += '<ul class="package-list">';
+            (pkg.units || []).forEach(unitConfig => {
+              html += '<li>' + unitConfig.name + (unitConfig.models != null ? ' x' + unitConfig.models : '') + ((unitConfig.upgrades || []).length ? ' | ' + unitConfig.upgrades.join(', ') : '') + '</li>';
+            });
+            html += '</ul>';
+            if (pkg.pilotNotes) {
+              html += '<div class="package-card-summary"><strong>Pilot Notes:</strong> ' + pkg.pilotNotes + '</div>';
+            }
+            html += '</div>';
+          });
+          packageNotes.forEach(note => {
+            html += '<div class="package-note-block"><div class="package-note-title">' + note.title + '</div>';
+            (note.notes || []).forEach(text => {
+              html += '<div class="package-note-text">' + text + '</div>';
+            });
+            html += '</div>';
+          });
+          html += '</div></div>';
+        }
+        html += '</div>';
+      }
+
+      html += '</div>'; // end Army tab
+
+      // ========== UNITS TAB ==========
+      html += '<div class="tab-content ' + (state.activeTab === 'units' ? 'active' : '') + '">';
+      html += '<div class="tab-header"><div class="tab-title">Units Library</div></div>';
+      ['Hero', 'Elite', 'Core', 'Support', 'Other'].forEach(role => {
+        const unitsInRole = unitsByRole[role];
+        if (unitsInRole.length === 0) return;
+        const roleKey = role.toLowerCase();
+        const familyGroups = groupUnitsByFamily(unitsInRole);
+        html += '<div class="library-section">';
+        html += '<div class="library-section-header"><span class="library-section-dot ' + roleKey + '"></span><span class="library-section-name">' + role + '</span></div>';
+        familyGroups.forEach(group => {
+          const showFamilyLabel = group.units.length > 1;
+          if (showFamilyLabel) {
+            html += '<div class="unit-family-group"><div class="unit-family-label">' + group.family + '</div>';
+          }
+          group.units.forEach(unit => {
+          const isInArmy = unitIdsInArmy.includes(unit.id);
+          const isExpanded = state.expandedLibraryCards[unit.id];
+          html += '<div class="unit-card role-' + roleKey + ' ' + (isInArmy ? 'in-army' : '') + '">';
+          html += '<div class="unit-card-header" onclick="toggleLibraryCard(\'' + unit.id + '\')">';
+          html += '<div class="unit-title-row"><div class="unit-name">' + unit.name + (unit.unique ? ' <span class="unique-badge">Unique</span>' : '') + (unit.tags.includes('Psionic') ? ' <span class="psionic-badge">Psionic</span>' : '') + '</div><button class="btn-add" onclick="event.stopPropagation(); showTierPicker(ZERG_UNITS.find(u => u.id === \'' + unit.id + '\'))">+</button></div>';
+          html += '<div class="unit-tags">' + unit.tags.map(t => '<span class="unit-tag" onclick="event.stopPropagation(); showKeyword(\'' + t + '\')">' + t + '</span>').join('') + '</div>';
+          html += '</div>';
+          if (isExpanded) {
+            html += '<div class="unit-card-body">';
+            // Stats
+            html += '<div class="stats-grid">';
+            html += '<div class="stat-chip"><span class="stat-abbr">SH</span><span class="stat-value">' + (unit.stats.shield || '-') + '</span></div>';
+            html += '<div class="stat-chip"><span class="stat-abbr">SP</span><span class="stat-value">' + unit.stats.speed + '</span></div>';
+            html += '<div class="stat-chip"><span class="stat-abbr">EV</span><span class="stat-value">' + (unit.stats.evade || '-') + '</span></div>';
+            html += '<div class="stat-chip"><span class="stat-abbr">AR</span><span class="stat-value">' + unit.stats.armour + '</span></div>';
+            html += '<div class="stat-chip"><span class="stat-abbr">HP</span><span class="stat-value">' + unit.stats.hp + '</span></div>';
+            html += '<div class="stat-chip"><span class="stat-abbr">SZ</span><span class="stat-value">' + unit.stats.size + '</span></div>';
+            html += '</div>';
+            // Tiers
+            html += '<table class="tier-table"><thead><tr><th>Tier</th><th>Cost</th><th>Models</th><th>Supply</th></tr></thead><tbody>';
+            unit.tiers.forEach(t => {
+              html += '<tr><td>' + t.tier + '</td><td>' + (t.cost !== null ? t.cost : '-') + '</td><td>' + t.models + '</td><td>' + t.supply + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            // Weapons
+            if (unit.weapons.length > 0) {
+              html += '<div class="section-block ' + (state.openSections['lib-wpn-' + unit.id] ? 'open' : '') + '">';
+              html += '<div class="section-header" onclick="toggleSection(\'lib-wpn-' + unit.id + '\')"><span class="section-title">Weapons</span><span class="chevron">&#8250;</span></div>';
+              if (state.openSections['lib-wpn-' + unit.id]) {
+                html += '<div class="section-body">';
+                unit.weapons.forEach(w => {
+                  html += '<div class="weapon-table">';
+                  html += '<div class="weapon-table-header"><span class="weapon-table-name">' + w.name + '</span><span class="weapon-table-phase">' + w.phase + '</span></div>';
+                  html += '<div class="weapon-table-row"><div class="weapon-table-cell"><span>RNG</span><strong>' + w.range + '</strong></div><div class="weapon-table-cell"><span>TGT</span><strong>' + w.target + '</strong></div><div class="weapon-table-cell"><span>RoA</span><strong>' + w.roa + '</strong></div><div class="weapon-table-cell"><span>Hit</span><strong>' + w.hit + '</strong></div></div>';
+                  html += '<div class="weapon-table-row alt"><div class="weapon-table-cell"><span>Surge</span><strong>' + (w.surge || '-') + '</strong></div><div class="weapon-table-cell"><span>S.Die</span><strong>' + (w.sDie || '-') + '</strong></div><div class="weapon-table-cell"><span>Dmg</span><strong>' + w.damage + '</strong></div><div class="weapon-table-cell"><span>Kwd</span><strong>' + (w.keywords?.length > 0 ? 'Y' : '-') + '</strong></div></div>';
+                  if (w.keywords?.length > 0) {
+                    html += '<div class="weapon-table-keywords">' + w.keywords.map(kw => '<span class="keyword" onclick="showKeyword(\'' + kw.split('(')[0].trim() + '\')">' + kw + '</span>').join('') + '</div>';
+                  }
+                  html += '</div>';
+                });
+                html += '</div>';
+              }
+              html += '</div>';
+            }
+            // Abilities
+            const allAbilities = [...(unit.abilities || []), ...Object.entries(unit.phaseAbilities || {}).flatMap(([phase, abs]) => abs.map(a => ({ ...a, phase })))];
+            if (allAbilities.length > 0) {
+              html += '<div class="section-block ' + (state.openSections['lib-abl-' + unit.id] ? 'open' : '') + '">';
+              html += '<div class="section-header" onclick="toggleSection(\'lib-abl-' + unit.id + '\')"><span class="section-title">Abilities</span><span class="chevron">&#8250;</span></div>';
+              if (state.openSections['lib-abl-' + unit.id]) {
+                html += '<div class="section-body">';
+                allAbilities.forEach(a => {
+                  html += '<div class="ability-block"><div class="ability-header"><div class="ability-title">' + a.name + '</div><div class="ability-meta">' + a.phase + ' - ' + a.type + '</div></div><div class="ability-body">' + highlightKeywords(a.description) + '</div></div>';
+                });
+                html += '</div>';
+              }
+              html += '</div>';
+            }
+            // Upgrades
+            const allUpgrades = Object.entries(unit.upgrades || {}).flatMap(([phase, upgs]) => upgs.map(u => ({ ...u, phase })));
+            if (allUpgrades.length > 0) {
+              html += '<div class="section-block ' + (state.openSections['lib-upg-' + unit.id] ? 'open' : '') + '">';
+              html += '<div class="section-header" onclick="toggleSection(\'lib-upg-' + unit.id + '\')"><span class="section-title">Upgrades</span><span class="chevron">&#8250;</span></div>';
+              if (state.openSections['lib-upg-' + unit.id]) {
+                html += '<div class="section-body">';
+                allUpgrades.forEach(upg => {
+                  html += '<div class="ability-block"><div class="ability-header"><div class="ability-title">' + upg.name + '</div><div class="ability-meta">' + upg.phase + ' - ' + getLibraryUpgradeCostLabel(unit, upg) + ' pts - ' + upg.type + '</div></div><div class="ability-body">' + highlightKeywords(upg.description) + '</div></div>';
+                });
+                html += '</div>';
+              }
+              html += '</div>';
+            }
+            html += '</div>';
+          }
+          html += '</div>';
+          });
+          if (showFamilyLabel) {
+            html += '</div>';
+          }
+        });
+        html += '</div>';
+      });
+      html += '</div>'; // end Units tab
+
+      // ========== TACTICAL TAB ==========
+      html += '<div class="tab-content ' + (state.activeTab === 'tactical' ? 'active' : '') + '">';
+      html += '<div class="tab-header"><div class="tab-title">Tactical Cards</div></div>';
+      
+      const tacticalCategories = [
+        { id: 'brood-core', name: 'Brood Core', desc: 'Cards that expand or sharpen core swarm forces' },
+        { id: 'evolved-elite', name: 'Evolved Elite', desc: 'Elite strain support and heavier brood tech' },
+        { id: 'support-synapse', name: 'Support and Synapse', desc: 'Queens, creep, scouting, and utility support' }
+      ];
+      const getTacticalCategoryId = (card) => {
+        const slots = card?.slots || {};
+        if (slots.support) return 'support-synapse';
+        if (slots.elite && !slots.core) return 'evolved-elite';
+        if (slots.elite && slots.core) return 'evolved-elite';
+        return 'brood-core';
+      };
+      
+      const renderTacticalCard = (card) => {
+        const isInArmy = tacticalIdsInArmy.includes(card.id);
+        const isExpanded = state.expandedLibraryCards['tac-' + card.id];
+        let cardHtml = '<div class="tactical-card ' + (isInArmy ? 'in-army' : '') + '">';
+        cardHtml += '<div class="tactical-header" onclick="toggleLibraryCard(\'tac-' + card.id + '\')">';
+        cardHtml += '<div class="tactical-title-row"><div class="tactical-name">' + card.name + (card.unique ? ' <span class="unique-badge">Unique</span>' : '') + '</div><div class="tactical-right"><span class="tactical-cost">' + card.cost + ' Gas</span><button class="btn-add" onclick="event.stopPropagation(); addTactical(\'' + card.id + '\')">+</button></div></div>';
+        if (card.summary) cardHtml += '<div class="tactical-summary">' + card.summary + '</div>';
+        cardHtml += '<div class="tactical-info">';
+        if (card.resource) cardHtml += '<span class="tactical-pill">' + card.resource + '</span>';
+        Object.entries(card.slots || {}).forEach(([s, c]) => {
+          cardHtml += '<span class="tactical-pill">' + s.toUpperCase() + ' +' + c + '</span>';
+        });
+        cardHtml += '</div>';
+        cardHtml += '</div>';
+        if (isExpanded) {
+          cardHtml += '<div class="tactical-body">';
+          (card.abilities || []).forEach(a => {
+            cardHtml += '<div class="ability-block"><div class="ability-header"><div class="ability-title">' + a.name + '</div><div class="ability-meta">' + a.phase + ' - ' + a.type + '</div></div><div class="ability-body">' + highlightKeywords(a.description) + '</div></div>';
+          });
+          cardHtml += '</div>';
+        }
+        cardHtml += '</div>';
+        return cardHtml;
+      };
+      
+      tacticalCategories.forEach(cat => {
+        const cardsInCat = ZERG_TACTICAL_CARDS.filter(c => getTacticalCategoryId(c) === cat.id);
+        if (cardsInCat.length > 0) {
+          html += '<div class="tactical-category-header"><span class="tactical-category-dot"></span><span class="tactical-category-name">' + cat.name + '</span></div>';
+          cardsInCat.forEach(card => {
+            html += renderTacticalCard(card);
+          });
+        }
+      });
+      
+      html += '</div>'; // end Tactical tab
+
+      // ========== FACTIONS TAB ==========
+      html += '<div class="tab-content ' + (state.activeTab === 'factions' ? 'active' : '') + '">';
+      html += '<div class="tab-header"><div class="tab-title">Faction Cards</div></div>';
+      html += '<div style="margin-bottom: 16px;">';
+      html += '<div class="battle-size-row"><span class="battle-size-label">Battle Size</span><div class="battle-size-options">';
+      ENGAGEMENT_SCALES.forEach(s => {
+        html += '<button class="battle-size-option ' + (state.selectedScale.id === s.id ? 'active' : '') + '" onclick="selectScale(\'' + s.id + '\')">' + s.name + '</button>';
+      });
+      html += '</div></div></div>';
+      ZERG_FACTION_CARDS.forEach(faction => {
+        const isSelected = state.selectedFaction?.id === faction.id;
+        const isExpanded = state.expandedLibraryCards['faction-' + faction.id];
+        html += '<div class="faction-card ' + (isSelected ? 'selected' : '') + '">';
+        html += '<div class="faction-card-header">';
+        html += '<button class="faction-radio ' + (isSelected ? 'selected' : '') + '" onclick="event.stopPropagation(); selectFaction(\'' + faction.id + '\')">' + (isSelected ? '&#10003;' : '') + '</button>';
+        html += '<div class="faction-card-main" onclick="toggleLibraryCard(\'faction-' + faction.id + '\')">';
+        html += '<div class="faction-card-top"><span class="faction-card-name">' + faction.name + '</span></div>';
+        html += '<div class="faction-card-meta"><span class="faction-card-resource">' + faction.resource + '</span></div>';
+        html += '</div>';
+        html += '<span class="faction-card-chevron" onclick="toggleLibraryCard(\'faction-' + faction.id + '\')">' + (isExpanded ? '&#9662;' : '&#8250;') + '</span>';
+        html += '</div>';
+        html += '<div class="faction-card-slots">';
+        Object.entries(faction.slots || {}).forEach(([s, c]) => {
+          html += '<span class="faction-slot-badge ' + s + '">' + s.toUpperCase() + ' x' + c + '</span>';
+        });
+        html += '</div>';
+        if (isExpanded) {
+          html += '<div class="faction-card-abilities">';
+          (faction.abilities || []).forEach(a => {
+            html += '<div class="ability-block"><div class="ability-header"><div class="ability-title">' + a.name + '</div><div class="ability-meta">' + a.phase + ' - ' + a.type + '</div></div><div class="ability-body">' + highlightKeywords(a.description) + '</div></div>';
+          });
+          html += '</div>';
+        }
+        html += '</div>';
+      });
+      html += '</div>'; // end Factions tab
+
+      // ========== GLOSSARY TAB ==========
+      html += '<div class="tab-content ' + (state.activeTab === 'glossary' ? 'active' : '') + '">';
+      html += '<div class="tab-header"><div class="tab-title">Glossary</div></div>';
+      
+      // Search input
+      html += '<div class="glossary-search"><input type="text" class="glossary-search-input" placeholder="Search keywords..." value="' + state.glossarySearch + '" oninput="updateGlossarySearch(this.value)"></div>';
+      
+      const searchTerm = state.glossarySearch.toLowerCase();
+      
+      // Filter function
+      const matchesSearch = (name, desc) => {
+        if (!searchTerm) return true;
+        return name.toLowerCase().includes(searchTerm) || desc.toLowerCase().includes(searchTerm);
+      };
+      
+      // Surge Tags
+      const filteredSurgeTags = SURGE_TAGS.filter(tag => matchesSearch(tag, TAGS[tag].description));
+      if (filteredSurgeTags.length > 0) {
+        html += '<div class="glossary-section-header">Surge Tags</div>';
+        filteredSurgeTags.forEach(tag => {
+          const data = TAGS[tag];
+          html += '<div class="ability-block glossary-entry tag-entry"><div class="ability-header"><div class="ability-title">' + tag + '</div><div class="ability-meta">' + data.type + '</div></div><div class="ability-body">' + data.description + '</div></div>';
+        });
+      }
+      
+      // Type Tags
+      const filteredTypeTags = TYPE_TAGS.filter(tag => matchesSearch(tag, TAGS[tag].description));
+      if (filteredTypeTags.length > 0) {
+        html += '<div class="glossary-section-header" style="margin-top: 16px;">Type Tags</div>';
+        filteredTypeTags.forEach(tag => {
+          const data = TAGS[tag];
+          html += '<div class="ability-block glossary-entry tag-entry"><div class="ability-header"><div class="ability-title">' + tag + '</div><div class="ability-meta">' + data.type + '</div></div><div class="ability-body">' + data.description + '</div></div>';
+        });
+      }
+      
+      // Special Tags
+      const filteredSpecialTags = Object.entries(TAGS).filter(([t]) => !SURGE_TAGS.includes(t) && !TYPE_TAGS.includes(t)).filter(([tag, data]) => matchesSearch(tag, data.description));
+      if (filteredSpecialTags.length > 0) {
+        html += '<div class="glossary-section-header" style="margin-top: 16px;">Special Tags</div>';
+        filteredSpecialTags.forEach(([tag, data]) => {
+          html += '<div class="ability-block glossary-entry tag-entry"><div class="ability-header"><div class="ability-title">' + tag + '</div><div class="ability-meta">' + data.type + '</div></div><div class="ability-body">' + data.description + '</div></div>';
+        });
+      }
+      
+      // Keywords
+      const filteredKeywords = Object.entries(KEYWORDS).filter(([kw, data]) => matchesSearch(kw, data.description)).sort(([a], [b]) => a.localeCompare(b));
+      if (filteredKeywords.length > 0) {
+        html += '<div class="glossary-section-header" style="margin-top: 16px;">Keywords</div>';
+        filteredKeywords.forEach(([keyword, data]) => {
+          html += '<div class="ability-block glossary-entry"><div class="ability-header"><div class="ability-title">' + keyword + '</div><div class="ability-meta">' + data.type + '</div></div><div class="ability-body">' + data.description + '</div></div>';
+        });
+      }
+      
+      // No results message
+      if (searchTerm && filteredSurgeTags.length === 0 && filteredTypeTags.length === 0 && filteredSpecialTags.length === 0 && filteredKeywords.length === 0) {
+        html += '<div class="empty-state">No results for "' + state.glossarySearch + '"</div>';
+      }
+      
+      html += '</div>'; // end Glossary tab
+
+      // Modals
+      if (state.keywordModal) {
+        const kw = KEYWORDS[state.keywordModal] || TAGS[state.keywordModal];
+        if (kw) {
+          html += '<div class="modal-overlay" onclick="closeKeywordModal()"><div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><div><div class="modal-title">' + state.keywordModal + '</div><div class="modal-type">' + kw.type + '</div></div><button class="modal-close" onclick="closeKeywordModal()">&#215;</button></div><div class="modal-body">' + kw.description + '</div></div></div>';
+        }
+      }
+
+      if (state.tierPicker) {
+        const unit = state.tierPicker;
+        html += '<div class="modal-overlay" onclick="closeTierPicker()"><div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><div><div class="modal-title">' + unit.name + '</div><div class="modal-type">Select tier</div></div><button class="modal-close" onclick="closeTierPicker()">&#215;</button></div><div class="modal-body">';
+        unit.tiers.forEach(t => {
+          if (t.cost === null) return;
+          html += '<div class="tier-option" onclick="selectTier(' + JSON.stringify(t).replace(/"/g, '&quot;') + ')"><div class="tier-option-main"><span class="tier-option-models">' + t.models + ' models</span><span class="tier-option-cost">' + t.cost + ' pts</span></div><div class="tier-option-supply">Supply: ' + t.supply + '</div></div>';
+        });
+        html += '</div></div></div>';
+      }
+
+      if (state.showExportChoice) {
+        html += '<div class="modal-overlay" onclick="closeExportChoice()"><div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><div><div class="modal-title">Export Army</div><div class="modal-type">Choose format</div></div><button class="modal-close" onclick="closeExportChoice()">&#215;</button></div><div class="modal-body">';
+        html += '<button class="export-choice-btn" onclick="downloadPdfExport()"><div class="export-choice-title">Print Army Sheet PDF</div><div class="export-choice-desc">Open a printable army sheet styled after your example layout</div></button>';
+        html += '<button class="export-choice-btn" onclick="downloadTextExport(\'quick\')"><div class="export-choice-title">Export Quick Reference TXT</div><div class="export-choice-desc">Download a compact text version for table use</div></button>';
+        html += '<button class="export-choice-btn" onclick="downloadTextExport(\'full\')"><div class="export-choice-title">Export Full Reference TXT</div><div class="export-choice-desc">Download a full text version with more detail</div></button>';
+        html += '<button class="export-choice-btn" onclick="downloadJsonExport()"><div class="export-choice-title">Save JSON</div><div class="export-choice-desc">Download a structured save file for future import</div></button>';
+        html += '</div></div></div>';
+      }
+
+      if (state.showClearConfirm) {
+        html += '<div class="modal-overlay" onclick="closeClearConfirm()"><div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><div><div class="modal-title">Clear Army?</div><div class="modal-type">This will remove all units and tactical cards</div></div><button class="modal-close" onclick="closeClearConfirm()">&#215;</button></div><div class="modal-body" style="display: flex; gap: 8px;"><button class="army-btn" style="flex: 1;" onclick="closeClearConfirm()">Cancel</button><button class="btn-remove" style="flex: 1; margin-top: 0;" onclick="clearArmy()">Clear Army</button></div></div></div>';
+      }
+
+      if (state.exportText) {
+        html += '<div class="modal-overlay" onclick="closeExportText()"><div class="modal" onclick="event.stopPropagation()" style="max-width: 420px;"><div class="modal-header"><div><div class="modal-title">Export Army</div><div class="modal-type">Copy the text below</div></div><button class="modal-close" onclick="closeExportText()">&#215;</button></div><div class="modal-body"><textarea readonly style="width: 100%; height: 200px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; color: var(--text); font-size: 0.85rem; font-family: monospace; resize: none;" onfocus="this.select()">' + state.exportText + '</textarea><button class="army-btn" style="width: 100%; margin-top: 12px;" onclick="closeExportText()">Done</button></div></div></div>';
+      }
+
+      app.innerHTML = html;
+
+      // Tab bar with 5 tabs
+      let tabHtml = '';
+      [
+        { id: 'factions', icon: '&#9813;', label: 'Faction' },
+        { id: 'units', icon: '&#9814;', label: 'Units' },
+        { id: 'tactical', icon: '&#9733;', label: 'Tactical' },
+        { id: 'army', icon: '&#9876;', label: 'Roster' },
+        { id: 'glossary', icon: '&#9776;', label: 'Glossary' },
+      ].forEach(tab => {
+        tabHtml += '<button class="tab-btn ' + (state.activeTab === tab.id ? 'active' : '') + '" onclick="setTab(\'' + tab.id + '\')"><span class="tab-icon">' + tab.icon + '</span>' + tab.label + '</button>';
+      });
+      tabBar.innerHTML = tabHtml;
+    }
+
+    // ============================================================================
+    // SCROLL HANDLING - removed, no longer needed
+    // ============================================================================
+
+    // ============================================================================
+    // INIT
+    // ============================================================================
+    load();
+    render();
+  </script>
+
+<script id="app-nav-menu-script">
+(function(){
+  function initAppMenu(){
+    if(document.getElementById('app-menu-overlay')) return;
+    var page=(location.pathname.split('/').pop()||'index.html').toLowerCase();
+    var links=[
+      ['Home','App launcher','index.html','home'],
+      ['Zerg','Army builder','zerg.html','zerg'],
+      ['Protoss','Army builder','protoss.html','protoss'],
+      ['Terran','Army builder','terran.html','terran'],
+      ['Missions','Scenario setup','missions.html','missions'],
+      ['Rules','Reference','rules.html','rules']
+    ];
+    var btn=document.createElement('button');
+    btn.className='app-menu-btn';
+    btn.setAttribute('aria-label','Open navigation menu');
+    btn.innerHTML='<span class="bars" aria-hidden="true"></span>';
+    var overlay=document.createElement('div');
+    overlay.className='app-menu-overlay';
+    overlay.id='app-menu-overlay';
+    var linkHtml=links.map(function(item){
+      var current=page===item[2].toLowerCase() ? ' current' : '';
+      var icons={home:'⌂',zerg:'☣',protoss:'✦',terran:'⚙',missions:'🗺',rules:'📘'};
+      return '<a class="app-menu-link'+current+'" data-accent="'+item[3]+'" href="'+item[2]+'"><span class="app-menu-icon">'+(icons[item[3]]||'•')+'</span><span>'+item[0]+'</span></a>';
+    }).join('');
+    overlay.innerHTML='<div class="app-menu-panel" role="dialog" aria-modal="true" aria-label="Navigation menu">'+
+      '<div class="app-menu-head"><div class="app-menu-eyebrow">StarCraft TMG</div><div class="app-menu-title">App Navigation</div></div>'+
+      '<nav class="app-menu-list">'+linkHtml+'</nav></div>';
+    function openMenu(){ overlay.classList.add('open'); document.body.classList.add('app-menu-open'); }
+    function closeMenu(){ overlay.classList.remove('open'); document.body.classList.remove('app-menu-open'); }
+    btn.addEventListener('click', function(){ overlay.classList.contains('open') ? closeMenu() : openMenu(); });
+    overlay.addEventListener('click', function(e){ if(e.target===overlay) closeMenu(); });
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeMenu(); });
+    document.body.appendChild(btn);
+    document.body.appendChild(overlay);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', initAppMenu); else initAppMenu();
+})();
+</script>
+</body>
+</html>

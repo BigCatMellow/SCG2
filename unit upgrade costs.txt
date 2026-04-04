@@ -1,0 +1,835 @@
+Yes. I reorganized it so the **size is always explicit**, because in several cases the **upgrade costs change between Small and Large**, so those cannot be merged without losing rules accuracy. Everything below is based on your file. 
+
+---
+
+# Unit Upgrade Costs — Cleaned Version
+
+## Zerg
+
+### Corpser (Roach) — Small
+
+**Base Cost:** 250
+**Models / Supply:** 3 / 1
+
+**Stats**
+
+* Shield: —
+* Speed: 4/7
+* Evade: 5+
+* Armor: 3+
+* HP: 4
+
+**Upgrades**
+
+* Tunneling Claws: +10
+* Burrow Ambush: +20
+* Glial Reconstitution: +20
+* Hydriodic Bile: +10
+
+**Abilities / Weapons**
+
+* Burrow
+* Roachling Infestation
+* Acid Saliva
+* Regeneration
+* Devastating Charge
+* Claws
+
+---
+
+### Hydralisk — Small
+
+**Base Cost:** 140
+**Models / Supply:** 2 / 2
+
+**Stats**
+
+* Shield: —
+* Speed: 4/8
+* Evade: 5+
+* Armor: 5+
+* HP: 4
+
+**Upgrades**
+
+* Ancillary Carapace: +20
+* Lurking: +10
+* Burrow Ambush: +20
+* Grooved Spines: +20
+
+**Abilities / Weapons**
+
+* Squadron
+* Needle Spines
+* Lunge
+* Scythe
+
+---
+
+### Hydralisk — Large
+
+**Base Cost:** 260
+**Models / Supply:** 4 / 3
+
+**Stats**
+
+* Shield: —
+* Speed: 4/8
+* Evade: 5+
+* Armor: 5+
+* HP: 4
+
+**Upgrades**
+
+* Ancillary Carapace: +40
+* Lurking: +20
+* Burrow Ambush: +40
+* Grooved Spines: +40
+
+**Abilities / Weapons**
+
+* Squadron
+* Needle Spines
+* Lunge
+* Scythe
+
+---
+
+### Kerrigan — Small
+
+**Base Cost:** 250
+**Models / Supply:** 1 / 1
+
+**Stats**
+
+* Shield: —
+* Speed: 7
+* Evade: 6+
+* Armor: 5+
+* HP: 9
+
+**Abilities / Weapons**
+
+* Commander
+* Crushing Grip
+* Mutating Carapace
+* Energy Blast
+* Leaping Strike
+* Devastating Charge
+* Blades
+
+---
+
+### Kerrigan Swarm Raptor (Zergling) — Small
+
+**Base Cost:** 250
+**Models / Supply:** 6 / 1
+
+**Stats**
+
+* Shield: —
+* Speed: 5/9
+* Evade: 4+
+* Armor: 5+
+* HP: 2
+
+**Abilities / Weapons**
+
+* Squadron
+* Raptor Strain
+* Leap
+* Adrenal Overload
+* Devastating Charge
+* Claws
+
+---
+
+### Omega Worm — Small
+
+**Base Cost:** 0
+**Models / Supply:** 1 / 0
+
+**Stats**
+
+* Shield: —
+* Speed: —
+* Evade: —
+* Armor: 5+
+* HP: 10
+
+**Abilities**
+
+* Detection
+* Source of Creep
+* Structure
+* Omega Network
+
+---
+
+### Queen — Small
+
+**Base Cost:** 150
+**Models / Supply:** 1 / 1
+
+**Stats**
+
+* Shield: —
+* Speed: 4
+* Evade: —
+* Armor: 4+
+* HP: 9
+
+**Upgrades**
+
+* Creep Speed: +10
+* Domineering Presence: +10
+
+**Abilities / Weapons**
+
+* Spawn Creep Tumor
+* Transfusion
+* Restoration
+* Psionic Link
+* Talons
+* Acid Spines
+* Devastating Charge
+* Talons
+
+---
+
+### Raptor (Zergling) — Small
+
+**Base Cost:** 240
+**Models / Supply:** 12 / 1
+
+**Stats**
+
+* Shield: —
+* Speed: 5/9
+* Evade: 4+
+* Armor: 6+
+* HP: 1
+
+**Upgrades**
+
+* Burrow Ambush: +20
+* Shredding Claws: +20
+* Adrenal Glands: +30
+
+**Abilities / Weapons**
+
+* Squadron
+* Raptor Strain
+* Adrenal Overload
+* Metabolic Boost
+* Devastating Charge
+* Claws
+
+---
+
+### Raptor (Zergling) — Large
+
+**Base Cost:** 300
+**Models / Supply:** 18 / 2
+
+**Stats**
+
+* Shield: —
+* Speed: 5/9
+* Evade: 4+
+* Armor: 6+
+* HP: 1
+
+**Upgrades**
+
+* Burrow Ambush: +30
+* Shredding Claws: +20
+* Adrenal Glands: +30
+
+**Abilities / Weapons**
+
+* Squadron
+* Raptor Strain
+* Adrenal Overload
+* Metabolic Boost
+* Devastating Charge
+* Claws
+
+---
+
+### Roach — Small
+
+**Base Cost:** 170
+**Models / Supply:** 3 / 1
+
+**Stats**
+
+* Shield: —
+* Speed: 4/7
+* Evade: 5+
+* Armor: 3+
+* HP: 4
+
+**Upgrades**
+
+* Tunneling Claws: +10
+* Burrow Ambush: +20
+* Glial Reconstitution: +20
+* Hydriodic Bile: +10
+
+**Abilities / Weapons**
+
+* Burrow
+* Acid Saliva
+* Regeneration
+* Devastating Charge
+* Claws
+
+---
+
+### Roachling — Small
+
+**Base Cost:** 0
+**Models / Supply:** 3 / 0
+
+**Stats**
+
+* Shield: —
+* Speed: 4/7
+* Evade: 6+
+* Armor: 6+
+* HP: 1
+
+**Abilities / Weapons**
+
+* Underdeveloped Claws
+* Claws
+
+---
+
+### Swarmling (Zergling) — Small
+
+**Base Cost:** 270
+**Models / Supply:** 18 / 1
+
+**Stats**
+
+* Shield: —
+* Speed: 4/8
+* Evade: 5+
+* Armor: 6+
+* HP: 1
+
+**Upgrades**
+
+* Burrow Ambush: +20
+
+**Abilities / Weapons**
+
+* Squadron
+* Zergling Reconstitution
+* Metabolic Boost
+* Devastating Charge
+* Claws
+
+---
+
+### Vile (Roach) — Small
+
+**Base Cost:** 200
+**Models / Supply:** 3 / 1
+
+**Stats**
+
+* Shield: —
+* Speed: 4/7
+* Evade: 5+
+* Armor: 3+
+* HP: 4
+
+**Upgrades**
+
+* Tunneling Claws: +10
+* Burrow Ambush: +20
+* Glial Reconstitution: +20
+* Hydriodic Bile: +10
+
+**Abilities / Weapons**
+
+* Debilitating Saliva
+* Burrow
+* Acid Saliva
+* Regeneration
+* Devastating Charge
+* Vile Claws
+
+---
+
+### Zergling — Small
+
+**Base Cost:** 180
+**Models / Supply:** 12 / 1
+
+**Stats**
+
+* Shield: —
+* Speed: 4/8
+* Evade: 4+
+* Armor: 6+
+* HP: 1
+
+**Upgrades**
+
+* Burrow Ambush: +20
+* Shredding Claws: +20
+* Adrenal Glands: +30
+
+**Abilities / Weapons**
+
+* Squadron
+* Metabolic Boost
+* Devastating Charge
+* Claws
+
+---
+
+### Zergling — Large
+
+**Base Cost:** 220
+**Models / Supply:** 18 / 2
+
+**Stats**
+
+* Shield: —
+* Speed: 4/8
+* Evade: 4+
+* Armor: 6+
+* HP: 1
+
+**Upgrades**
+
+* Burrow Ambush: +30
+* Shredding Claws: +20
+* Adrenal Glands: +30
+
+**Abilities / Weapons**
+
+* Squadron
+* Metabolic Boost
+* Devastating Charge
+* Claws
+
+---
+
+## Terran
+
+### Goliath — Small
+
+**Base Cost:** 190
+**Models / Supply:** 1 / 2
+
+**Stats**
+
+* Shield: —
+* Speed: 7
+* Evade: —
+* Armor: 4+
+* HP: 10
+
+**Upgrades**
+
+* Ares-Class Targeting System: +20
+* Scatter Missiles: +30
+* Haywire Missiles: +40
+
+**Abilities / Weapons**
+
+* Target Lock
+* Indomitable
+* Autocannon
+* Underbelly Machine Gun
+* Hellfire Missiles
+* Devastating Charge
+* Stomp
+
+---
+
+### Jim Raynor — Small
+
+**Base Cost:** 230
+**Models / Supply:** 1 / 1
+
+**Stats**
+
+* Shield: —
+* Speed: 7
+* Evade: 5+
+* Armor: 4+
+* HP: 8
+
+**Abilities / Weapons**
+
+* Commander
+* Freedom Fighters
+* Orders
+* Commando Rifle
+* C-14 Rifle
+* “Justice” Revolver
+* Bayonet
+
+---
+
+### Marauder — Small
+
+**Base Cost:** 150
+**Models / Supply:** 2 / 1
+
+**Stats**
+
+* Shield: —
+* Speed: 4/7
+* Evade: 6+
+* Armor: 4+
+* HP: 5
+
+**Upgrades**
+
+* Veteran of Tarsonis: +20
+* Kinetic Foam: +20
+* Laser Targeting Systems: +20
+
+**Abilities / Weapons**
+
+* Stimpack
+* Quad K12
+* Concusive Shells
+* Strike
+
+---
+
+### Marauder — Large
+
+**Base Cost:** 280
+**Models / Supply:** 4 / 2
+
+**Stats**
+
+* Shield: —
+* Speed: 4/7
+* Evade: 6+
+* Armor: 4+
+* HP: 5
+
+**Upgrades**
+
+* Veteran of Tarsonis: +40
+* Kinetic Foam: +40
+* Laser Targeting Systems: +40
+
+**Abilities / Weapons**
+
+* Stimpack
+* Quad K12
+* Concusive Shells
+* Strike
+
+---
+
+### Marine — Small
+
+**Base Cost:** 160
+**Models / Supply:** 6 / 1
+
+**Stats**
+
+* Shield: —
+* Speed: 4/7
+* Evade: 5+
+* Armor: 5+
+* HP: 2
+
+**Upgrades**
+
+* Combat Shield: +20
+* AGG-12: +10
+* Rocket Launcher: +40
+* Slugthrower: +10
+* Grenades - Frag: +10
+* Bayonet: +20
+
+**Abilities / Weapons**
+
+* Stimpack
+* C-14 Rifle
+* Strike
+
+---
+
+### Marine — Large
+
+**Base Cost:** 210
+**Models / Supply:** 9 / 2
+
+**Stats**
+
+* Shield: —
+* Speed: 4/7
+* Evade: 5+
+* Armor: 5+
+* HP: 2
+
+**Upgrades**
+
+* Combat Shield: +30
+* AGG-12: +10
+* Rocket Launcher: +40
+* Slugthrower: +20
+* Grenades - Frag: +10
+* Bayonet: +30
+
+**Abilities / Weapons**
+
+* Stimpack
+* C-14 Rifle
+* Strike
+
+---
+
+### Medic — Small
+
+**Base Cost:** 110
+**Models / Supply:** 3 / 1
+
+**Stats**
+
+* Shield: —
+* Speed: 4/7
+* Evade: 5+
+* Armor: 5+
+* HP: 2
+
+**Upgrades**
+
+* Advanced Medic Facilities: +60
+* A-13 Flash Grenade Launcher: +20
+* Stabilizer Medpacks: +30
+
+**Abilities / Weapons**
+
+* Life Support
+* Restoration
+* Medpack
+* Optical Flare
+* Strike
+
+---
+
+## Protoss
+
+### Adept — Small
+
+**Base Cost:** 150
+**Models / Supply:** 4 / 1
+
+**Stats**
+
+* Shield: 2
+* Speed: 5/8
+* Evade: 5+
+* Armor: 5+
+* HP: 3
+
+**Upgrades**
+
+* Resonating Glaives: +20
+* Guidance: +10
+* Glaive Strike: +20
+
+**Abilities / Weapons**
+
+* Psionic Presence
+* Psionic Transfer
+* Glaive Cannon
+* Strike
+
+---
+
+### Artanis — Small
+
+**Base Cost:** 250
+**Models / Supply:** 1 / 1
+
+**Stats**
+
+* Shield: 4
+* Speed: 7
+* Evade: 5+
+* Armor: 4+
+* HP: 8
+
+**Abilities / Weapons**
+
+* Commander
+* Phase Prism
+* Hierarch’s Stand
+* Lightning Dash
+* Devastating Charge
+* Twilight Blades Strike
+* Twilight Blades Sweep
+
+---
+
+### Praetor Guard (Zealot) — Small
+
+**Base Cost:** 280
+**Models / Supply:** 3 / 2
+
+**Stats**
+
+* Shield: 3
+* Speed: 4/7
+* Evade: 5+
+* Armor: 5+
+* HP: 4
+
+**Abilities / Weapons**
+
+* Shield Overcharge
+* Leg Enhancements
+* Charge
+* Devastating Charge
+* Psi Blades
+* Titan Killers
+* Precognition
+
+---
+
+### Pylon — Small
+
+**Base Cost:** 0
+**Models / Supply:** 1 / 0
+
+**Stats**
+
+* Shield: 2
+* Speed: —
+* Evade: —
+* Armor: 5+
+* HP: 8
+
+**Abilities**
+
+* Structure
+* Khalai Ingenuity
+* Warp Conduit
+
+---
+
+### Sentry — Small
+
+**Base Cost:** 130
+**Models / Supply:** 2 / 1
+
+**Stats**
+
+* Shield: 2
+* Speed: 4/7
+* Evade: 6+
+* Armor: 5+
+* HP: 4
+
+**Upgrades**
+
+* Solid-Field Projectors: +20
+* Hallucination: +30
+
+**Abilities / Weapons**
+
+* Restoration
+* Force Field
+* Guardian Shield
+* Disruption Beam
+* Beam
+
+---
+
+### Stalker — Small
+
+**Base Cost:** 160
+**Models / Supply:** 1 / 1
+
+**Stats**
+
+* Shield: 3
+* Speed: 4/8
+* Evade: 6+
+* Armor: 4+
+* HP: 6
+
+**Upgrades**
+
+* Path of Shadows: +20
+* Fury of the Nerazim: +20
+
+**Abilities / Weapons**
+
+* Squadron
+* Blink
+* Particle Disruptors
+* Stomp
+
+---
+
+### Stalker — Large
+
+**Base Cost:** 260
+**Models / Supply:** 2 / 2
+
+**Stats**
+
+* Shield: 3
+* Speed: 4/8
+* Evade: 6+
+* Armor: 4+
+* HP: 6
+
+**Upgrades**
+
+* Path of Shadows: +40
+* Fury of the Nerazim: +30
+
+**Abilities / Weapons**
+
+* Squadron
+* Blink
+* Particle Disruptors
+* Stomp
+
+---
+
+### Zealot — Small
+
+**Base Cost:** 160
+**Models / Supply:** 3 / 2
+
+**Stats**
+
+* Shield: 3
+* Speed: 4/7
+* Evade: 5+
+* Armor: 5+
+* HP: 4
+
+**Upgrades**
+
+* My Life for Aiur: +10
+* Leg Enhancements: +20
+* Zealous Round: +10
+* We Stand as One: +20
+
+**Abilities / Weapons**
+
+* Charge
+* Devastating Charge
+* Psi Blades
+

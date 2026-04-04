@@ -1,0 +1,63 @@
+{
+  "generatedAt": "2026-04-03T19:00:05.606Z",
+  "factions": {
+    "zerg": {
+      "counts": {
+        "runtime": {
+          "factionCards": 2,
+          "units": 12,
+          "weapons": 18,
+          "abilities": 72,
+          "tacticalCards": 11,
+          "upgrades": 49
+        },
+        "expected": {
+          "factionCards": 2,
+          "units": 12,
+          "tacticalCards": 11
+        }
+      },
+      "issues": []
+    },
+    "protoss": {
+      "counts": {
+        "runtime": {
+          "factionCards": 2,
+          "units": 7,
+          "weapons": 10,
+          "abilities": 45,
+          "tacticalCards": 10,
+          "upgrades": 22
+        },
+        "expected": {
+          "factionCards": 2,
+          "units": 7,
+          "tacticalCards": 10
+        }
+      },
+      "issues": []
+    },
+    "terran": {
+      "counts": {
+        "runtime": {
+          "factionCards": 2,
+          "units": 7,
+          "weapons": 15,
+          "abilities": 43,
+          "tacticalCards": 10,
+          "upgrades": 26
+        },
+        "expected": {
+          "factionCards": 2,
+          "units": 7,
+          "tacticalCards": 10
+        }
+      },
+      "issues": []
+    }
+  },
+  "summary": {
+    "totalIssues": 0,
+    "factionsWithIssues": []
+  }
+}
